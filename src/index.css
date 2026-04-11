@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+:root {
+    --app-height: 100dvh;
+}
+
+body {
+    position: fixed;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* ===================== THEMES ===================== */
+
+/* Rosa */
+.theme-rosa {
+    --bg-color: #ffe4e6;
+    --text-color: #4b004b;
+    --form-bg: #ffc0cb;
+    --form-btn-bg: #ff69b4;
+}
+
+html.theme-rosa body { background: var(--bg-color); color: var(--text-color); }
+html.theme-rosa::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 32px 32px;
+    animation: fall 15s linear infinite;
+    z-index: 0;
+}
+
+/* Dark */
+html.theme-dark body { background: #121212; color: white; }
+html.theme-dark header { background: rgba(30,30,30,0.8) !important; border-color: #333 !important; }
+
+/* Dark Pink */
+html.theme-darkpink body { background: #330022; color: #ffb6c1; }
+html.theme-darkpink::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 32px 32px;
+    animation: fall 15s linear infinite;
+    z-index: 0;
+}
+
+/* Neon */
+html.theme-neon body { background: linear-gradient(45deg, #0f0f23, #1a1a2e); color: #00ff88; }
+
+/* Cyberpunk */
+html.theme-cyberpunk body { background: linear-gradient(135deg, #0d001a, #1a0033); color: #ff0080; }
+
+/* Matrix */
+html.theme-matrix body {
+    background: #000000;
+    color: #00ff00;
+    font-family: "Courier New", monospace;
+    animation: matrixRain 5s linear infinite;
+}
+
+/* Retro */
+html.theme-retro body { background: linear-gradient(45deg, #ff6b35, #f7931e); color: #2d1b69; }
+
+/* Ocean */
+html.theme-ocean body { background: linear-gradient(135deg, #0077be, #00a8cc); color: white; }
+
+/* Forest */
+html.theme-forest body { background: linear-gradient(135deg, #228b22, #32cd32); color: white; }
+
+/* Galaxy */
+html.theme-galaxy body {
+    background: linear-gradient(135deg, #4b0082, #800080);
+    color: white;
+    animation: galaxy 10s ease-in-out infinite;
+}
+
+/* Minimal */
+html.theme-minimal body { background: #ffffff; color: #333333; }
+
+/* Vaporwave */
+html.theme-vaporwave body {
+    background: linear-gradient(135deg, #ff71ce, #01cdfe);
+    color: white;
+}
+
+/* Fire */
+html.theme-fire body {
+    background: linear-gradient(135deg, #ff4500, #ff6347);
+    color: white;
+    animation: fire 2s ease-in-out infinite alternate;
+}
+
+/* Animaciones */
+@keyframes fall {
+    0% { background-position: 0 -32px, 50px -64px, 100px -96px; }
+    100% { background-position: 0 100%, 50px 100%, 100px 100%; }
+}
+
+@keyframes galaxy {
+    0%, 100% { background: linear-gradient(135deg, #4b0082, #800080); }
+    50% { background: linear-gradient(135deg, #800080, #4b0082); }
+}
+
+@keyframes fire {
+    0% { background: linear-gradient(135deg, #ff4500, #ff6347); }
+    100% { background: linear-gradient(135deg, #ff6347, #ff4500); }
+}
+
+@keyframes matrixRain {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100%; }
+}
+
+@keyframes neonPulse {
+    0%, 100% { 
+        box-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88, 0 0 20px #00ff88;
+        text-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88;
+    }
+    50% { 
+        box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88;
+        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
+    }
+}
+
+@keyframes oceanWave {
+    0%, 100% { background: linear-gradient(135deg, #0077be, #00a8cc); }
+    50% { background: linear-gradient(135deg, #00a8cc, #0077be); }
+}
+
+@keyframes retroPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+@keyframes vaporGlow {
+    0%, 100% { 
+        background: linear-gradient(135deg, #ff71ce, #01cdfe, #05ffa1, #b967ff);
+        background-size: 400% 400%;
+        background-position: 0% 50%;
+    }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes cyberShift {
+    0% { 
+        background: linear-gradient(135deg, #0d001a, #1a0033);
+        filter: hue-rotate(0deg);
+    }
+    50% { 
+        background: linear-gradient(135deg, #1a0033, #0d001a);
+        filter: hue-rotate(30deg);
+    }
+    100% { 
+        background: linear-gradient(135deg, #0d001a, #1a0033);
+        filter: hue-rotate(0deg);
+    }
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes popIn {
+    from { 
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
+}
