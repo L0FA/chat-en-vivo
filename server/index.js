@@ -682,8 +682,8 @@ app.get("/api/giphy/search", async (req, res) => {
     }
 });
 
-    // Fallback para React Router
-    app.get("*", (req, res) => {
+    // Fallback para React Router adaptado a Express 5 (path-to-regexp)
+    app.get(/.*/, (req, res) => {
         res.sendFile(path.join(process.cwd(), "dist", "index.html"));
     });
 
