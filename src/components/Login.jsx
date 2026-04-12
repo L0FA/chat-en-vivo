@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { useChat } from "../hooks/useChat";
 
+const ADMIN_USERS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+
 export default function Login() {
     const { login } = useChat();
     const [input, setInput] = useState(() => localStorage.getItem("NombreUsuario") || "");
+    const [password, setPassword] = useState("");
+    const isAdmin = ADMIN_USERS.includes(input.trim());
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const nombre = input.trim() || "Invitado";
-        login(nombre);
+        login(nombre, password);
     };
 
     return (
@@ -29,6 +33,15 @@ export default function Login() {
                         autoFocus
                         className="border border-gray-200 rounded-xl px-4 py-2 text-base sm:text-sm focus:outline-none focus:border-pink-400 transition w-full bg-white text-gray-900"
                     />
+                    {isAdmin && (
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder="Contraseña de admin..."
+                            className="border border-gray-200 rounded-xl px-4 py-2 text-base sm:text-sm focus:outline-none focus:border-pink-400 transition w-full bg-white text-gray-900"
+                        />
+                    )}
                     <button
                         type="submit"
                         className="bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 rounded-xl transition"

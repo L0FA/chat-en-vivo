@@ -14,8 +14,8 @@ import VideoCall from "./VideoCall";
 import ProfileDropdown from "./ProfileDropdown";
 
 export default function Chat() {
-    const { user, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom } = useChat();
-    const { socket, connected } = useSocket(user);
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom } = useChat();
+    const { socket, connected } = useSocket(user, password);
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);

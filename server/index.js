@@ -113,7 +113,19 @@ io.on("connection", async (socket) => {
         
     console.log("🟢 Conectando:", user);
 
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+    const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(s => s.trim());
+
     try {
+        const isAdmin = ADMIN_LIST.includes(user);
+        const password = socket.handshake.auth?.password || "";
+
+        if (isAdmin && password !== ADMIN_PASSWORD) {
+            socket.emit("Admin Password Required", { message: "Necesitás contraseña de admin para entrar con este usuario." });
+            socket.disconnect();
+            return;
+        }
+
         const existingUser = await db.execute({
             sql: "SELECT nombre FROM Usuarios WHERE nombre = ?",
             args: [user]
@@ -138,19 +150,21 @@ io.on("connection", async (socket) => {
         return;
     }
 
-    console.log("🟢 Conectado:", user);
+    const isAdmin = ADMIN_LIST.includes(user);
+
+    console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
 
         // Registrar usuario
-        connectedUsers.set(socket.id, user);
+        connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin });
         callState.registerUser(socket.id, user);
-        io.emit("Usuarios Conectados", { users: [...connectedUsers.values()] });
+        io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre) });
 
         // ---- DISCONNECT ----
         socket.on("disconnect", () => {
             console.log("🔴 Desconectado:", user);
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
-            io.emit("Usuarios Conectados", { users: [...connectedUsers.values()] });
+            io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre) });
         });
 
         // ---- TEXTO ----

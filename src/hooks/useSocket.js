@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
-export function useSocket(nombreUsuario) {
+export function useSocket(nombreUsuario, password = "") {
     const [socket, setSocket] = useState(null);
     const [connected, setConnected] = useState(false);
 
@@ -11,7 +11,7 @@ export function useSocket(nombreUsuario) {
         if (!nombreUsuario) return;
 
         const newSocket = io(SOCKET_URL, {
-            auth: { NombreUsuario: nombreUsuario },
+            auth: { NombreUsuario: nombreUsuario, password },
             transports: ["websocket"],
             reconnection: true,
             reconnectionAttempts: 10,
@@ -30,15 +30,20 @@ export function useSocket(nombreUsuario) {
             console.error("Socket error:", data.message);
             alert(data.message);
         });
+        newSocket.on("Admin Password Required", (data) => {
+            alert(data.message);
+        });
 
         return () => {
             newSocket.off("connect");
             newSocket.off("disconnect");
+            newSocket.off("Error");
+            newSocket.off("Admin Password Required");
             newSocket.disconnect();
             setSocket(null);
             setConnected(false);
         };
-    }, [nombreUsuario]);
+    }, [nombreUsuario, password]);
 
     return { socket, connected };
 }

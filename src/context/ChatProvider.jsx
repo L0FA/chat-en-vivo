@@ -3,6 +3,7 @@ import { ChatContext } from "./ChatContext";
 
 export function ChatProvider({ children }) {
     const [user, setUser] = useState(() => localStorage.getItem("NombreUsuario") || "");
+    const [password, setPassword] = useState(() => localStorage.getItem("UserPassword") || "");
     const [avatar, setAvatar] = useState(() => localStorage.getItem("UserAvatar") || "");
     const [messages, setMessages] = useState([]);
     const [theme, setTheme] = useState(() => localStorage.getItem("chat-theme") || "default");
@@ -92,9 +93,11 @@ export function ChatProvider({ children }) {
         }
     }, [currentRoom]);
 
-    const login = useCallback((nombre, nuevoAvatar = null) => {
+    const login = useCallback((nombre, password = "") => {
         localStorage.setItem("NombreUsuario", nombre);
+        localStorage.setItem("UserPassword", password);
         setUser(nombre);
+        setPassword(password);
         if (nuevoAvatar !== null) {
             setAvatar(nuevoAvatar);
             localStorage.setItem("UserAvatar", nuevoAvatar);
@@ -114,7 +117,7 @@ export function ChatProvider({ children }) {
 
     return (
         <ChatContext.Provider value={{
-            user, login, avatar, updateProfile,
+            user, password, login, avatar, updateProfile,
             messages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
             theme, changeTheme,
             connectedUsers, setConnectedUsers,
