@@ -113,6 +113,9 @@ export default function RoomSelector({ scrolled, socket }) {
             >
                 <span>{current ? (current.esAdmin ? "💎" : "💬") : "💬"}</span>
                 <span className="hidden sm:inline">{current ? current.nombre : "Sin sala"}</span>
+                {current && current.id !== "sala-admins-global" && (
+                    <span className="text-[10px] opacity-50 ml-1" title="ID de sala">{current.id.slice(0, 8)}</span>
+                )}
                 {isCurrentUserAdmin && <span className="text-[8px] bg-yellow-500 text-black px-1 rounded font-bold">ADMIN</span>}
                 <span className="text-xs opacity-70">{open ? "▲" : "▼"}</span>
             </button>

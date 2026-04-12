@@ -30,6 +30,7 @@ export default function Message({ message, currentUser, socket, onImageClick, on
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+    const [userInfoModal, setUserInfoModal] = useState(null);
     
     const longPressTimerRef = useRef(null);
 
@@ -282,10 +283,16 @@ export default function Message({ message, currentUser, socket, onImageClick, on
 
                     {/* Nombre */}
                     {!isOwn && (
-                        <span className="text-xs font-bold mb-1 block" style={{ color }}>
+                        <button 
+                            onClick={() => socket?.emit("Obtener Info Usuario", { targetUser: message.user }, (res) => {
+                                if (res.status === "ok") setUserInfoModal(res.info);
+                            })}
+                            className="text-xs font-bold mb-1 block hover:underline"
+                            style={{ color }}
+                        >
                             {message.user}
                             {adminsList.includes(message.user) && <span className="ml-1 text-yellow-400">👑</span>}
-                        </span>
+                        </button>
                     )}
 
                     {renderBody()}
@@ -445,5 +452,32 @@ export default function Message({ message, currentUser, socket, onImageClick, on
                 </div>
             )}
         </div>
+
+        {/* User Info Modal */}
+        {userInfoModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
+                <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
+                            {userInfoModal.avatar || "😀"}
+                        </div>
+                        <div className="text-center">
+                            <p className="text-white font-bold text-xl">{userInfoModal.nombre}</p>
+                            {adminsList.includes(userInfoModal.nombre) && <span className="text-yellow-400 text-sm">👑 Admin</span>}
+                        </div>
+                        <div className="text-white/60 text-sm text-center mt-2">
+                            <p>Usuario desde:</p>
+                            <p className="font-bold">{userInfoModal.creado}</p>
+                        </div>
+                        <button 
+                            onClick={() => setUserInfoModal(null)}
+                            className="mt-4 bg-pink-400 hover:bg-pink-500 text-white px-6 py-2 rounded-full"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     );
 }

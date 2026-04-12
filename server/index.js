@@ -262,6 +262,77 @@ io.on("connection", async (socket) => {
             }
         });
 
+        // ---- INFO USUARIO ----
+        socket.on("Obtener Info Usuario", async ({ targetUser }, cb) => {
+            try {
+                const result = await db.execute({
+                    sql: "SELECT nombre, avatar, creado FROM Usuarios WHERE nombre = ?",
+                    args: [targetUser]
+                });
+                if (result.rows.length > 0) {
+                    const u = result.rows[0];
+                    const fechaCreado = new Date(u.creado).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" });
+                    cb?.({ status: "ok", info: { nombre: u.nombre, avatar: u.avatar, creado: fechaCreado, timestamp: u.creado } });
+                } else {
+                    cb?.({ status: "error", error: "Usuario no encontrado" });
+                }
+            } catch (e) {
+                console.error("❌ ERROR INFO USUARIO:", e);
+                cb?.({ status: "error" });
+            }
+        });
+
+        // ---- GLOBAL (solo admins pueden escribir aqui) ----
+        socket.on("Mensaje Global", async (payload, cb) => {
+            if (!isAdmin) { cb?.({ status: "error", error: "Solo admins" }); return; }
+            const id = generateId();
+            const { content } = payload || {};
+            try {
+                await db.execute({
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, room) VALUES (?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, Date.now(), "text", "sala-global"]
+                });
+                io.emit("Mensaje en Chat", { id, type: "text", content, timestamp: Date.now(), user, room: "sala-global" });
+                cb?.({ status: "ok" });
+            } catch (e) {
+                console.error("❌ ERROR GLOBAL:", e);
+            }
+        });
+
+        // ---- ADMIN: HACER ADMIN ----
+        socket.on("Hacer Admin", async ({ targetUser }, cb) => {
+            if (!isAdmin) { cb?.({ status: "error", error: "No autorizado" }); return; }
+            try {
+                const currentAdmins = (process.env.ADMINS || "").split(",").map(s => s.trim());
+                if (!currentAdmins.includes(targetUser)) {
+                    const newAdmins = [...currentAdmins, targetUser].join(",");
+                    // No se puede cambiar .env en runtime, así que emitimos evento a todos los admins
+                    io.emit("Nuevo Admin", { usuario: targetUser });
+                }
+                cb?.({ status: "ok" });
+            } catch (e) {
+                console.error("❌ ERROR HACER ADMIN:", e);
+                cb?.({ status: "error" });
+            }
+        });
+
+        // ---- ADMIN: BANEAR ----
+        socket.on("Banear Usuario", async ({ targetUser }, cb) => {
+            if (!isAdmin) { cb?.({ status: "error", error: "No autorizado" }); return; }
+            try {
+                const bannedUser = [...connectedUsers.entries()].find(([_, u]) => u.nombre === targetUser);
+                if (bannedUser) {
+                    const [socketId] = bannedUser;
+                    io.to(socketId).emit("Baneado", { mensaje: "Has sido baneado del chat" });
+                    io.sockets.sockets.get(socketId)?.disconnect();
+                }
+                cb?.({ status: "ok" });
+            } catch (e) {
+                console.error("❌ ERROR BANEAR:", e);
+                cb?.({ status: "error" });
+            }
+        });
+
         // ---- TEXTO ----
         socket.on("Mensaje en Chat", async (payload, cb) => {
             const id = payload?.id || generateId();
@@ -270,12 +341,22 @@ io.on("connection", async (socket) => {
             const replyToId = payload?.replyToId || null;
             const replyToUser = payload?.replyToUser || null;
             const destructSeconds = payload?.destructSeconds || 0;
+            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, 0, destructSeconds]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, 0, destructSeconds, room]
                 });
+
+                socket.emit("Mensaje en Chat", { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds, room });
+                socket.broadcast.emit("Mensaje en Chat", { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds, room });
+                cb?.({ status: "ok", id });
+            } catch (e) {
+                console.error("❌ ERROR TEXTO:", e);
+                cb?.({ status: "error" });
+            }
+        });
 
                 broadcastMessage(socket, { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds });
                 cb?.({ status: "ok", id });
@@ -392,7 +473,7 @@ io.on("connection", async (socket) => {
                     args: [messageId]
                 });
 
-                if (!existing.rows.length || existing.rows[0].user !== user) {
+                if (!existing.rows.length || (existing.rows[0].user !== user && !isAdmin)) {
                     cb?.({ status: "error", error: "No autorizado" });
                     return;
                 }
@@ -419,7 +500,7 @@ io.on("connection", async (socket) => {
                     args: [messageId]
                 });
 
-                if (!existing.rows.length || existing.rows[0].user !== user) {
+                if (!existing.rows.length || (existing.rows[0].user !== user && !isAdmin)) {
                     cb?.({ status: "error" });
                     return;
                 }
