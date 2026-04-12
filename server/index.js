@@ -49,6 +49,15 @@ async function init() {
         )
     `);
 
+    // Agregar admins por defecto si no existen
+    const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+    for (const admin of ADMINS) {
+        await db.execute({
+            sql: "INSERT OR IGNORE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
+            args: [admin, null, Date.now()]
+        });
+    }
+
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Mensajes (
             id TEXT PRIMARY KEY,
