@@ -386,41 +386,63 @@ async function init() {
         });
 
         // ---- LLAMADAS ----
-        socket.on("Iniciar Llamada", ({ to, type }) => {
-            callState.startCall({ from: user, fromSocketId: socket.id, to, type });
+        socket.on("llamada:invite", ({ to, type }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (!toSocketId) {
+                console.log(`❌ Usuario ${to} no encontrado`);
+                socket.emit("llamada:reject", { from: to, reason: "Usuario no encontrado" });
+                return;
+            }
+            const callId = `call-${Date.now()}`;
+            io.to(toSocketId).emit("llamada:invite", { from: user, type, callId, fromSocketId: socket.id });
+            console.log(`📞 Invites enviado: ${user} -> ${to}`);
         });
 
-        socket.on("Aceptar Llamada", ({ callId, from, to, rejected }) => {
-            if (rejected) {
-                callState.rejectCall({ from: user, to });
-            } else {
-                callState.acceptCall({ callId, from, to });
+        socket.on("llamada:accept", ({ to, callId }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:accept", { from: user, callId });
+                socket.emit("llamada:accept", { from: to, callId });
+                console.log(`📞 Llamada aceptada: ${user} <-> ${to}`);
             }
         });
 
-        socket.on("Rechazar Llamada", ({ from, to }) => {
-            callState.rejectCall({ from: user, to });
+        socket.on("llamada:reject", ({ to }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:reject", { from: user });
+            }
         });
 
-        socket.on("Terminar Llamada", ({ to }) => {
-            callState.endCall({ from: user, to });
+        socket.on("llamada:end", ({ to }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:end", { from: user });
+            }
+            console.log(`📞 Llamada terminada: ${user} -> ${to}`);
         });
 
         // ---- WEBRTC ----
-socket.on("Oferta WebRTC", ({ offer, to }) => {
-    const targetId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
-    if (targetId) io.to(targetId).emit("Oferta WebRTC", { offer, from: user });
-});
+        socket.on("llamada:offer", ({ offer, to }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:offer", { offer, from: user });
+            }
+        });
 
-socket.on("Respuesta WebRTC", ({ answer, to }) => {
-    const targetId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
-    if (targetId) io.to(targetId).emit("Respuesta WebRTC", { answer, from: user });
-});
+        socket.on("llamada:answer", ({ answer, to }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:answer", { answer, from: user });
+            }
+        });
 
-socket.on("ICE Candidate", ({ candidate, to }) => {
-    const targetId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
-    if (targetId) io.to(targetId).emit("ICE Candidate", { candidate, from: user });
-});
+        socket.on("llamada:ice", ({ candidate, to }) => {
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            if (toSocketId) {
+                io.to(toSocketId).emit("llamada:ice", { candidate, from: user });
+            }
+        });
 
         // ---- PAGINACIÓN ----
         socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp } = {}, cb) => {

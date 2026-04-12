@@ -9,7 +9,7 @@ import ThemeSelector from "./ThemeSelector";
 import UsersPanel from "./UsersPanel";
 import Lightbox from "./Lightbox";
 import MusicApp from "./MusicApp";
-import VideoCall, { CallButton } from "./VideoCall";
+import VideoCall from "./VideoCall";
 
 export default function Chat() {
     const { user, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc } = useChat();
@@ -24,7 +24,6 @@ export default function Chat() {
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [showMusicApp, setShowMusicApp] = useState(false);
-    const [showVideoCall, setShowVideoCall] = useState(false);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
@@ -126,7 +125,7 @@ export default function Chat() {
                 {/* Botones */}
                 <div className="flex items-center gap-1.5">
                     <UsersPanel />
-                    <CallButton socket={socket} currentUser={user} />
+                    <VideoCall socket={socket} />
                     <button
                         onClick={() => setShowMusicApp(p => !p)}
                         className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
@@ -215,13 +214,11 @@ export default function Chat() {
                 onClose={() => setShowMusicApp(false)}
             />
 
-            {/* Video Call */}
-            {showVideoCall && (
-                <VideoCall
-                    socket={socket}
-                    onClose={() => setShowVideoCall(false)}
-                />
-            )}
+            {/* Video Call - siempre montado para recibir eventos */}
+            <VideoCall
+                socket={socket}
+                onClose={() => setShowVideoCall(false)}
+            />
 
             {/* Lightbox */}
             {lightboxSrc && (
