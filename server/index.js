@@ -725,6 +725,7 @@ io.on("connection", async (socket) => {
         
         try {
             let results;
+            console.log("🟢 isAdmin =", isAdmin, "para usuario", user);
             if (isAdmin) {
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
@@ -739,6 +740,8 @@ io.on("connection", async (socket) => {
                 console.log("📥 Mensajes por sala:", results.rows.length);
             }
 
+            console.log("📤 Enviando", results.rows.length, "mensajes al socket...");
+            
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
                 socket.emit("Mensaje en Chat", {
