@@ -12,8 +12,8 @@ export default function Login() {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 flex flex-col gap-4 min-w-70 shadow-2xl">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 flex flex-col gap-4 w-full max-w-sm shadow-2xl">
                 <h2 className="text-xl font-bold text-center text-gray-800">
                     💬 Whatsappn't
                 </h2>
@@ -27,7 +27,7 @@ export default function Login() {
                         onChange={e => setInput(e.target.value)}
                         placeholder="Tu nombre..."
                         autoFocus
-                        className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-pink-400 transition"
+                        className="border border-gray-200 rounded-xl px-4 py-2 text-base sm:text-sm focus:outline-none focus:border-pink-400 transition w-full"
                     />
                     <button
                         type="submit"

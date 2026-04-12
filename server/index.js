@@ -390,12 +390,20 @@ async function init() {
             callState.startCall({ from: user, to, type });
         });
 
-        socket.on("Aceptar Llamada", ({ callId, from, to }) => {
-            callState.acceptCall({ callId, from, to });
+        socket.on("Aceptar Llamada", ({ callId, from, to, rejected }) => {
+            if (rejected) {
+                callState.rejectCall({ from: user, to });
+            } else {
+                callState.acceptCall({ callId, from, to });
+            }
         });
 
-        socket.on("Terminar Llamada", ({ from, to }) => {
-            callState.endCall({ from, to });
+        socket.on("Rechazar Llamada", ({ from, to }) => {
+            callState.rejectCall({ from: user, to });
+        });
+
+        socket.on("Terminar Llamada", ({ to }) => {
+            callState.endCall({ from: user, to });
         });
 
         // ---- WEBRTC ----
