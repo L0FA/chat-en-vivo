@@ -23,7 +23,7 @@ export default function UsersPanel() {
                     <ul className="p-2 flex flex-col gap-1">
                         {connectedUsers.map(u => (
                             <li key={u} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-white ${u === user ? "bg-blue-500/20" : "hover:bg-white/5"}`}>
-                                <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)] flex-shrink-0"/>
+                                <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)] shrink-0"/>
                                 <span className="flex-1 truncate">{u}</span>
                                 {u === user && <span className="text-xs bg-blue-500/30 text-blue-300 px-1.5 rounded-full">vos</span>}
                             </li>

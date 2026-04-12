@@ -12,136 +12,557 @@ html {
 
 :root {
     --app-height: 100dvh;
+    --bg-color: #000;
+    --text-color: #fff;
 }
 
+/* BASE GLOBAL */
 body {
-    position: fixed;
+    min-height: 100vh;
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+
+    background: var(--bg-color);
+    color: var(--text-color);
+
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* ===================== THEMES ===================== */
 
-/* Rosa */
+/* 🌸 ROSA */
 .theme-rosa {
     --bg-color: #ffe4e6;
     --text-color: #4b004b;
-    --form-bg: #ffc0cb;
-    --form-btn-bg: #ff69b4;
 }
 
-html.theme-rosa body { background: var(--bg-color); color: var(--text-color); }
 html.theme-rosa::before {
     content: "";
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    inset: 0;
     pointer-events: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
     background-repeat: repeat;
-    background-size: 32px 32px;
+    background-size: 32px;
     animation: fall 15s linear infinite;
-    z-index: 0;
+    z-index: -1;
 }
 
-/* Dark */
-html.theme-dark body { background: #121212; color: white; }
-html.theme-dark header { background: rgba(30,30,30,0.8) !important; border-color: #333 !important; }
+@keyframes petalFloat {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-1.5px) scale(1.01); }
+}
 
-/* Dark Pink */
-html.theme-darkpink body { background: #330022; color: #ffb6c1; }
+.animate-petalFloat {
+    animation: petalFloat 4s ease-in-out infinite;
+}
+
+html.theme-rosa body {
+    box-shadow: inset 0 0 80px rgba(255, 182, 193, 0.15);
+}
+
+
+/* 🌑 DARK */
+.theme-dark {
+    --bg-color: #121212;
+    --text-color: #ffffff;
+}
+
+/* 🌑💗 DARK PINK */
+.theme-darkpink {
+    --bg-color: #000;
+    --text-color: #ffb6c1;
+}
+
 html.theme-darkpink::before {
     content: "";
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    inset: 0;
     pointer-events: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
     background-repeat: repeat;
-    background-size: 32px 32px;
+    background-size: 32px;
     animation: fall 15s linear infinite;
+    z-index: -1;
+}
+
+/* ⚡ NEON */
+.theme-neon {
+    --bg-color: #000;
+    --text-color: #00ff88;
+}
+
+html.theme-neon body {
+    animation: neonPulse 2s infinite;
+}
+
+/* 🌆 CYBERPUNK */
+.theme-cyberpunk {
+    --bg-color: #000;
+    --text-color: #ff0080;
+}
+
+html.theme-cyberpunk body {
+    animation: cyberShift 4s infinite;
+}
+
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-1px, 1px); }
+    40% { transform: translate(-1px, -1px); }
+    60% { transform: translate(1px, 1px); }
+    80% { transform: translate(1px, -1px); }
+    100% { transform: translate(0); }
+}
+
+.glitch {
+    animation: glitch 0.3s infinite;
+}
+
+.glitch-soft {
+    animation: glitch 1.2s infinite;
+}
+
+html.theme-cyberpunk::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 0, 128, 0.05),
+        rgba(255, 0, 128, 0.05) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+
+    animation: scanMove 4s linear infinite;
+
+    z-index: 1;
+}
+
+@keyframes scanMove {
+    from { transform: translateY(0); }
+    to { transform: translateY(4px); }
+}
+
+@keyframes cyberFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.95; }
+    52% { opacity: 0.7; }
+    54% { opacity: 1; }
+}
+
+html.theme-cyberpunk body {
+    animation: cyberFlicker 3s infinite;
+}
+
+
+/* 🟢 MATRIX */
+.theme-matrix {
+    --bg-color: #000;
+    --text-color: #00ff00;
+}
+
+html.theme-matrix body {
+    font-family: "Courier New", monospace;
+}
+
+/* 🧡 RETRO */
+.theme-retro {
+    --bg-color: #000;
+    --text-color: #ff6b35;
+}
+
+html.theme-retro body {
+    animation: retroPulse 3s infinite;
+}
+
+/* 🌊 OCEAN */
+.theme-ocean {
+    --bg-color: #000;
+    --text-color: #00a8cc;
+}
+
+html.theme-ocean::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+
+    background: linear-gradient(
+        to bottom,
+        rgba(100, 180, 255, 0.15),
+        transparent 40%
+    );
+
+    z-index: -1;
+}
+
+
+html.theme-ocean body {
+    animation: oceanWave 6s infinite;
+}
+
+html.theme-ocean::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+
+    background: radial-gradient(
+        ellipse at top,
+        rgba(100, 180, 255, 0.15),
+        transparent 60%
+    );
+
+    animation: waterPulse 6s ease-in-out infinite;
+
+    z-index: -1;
+}
+
+@keyframes waterPulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.4; }
+}
+
+
+@keyframes waterLight {
+    from { transform: translateX(0); }
+    to { transform: translateX(80px); }
+}
+
+.chat-bubble {
+    position: absolute;
+    bottom: 10px;
+
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+
+    background: rgba(180,220,255,0.7);
+    box-shadow: 0 0 8px rgba(180,220,255,0.9);
+
+    animation: bubbleUp 2s ease-out forwards;
+}
+
+@keyframes bubbleUp {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-40px) scale(1.4);
+        opacity: 0;
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-2px); }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes galaxyPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(180,100,255,0.4); }
+    50% { box-shadow: 0 0 20px rgba(180,100,255,0.7); }
+}
+
+.animate-galaxyPulse {
+    animation: galaxyPulse 3s ease-in-out infinite;
+}
+
+@keyframes firePulse {
+    0% { box-shadow: 0 0 10px rgba(255,100,0,0.5); }
+    50% { box-shadow: 0 0 20px rgba(255,150,0,0.8); }
+    100% { box-shadow: 0 0 10px rgba(255,100,0,0.5); }
+}
+
+.animate-firePulse {
+    animation: firePulse 2s ease-in-out infinite;
+}
+
+
+/* 🌲 FOREST */
+.theme-forest {
+    --bg-color: #000;
+    --text-color: #32cd32;
+}
+
+/* 🌌 GALAXY PRO */
+.theme-galaxy {
+    --bg-color: #000;
+    --text-color: #a855f7;
+}
+
+/* 🕳️ Agujero negro */
+html.theme-galaxy::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 80vmax;
+    height: 80vmax;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+
+    background:
+        radial-gradient(circle,
+            #000 0%,
+            #000 10%,
+            rgba(10,10,30,0.9) 15%,
+            rgba(59,130,246,0.4) 25%,
+            rgba(139,92,246,0.5) 40%,
+            rgba(59,130,246,0.2) 55%,
+            transparent 70%
+        );
+
+    box-shadow:
+        0 0 80px rgba(59,130,246,0.4),
+        0 0 160px rgba(139,92,246,0.3),
+        0 0 300px rgba(59,130,246,0.2);
+
+    animation: blackHoleBreath 6s ease-in-out infinite;
+
+    z-index: -2;
+}
+
+
+/* 💫 Anillo dinámico */
+html.theme-galaxy::after {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 120vmax;
+    height: 120vmax;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+
+    background:
+        conic-gradient(
+            from 0deg,
+            transparent,
+            rgba(59,130,246,0.9),
+            rgba(139,92,246,1),
+            rgba(59,130,246,0.9),
+            transparent
+        );
+
+    filter: blur(60px);
+    opacity: 0.7;
+
+    animation: blackHoleSpin 20s linear infinite;
+
+    z-index: -1;
+}
+
+/* Distorsión */
+html.theme-galaxy .gravitational-lens {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+
+    width: 250px;
+    height: 250px;
+
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+
+    backdrop-filter: blur(10px) contrast(140%) brightness(120%);
+    
+    box-shadow:
+        inset 0 0 60px rgba(0,0,0,1),
+        0 0 120px rgba(0,0,0,0.9);
+
     z-index: 0;
 }
 
-/* Neon */
-html.theme-neon body { background: linear-gradient(45deg, #0f0f23, #1a1a2e); color: #00ff88; }
 
-/* Cyberpunk */
-html.theme-cyberpunk body { background: linear-gradient(135deg, #0d001a, #1a0033); color: #ff0080; }
-
-/* Matrix */
-html.theme-matrix body {
-    background: #000000;
-    color: #00ff00;
-    font-family: "Courier New", monospace;
-    animation: matrixRain 5s linear infinite;
+/* Respiración */
+@keyframes blackHoleBreath {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
 }
 
-/* Retro */
-html.theme-retro body { background: linear-gradient(45deg, #ff6b35, #f7931e); color: #2d1b69; }
 
-/* Ocean */
-html.theme-ocean body { background: linear-gradient(135deg, #0077be, #00a8cc); color: white; }
-
-/* Forest */
-html.theme-forest body { background: linear-gradient(135deg, #228b22, #32cd32); color: white; }
-
-/* Galaxy */
-html.theme-galaxy body {
-    background: linear-gradient(135deg, #4b0082, #800080);
-    color: white;
-    animation: galaxy 10s ease-in-out infinite;
+/* 🔄 Rotación principal */
+@keyframes blackHoleSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.05); }
+    100% { transform: rotate(360deg) scale(1); }
 }
 
-/* Minimal */
-html.theme-minimal body { background: #ffffff; color: #333333; }
+/* 🔄 Rotación contraria (más realista) */
+@keyframes blackHoleSpinReverse {
+    0% { transform: rotate(360deg) scale(1.1); }
+    50% { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(0deg) scale(1.1); }
+}
 
-/* Vaporwave */
+.gravitational-lens {
+    position: fixed;
+    width: 250px;
+    height: 250px;
+    pointer-events: none;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: -1;
+
+    backdrop-filter: blur(6px) contrast(120%);
+    
+    background: radial-gradient(
+        circle,
+        rgba(255,255,255,0.08) 0%,
+        rgba(255,255,255,0.04) 40%,
+        rgba(0,0,0,0.2) 70%,
+        transparent 100%
+    );
+
+    box-shadow:
+        0 0 40px rgba(255,255,255,0.15),
+        inset 0 0 60px rgba(0,0,0,0.8);
+}
+
+
+
+/* ⚪ MINIMAL */
+.theme-minimal {
+    --bg-color: #f9f9f9;
+    --text-color: #111;
+}
+
+/* 🌈 VAPORWAVE PRO */
+.theme-vaporwave {
+    --bg-color: #000;
+    --text-color: #ff71ce;
+}
+
 html.theme-vaporwave body {
-    background: linear-gradient(135deg, #ff71ce, #01cdfe);
-    color: white;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Fire */
+/* 🌅 SOL */
+html.theme-vaporwave::before {
+    content: "";
+    position: fixed;
+    left: 50%;
+    top: 45%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    pointer-events: none;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            #ff2ec4 0px,
+            #ff2ec4 4px,
+            transparent 4px,
+            transparent 8px
+        ),
+        radial-gradient(circle, #ff2ec4 0%, #ff71ce 40%, transparent 70%);
+
+    box-shadow:
+        0 0 60px #ff2ec4,
+        0 0 120px #ff71ce;
+
+    z-index: -1;
+}
+
+/* 🟪 GRID EN PERSPECTIVA */
+html.theme-vaporwave::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 60%;
+    pointer-events: none;
+
+    background:
+        linear-gradient(to top, rgba(0,0,0,1), transparent 30%),
+        repeating-linear-gradient(
+            to right,
+            rgba(0,255,255,0.6) 0px,
+            rgba(0,255,255,0.6) 2px,
+            transparent 2px,
+            transparent 40px
+        ),
+        repeating-linear-gradient(
+            to top,
+            rgba(255,0,255,0.4) 0px,
+            rgba(255,0,255,0.4) 2px,
+            transparent 2px,
+            transparent 40px
+        );
+
+    transform: perspective(600px) rotateX(60deg);
+    transform-origin: bottom;
+
+    animation: vaporGridMove 8s linear infinite;
+
+    z-index: -1;
+}
+
+/* 🎬 MOVIMIENTO DEL GRID */
+@keyframes vaporGridMove {
+    from {
+        background-position: 0 0, 0 0, 0 0;
+    }
+    to {
+        background-position: 0 0, 0 40px, 40px 0;
+    }
+}
+
+
+
+/* 🔥 FIRE */
+.theme-fire {
+    --bg-color: #000;
+    --text-color: #ff4500;
+}
+
 html.theme-fire body {
-    background: linear-gradient(135deg, #ff4500, #ff6347);
-    color: white;
     animation: fire 2s ease-in-out infinite alternate;
 }
 
-/* Animaciones */
+/* ===================== ANIMACIONES ===================== */
+
 @keyframes fall {
-    0% { background-position: 0 -32px, 50px -64px, 100px -96px; }
-    100% { background-position: 0 100%, 50px 100%, 100px 100%; }
-}
-
-@keyframes galaxy {
-    0%, 100% { background: linear-gradient(135deg, #4b0082, #800080); }
-    50% { background: linear-gradient(135deg, #800080, #4b0082); }
-}
-
-@keyframes fire {
-    0% { background: linear-gradient(135deg, #ff4500, #ff6347); }
-    100% { background: linear-gradient(135deg, #ff6347, #ff4500); }
-}
-
-@keyframes matrixRain {
-    0% { background-position: 0 0; }
+    0% { background-position: 0 -32px; }
     100% { background-position: 0 100%; }
 }
 
 @keyframes neonPulse {
-    0%, 100% { 
-        box-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88, 0 0 20px #00ff88;
+    0%, 100% {
         text-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88;
     }
-    50% { 
-        box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88;
-        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
+    50% {
+        text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
     }
 }
 
+@keyframes cyberShift {
+    0% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(40deg); }
+    100% { filter: hue-rotate(0deg); }
+}
+
 @keyframes oceanWave {
-    0%, 100% { background: linear-gradient(135deg, #0077be, #00a8cc); }
-    50% { background: linear-gradient(135deg, #00a8cc, #0077be); }
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(30deg); }
 }
 
 @keyframes retroPulse {
@@ -151,57 +572,74 @@ html.theme-fire body {
 }
 
 @keyframes vaporGlow {
-    0%, 100% { 
+    0% {
         background: linear-gradient(135deg, #ff71ce, #01cdfe, #05ffa1, #b967ff);
-        background-size: 400% 400%;
         background-position: 0% 50%;
     }
-    50% { background-position: 100% 50%; }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
-@keyframes cyberShift {
-    0% { 
-        background: linear-gradient(135deg, #0d001a, #1a0033);
-        filter: hue-rotate(0deg);
-    }
-    50% { 
-        background: linear-gradient(135deg, #1a0033, #0d001a);
-        filter: hue-rotate(30deg);
-    }
-    100% { 
-        background: linear-gradient(135deg, #0d001a, #1a0033);
-        filter: hue-rotate(0deg);
-    }
+@keyframes fire {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.4); }
+}
+
+@keyframes galaxySpin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+/* ===================== COMPONENT ANIMATIONS ===================== */
+
+/* Entrada suave */
+.animate-fadeInUp {
+    animation: fadeInUp 0.5s ease forwards;
 }
 
 @keyframes fadeInUp {
-    from { 
+    from {
         opacity: 0;
         transform: translateY(20px);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
+/* Slide lateral */
+.animate-slideInRight {
+    animation: slideInRight 0.4s ease forwards;
+}
+
 @keyframes slideInRight {
-    from { 
+    from {
         opacity: 0;
         transform: translateX(100%);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateX(0);
     }
 }
 
+/* Pop */
+.animate-popIn {
+    animation: popIn 0.3s ease forwards;
+}
+
 @keyframes popIn {
-    from { 
+    from {
         opacity: 0;
         transform: scale(0.8);
     }
-    to { 
+    to {
         opacity: 1;
         transform: scale(1);
     }

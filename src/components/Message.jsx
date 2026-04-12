@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChat } from "../hooks/useChat";
 import { MusicCard } from "./MusicPanel";
 
+
 const QUICK_EMOJIS = ["❤️", "😂", "🥰", "😍", "🔥", "👍", "👎", "😢", "😮", "😡", "🎉", "💯", "🙏", "😭", "😊", "🤔", "🥺", "💀", "👀", "🤷"];
 
 function getUserColor(username) {
@@ -22,13 +23,76 @@ function highlightMentions(text, currentUser) {
 }
 
 export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic }) {
-    const { setReplyingTo } = useChat();
+    const { setReplyingTo, theme } = useChat();
     const [showPicker, setShowPicker] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState(message.content);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
 
     const isOwn = message.user === currentUser;
+    const getThemeStyles = () => {
+    switch (theme) {
+
+        case "rosa":
+    return isOwn
+        ? "bg-pink-300/70 text-pink-900 backdrop-blur shadow-[0_0_10px_rgba(255,182,193,0.6)] animate-petalFloat"
+        : "bg-pink-100/70 text-pink-800 backdrop-blur";
+
+        case "neon":
+            return isOwn
+                ? "bg-black text-green-400 border border-green-400 shadow-[0_0_10px_#00ff88] animate-neonPulse"
+                : "bg-black text-green-300 border border-green-400/50";
+
+    case "cyberpunk":
+        return isOwn
+            ? "bg-black text-pink-400 border border-pink-500 shadow-[0_0_10px_#ff0080] glitch"
+            : "bg-black text-pink-300 border border-pink-500/50 glitch-soft";
+
+
+        case "ocean":
+            return isOwn
+                ? "bg-blue-900/40 text-blue-100 backdrop-blur animate-float"
+                : "bg-blue-800/30 text-blue-100 backdrop-blur";
+
+        case "galaxy":
+            return isOwn
+                ? "bg-purple-900/40 text-purple-100 backdrop-blur shadow-[0_0_15px_rgba(180,100,255,0.5)] animate-galaxyPulse"
+                : "bg-purple-800/30 text-purple-100 backdrop-blur";
+
+        case "vaporwave":
+            return isOwn
+                ? "bg-pink-500/30 text-white backdrop-blur shadow-[0_0_10px_#ff71ce]"
+                : "bg-cyan-400/20 text-white backdrop-blur";
+
+        case "fire":
+            return isOwn
+                ? "bg-black text-orange-400 border border-orange-500 shadow-[0_0_12px_rgba(255,100,0,0.7)]"
+                : "bg-black text-orange-300 border border-orange-500/50";
+
+
+        case "forest":
+            return isOwn
+                ? "bg-green-700/40 text-green-100"
+                : "bg-green-600/30 text-green-100";
+
+        case "retro":
+            return isOwn
+                ? "bg-yellow-400 text-black animate-retroPulse"
+                : "bg-orange-300 text-black";
+
+        case "minimal":
+            return isOwn
+                ? "bg-gray-200 text-black"
+                : "bg-white text-gray-800";
+
+        default:
+            return isOwn
+                ? "bg-pink-400 text-white"
+                : "bg-white text-gray-800";
+    }
+};
+
     const color = getUserColor(message.user);
     const date = new Date(Number(message.timestamp));
     const hora = !isNaN(date.getTime())
@@ -160,11 +224,12 @@ if (message.type === "music") {
             <div className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
 
                 {/* Bubble */}
-                <div className={`relative w-fit max-w-[72vw] sm:max-w-[320px] px-3 py-2 rounded-2xl shadow-sm ${
-                    isOwn
-                        ? "bg-pink-400 text-white rounded-br-sm"
-                        : "bg-white text-gray-800 rounded-bl-sm"
-                } ${message.pending ? "opacity-60" : ""}`}>
+<div className={`relative w-fit max-w-[72vw] sm:max-w-[320px] px-3 py-2 rounded-2xl shadow-sm ${
+    getThemeStyles()
+} ${isOwn ? "rounded-br-sm" : "rounded-bl-sm"} ${
+    message.pending ? "opacity-60" : ""
+}`}>
+
 
                     {/* Nombre */}
                     {!isOwn && (

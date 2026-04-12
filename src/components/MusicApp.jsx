@@ -469,7 +469,7 @@ const [tab, setTab] = useState("cola");
                         )}
                     </div>
                     <div className="text-center">
-                        <p className="text-white font-bold text-sm truncate max-w-[240px]">
+                        <p className="text-white font-bold text-sm truncate max-w-60">
                             {cancionActual?.titulo || "Sin canción"}
                         </p>
                         <p className="text-white/50 text-xs">

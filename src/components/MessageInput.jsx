@@ -8,6 +8,9 @@ export default function MessageInput({ socket, onType, stopTyping }) {
     const [input, setInput] = useState("");
     const [showEmojiPanel, setShowEmojiPanel] = useState(false);
     const inputRef = useRef(null);
+    const bubbleContainerRef = useRef(null);
+    const typingCountRef = useRef(0);
+
 
     const handleSubmit = (e) => {
         if (e?.preventDefault) e.preventDefault();
@@ -31,10 +34,22 @@ export default function MessageInput({ socket, onType, stopTyping }) {
         inputRef.current?.focus();
     };
 
-    const handleChange = (e) => {
-        setInput(e.target.value);
-        onType();
-    };
+const handleChange = (e) => {
+    setInput(e.target.value);
+    onType();
+
+    typingCountRef.current++;
+
+    if (typingCountRef.current % 3 === 0) {
+        createBubble();
+
+        window.dispatchEvent(new Event("user-typing"));
+
+    }
+};
+
+
+
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -42,6 +57,23 @@ export default function MessageInput({ socket, onType, stopTyping }) {
             handleSubmit();
         }
     };
+
+    const createBubble = () => {
+    if (!bubbleContainerRef.current) return;
+
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+
+    // posición horizontal dentro del input
+    bubble.style.left = Math.random() * 100 + "%";
+
+    bubbleContainerRef.current.appendChild(bubble);
+
+    setTimeout(() => {
+        bubble.remove();
+    }, 2000);
+};
+
 
     return (
         <div
@@ -87,17 +119,25 @@ export default function MessageInput({ socket, onType, stopTyping }) {
                 </div>
 
                 {/* Input + submit */}
-                <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2">
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={handleChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Escribí un mensaje..."
-                        autoComplete="off"
-                        className="flex-1 text-sm bg-transparent focus:outline-none"
-                    />
+                <div className="relative flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2">
+    
+    {/* 🫧 contenedor de burbujas */}
+    <div
+        ref={bubbleContainerRef}
+        className="absolute inset-0 pointer-events-none overflow-hidden rounded-full"
+    />
+
+    <input
+        ref={inputRef}
+        type="text"
+        value={input}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Escribí un mensaje..."
+        autoComplete="off"
+        className="flex-1 text-sm bg-transparent focus:outline-none"
+    />
+
                     <button
                         type="button"
                         onClick={handleSubmit}
