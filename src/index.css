@@ -2,6 +2,12 @@
 
 html {
     font-size: 14px;
+    height: 100%;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
 }
 
 @media (min-width: 768px) {
@@ -18,10 +24,9 @@ html {
 
 /* BASE GLOBAL */
 body {
-    min-height: 100vh;
+    height: 100dvh;
     width: 100%;
     overflow-x: hidden;
-    overflow-y: auto;
     position: relative;
 
     background: var(--bg-color);

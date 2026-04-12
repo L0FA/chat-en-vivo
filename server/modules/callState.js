@@ -13,10 +13,22 @@ export default function createCallState(io) {
                 break;
             }
         }
+        for (const [callId, call] of activeCalls.entries()) {
+            if (call.fromSocketId === socketId || call.toSocketId === socketId) {
+                activeCalls.delete(callId);
+            }
+        }
     }
 
     function getSocketId(username) {
         return userSockets.get(username);
+    }
+
+    function getUsername(socketId) {
+        for (const [user, id] of userSockets.entries()) {
+            if (id === socketId) return user;
+        }
+        return null;
     }
 
     function emitToUser(username, event, data) {
@@ -26,22 +38,37 @@ export default function createCallState(io) {
         return true;
     }
 
-    function startCall({ from, to, type }) {
+    function emitToSocket(socketId, event, data) {
+        if (!socketId) return false;
+        io.to(socketId).emit(event, data);
+        return true;
+    }
+
+    function startCall({ from, fromSocketId, to, type }) {
         const callId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const toSocketId = getSocketId(to);
+
+        if (!toSocketId) {
+            console.log(`❌ Usuario ${to} no encontrado para llamada`);
+            return null;
+        }
 
         activeCalls.set(callId, {
             from,
+            fromSocketId,
             to,
+            toSocketId,
             type,
             status: "calling"
         });
 
-        emitToUser(to, "Llamada Entrante", {
+        emitToSocket(toSocketId, "Llamada Entrante", {
             from,
             type,
             callId
         });
 
+        console.log(`📞 Llamada iniciada: ${from} -> ${to} (callId: ${callId})`);
         return callId;
     }
 
@@ -51,13 +78,21 @@ export default function createCallState(io) {
 
         call.status = "active";
 
-        emitToUser(to, "Llamada Aceptada", { from });
-        emitToUser(from, "Llamada Aceptada", { from: to });
+        emitToUser(to, "Llamada Aceptada", { from, callId });
+        emitToUser(from, "Llamada Aceptada", { from: to, callId });
+
+        console.log(`📞 Llamada aceptada: ${callId}`);
+    }
+
+    function rejectCall({ from, to }) {
+        emitToUser(to, "Llamada Rechazada", { from });
+        emitToUser(from, "Llamada Rechazada", { from: to });
     }
 
     function endCall({ from, to }) {
         emitToUser(to, "Llamada Terminada", { from });
         emitToUser(from, "Llamada Terminada", { from: to });
+        console.log(`📞 Llamada terminada entre ${from} y ${to}`);
     }
 
     return {
@@ -65,7 +100,9 @@ export default function createCallState(io) {
         unregisterUser,
         startCall,
         acceptCall,
+        rejectCall,
         endCall,
+        getSocketId,
         activeCalls
     };
 }

@@ -387,7 +387,7 @@ async function init() {
 
         // ---- LLAMADAS ----
         socket.on("Iniciar Llamada", ({ to, type }) => {
-            callState.startCall({ from: user, to, type });
+            callState.startCall({ from: user, fromSocketId: socket.id, to, type });
         });
 
         socket.on("Aceptar Llamada", ({ callId, from, to, rejected }) => {

@@ -5,6 +5,12 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     server: {
+        host: "0.0.0.0",
+        port: 5173,
+        strictPort: false,
+        watch: {
+            usePolling: true
+        },
         proxy: {
             "/api": "http://localhost:3000",
             "/socket.io": {
@@ -12,5 +18,8 @@ export default defineConfig({
                 ws: true
             }
         }
+    },
+    build: {
+        sourcemap: true
     }
 });

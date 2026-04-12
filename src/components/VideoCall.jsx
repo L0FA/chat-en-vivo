@@ -193,6 +193,11 @@ export default function VideoCall({ socket }) {
             handleEndCall();
         });
 
+        socket.on("Llamada Rechazada", ({ from }) => {
+            console.log("Llamada rechazada por", from);
+            handleEndCall();
+        });
+
         return () => {
             socket.off("Llamada Entrante");
             socket.off("Llamada Aceptada");
@@ -200,6 +205,7 @@ export default function VideoCall({ socket }) {
             socket.off("Respuesta WebRTC");
             socket.off("ICE Candidate");
             socket.off("Llamada Terminada");
+            socket.off("Llamada Rechazada");
         };
     }, [socket, createPeerConnection, handleEndCall]);
 

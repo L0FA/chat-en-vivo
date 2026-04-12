@@ -52,20 +52,19 @@ export default function Chat() {
 
     // Fijar altura para evitar problemas con teclado en mobile
     useEffect(() => {
-        const initialHeight = window.innerHeight;
-        document.documentElement.style.setProperty("--app-height", `${initialHeight}px`);
-
-        const handleResize = () => {
-            if (window.innerHeight > initialHeight * 0.75) {
-                document.documentElement.style.setProperty(
-                    "--app-height",
-                    `${window.innerHeight}px`
-                );
-            }
+        const setHeight = () => {
+            document.documentElement.style.setProperty(
+                "--app-height",
+                `${window.innerHeight}px`
+            );
         };
 
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
+        setHeight();
+        window.addEventListener("resize", setHeight);
+        window.addEventListener("orientationchange", () => setTimeout(setHeight, 100));
+        return () => {
+            window.removeEventListener("resize", setHeight);
+        };
     }, []);
 
     const handleScroll = () => {
