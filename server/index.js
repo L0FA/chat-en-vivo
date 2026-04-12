@@ -142,6 +142,13 @@ async function init() {
         }
         console.log("✅ Miembros de sala de admins asegurados");
         
+        // Migrar TODOS los mensajes existentes a sala de admins
+        await db.execute({
+            sql: "UPDATE Mensajes SET room = ? WHERE room IS NULL OR room = ''",
+            args: [SALA_ADMINS_ID]
+        });
+        console.log("✅ Mensajes migrados a sala de admins");
+        
         // Crear sala privada para cada usuario existente
         const allUsers = await db.execute({ sql: "SELECT nombre FROM Usuarios", args: [] });
         for (const row of allUsers.rows) {
