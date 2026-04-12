@@ -226,19 +226,24 @@ io.on("connection", async (socket) => {
     const isAdmin = ADMIN_LIST.includes(user);
     const userRoom = isAdmin ? "sala-admins-global" : `privada-${user}`;
 
-    console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
+        console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
 
         // Registrar usuario
+        const adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
+        if (isAdmin) adminsArray.push(user);
+        
         connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin });
         callState.registerUser(socket.id, user);
-        io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre) });
+        io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: adminsArray });
+        socket.emit("Logged In", { user, isAdmin });
 
         // ---- DISCONNECT ----
         socket.on("disconnect", () => {
             console.log("🔴 Desconectado:", user);
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
-            io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre) });
+            const remainingAdmins = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
+            io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: remainingAdmins });
         });
 
         // ---- SALAS ----

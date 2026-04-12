@@ -101,7 +101,7 @@ export default function ProfileDropdown({ isAdmin = false }) {
                         transform: visible ? "translateY(0) scale(1)" : "translateY(8px) scale(0.97)",
                         transition: "opacity 0.2s ease, transform 0.2s ease"
                     }}
-                    className="absolute top-12 left-0 z-50 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl w-72"
+                    className="absolute top-12 left-0 z-50 bg-gray-900/95 border border-white/20 rounded-2xl p-4 shadow-2xl w-72"
                 >
                     {!editMode ? (
                         <div className="flex flex-col gap-4">

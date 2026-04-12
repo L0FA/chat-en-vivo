@@ -6,6 +6,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 export function useSocket(nombreUsuario, password = "") {
     const [socket, setSocket] = useState(null);
     const [connected, setConnected] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         if (!nombreUsuario) return;
@@ -33,17 +34,21 @@ export function useSocket(nombreUsuario, password = "") {
         newSocket.on("Admin Password Required", (data) => {
             alert(data.message);
         });
+        newSocket.on("Logged In", (data) => {
+            setIsAdmin(data.isAdmin || false);
+        });
 
         return () => {
             newSocket.off("connect");
             newSocket.off("disconnect");
             newSocket.off("Error");
             newSocket.off("Admin Password Required");
+            newSocket.off("Logged In");
             newSocket.disconnect();
             setSocket(null);
             setConnected(false);
         };
     }, [nombreUsuario, password]);
 
-    return { socket, connected };
+    return { socket, connected, isAdmin };
 }

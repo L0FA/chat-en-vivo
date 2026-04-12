@@ -15,7 +15,7 @@ import ProfileDropdown from "./ProfileDropdown";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
-    const { socket, connected } = useSocket(user, password);
+    const { socket, connected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);
@@ -117,7 +117,7 @@ export default function Chat() {
         return () => socket.off("Usuarios Conectados", handleUsers);
     }, [socket, setConnectedUsers]);
 
-    const [adminsList, setAdminsList] = useState([]);
+    const [adminsList, setAdminsList] = useState(() => userIsAdmin ? [user] : []);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
