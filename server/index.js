@@ -358,14 +358,6 @@ io.on("connection", async (socket) => {
             }
         });
 
-                broadcastMessage(socket, { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds });
-                cb?.({ status: "ok", id });
-            } catch (e) {
-                console.error("❌ ERROR TEXTO:", e);
-                cb?.({ status: "error" });
-            }
-        });
-
         // ---- IMAGEN ----
         socket.on("Imagen en Chat", async (payload, cb) => {
             const id = payload?.id || generateId();
@@ -680,13 +672,14 @@ io.on("connection", async (socket) => {
         });
 
         // ---- PAGINACIÓN ----
-        socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp } = {}, cb) => {
+        socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
             if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
+            const queryRoom = room || userRoom;
 
             try {
                 const results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp]
+                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                    args: [beforeTimestamp, queryRoom]
                 });
 
                 const rows = [...results.rows].reverse().map(row => ({
@@ -694,18 +687,19 @@ io.on("connection", async (socket) => {
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
-                    user: row.user || "Anonimo",
+                    user: row.user || "Invitado",
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0
+                    destructSeconds: row.destructSeconds || 0,
+                    room: row.room || null
                 }));
 
                 let hasMore = false;
                 if (rows.length > 0) {
                     const older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
-                        args: [rows[0].timestamp]
+                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) LIMIT 1",
+                        args: [rows[0].timestamp, queryRoom]
                     });
                     hasMore = older.rows.length > 0;
                 }
@@ -719,9 +713,10 @@ io.on("connection", async (socket) => {
 
         // ---- RECUPERACIÓN INICIAL ----
         try {
-            const results = await db.execute(
-                `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`
-            );
+            const results = await db.execute({
+                sql: `SELECT * FROM Mensajes WHERE room = ? OR (room IS NULL AND ? = 'sala-admins-global') ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                args: [userRoom, userRoom]
+            });
 
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
@@ -730,11 +725,12 @@ io.on("connection", async (socket) => {
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
-                    user: row.user || "Anonimo",
+                    user: row.user || "Invitado",
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0
+                    destructSeconds: row.destructSeconds || 0,
+                    room: row.room || null
                 });
             });
 
