@@ -719,11 +719,13 @@ io.on("connection", async (socket) => {
         });
 
         // ---- RECUPERACIÓN INICIAL ----
+        console.log("📥 Recuperando mensajes para room:", userRoom);
         try {
             const results = await db.execute({
                 sql: `SELECT * FROM Mensajes WHERE room = ? OR (room IS NULL AND ? = 'sala-admins-global') ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                 args: [userRoom, userRoom]
             });
+            console.log("📥 Mensajes encontrados:", results.rows.length);
 
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
