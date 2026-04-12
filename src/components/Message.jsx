@@ -22,7 +22,7 @@ function highlightMentions(text, currentUser) {
     });
 }
 
-export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar }) {
+export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar, adminsList = [] }) {
     const { setReplyingTo, theme, connectedUsers } = useChat();
     const [showPicker, setShowPicker] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -284,6 +284,7 @@ export default function Message({ message, currentUser, socket, onImageClick, on
                     {!isOwn && (
                         <span className="text-xs font-bold mb-1 block" style={{ color }}>
                             {message.user}
+                            {adminsList.includes(message.user) && <span className="ml-1 text-yellow-400">👑</span>}
                         </span>
                     )}
 

@@ -22,7 +22,7 @@ const TYPING_SOUND_OPTIONS = [
     { value: "none", label: "🔇 Silencio" },
 ];
 
-export default function ProfileDropdown() {
+export default function ProfileDropdown({ isAdmin = false }) {
     const { user, avatar, updateProfile } = useChat();
     const [open, setOpen] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -86,9 +86,10 @@ export default function ProfileDropdown() {
                 <div className="hidden sm:block text-left">
                     <p className={`text-xs font-bold ${open ? "text-white" : "text-white drop-shadow"}`}>
                         {user}
+                        {isAdmin && <span className="ml-1 text-yellow-300">👑</span>}
                     </p>
                     <p className={`text-[10px] ${open ? "text-white/70" : "text-white/50 drop-shadow"}`}>
-                        ▼
+                        {isAdmin ? "Admin" : "▼"}
                     </p>
                 </div>
             </button>

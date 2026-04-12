@@ -95,6 +95,58 @@ async function init() {
         )
     `);
 
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS Salas (
+            id TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            descripcion TEXT,
+            dueno TEXT NOT NULL,
+            creado INTEGER NOT NULL,
+            esPrivada INTEGER DEFAULT 1
+        )
+    `);
+
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS MiembrosSala (
+            salaId TEXT,
+            usuario TEXT,
+            rol TEXT DEFAULT 'member',
+            esAdmin INTEGER DEFAULT 0,
+            joinedAt INTEGER,
+            PRIMARY KEY (salaId, usuario)
+        )
+    `);
+
+    // Crear sala de admins si no existe
+    const SALA_ADMINS_ID = "sala-admins-global";
+    const ADMINS_LIST = ADMINS;
+    
+    try {
+        const existingSala = await db.execute({ sql: "SELECT id FROM Salas WHERE id = ?", args: [SALA_ADMINS_ID] });
+        if (!existingSala.rows.length) {
+            const timestamp = Date.now();
+            await db.execute({
+                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
+                args: [SALA_ADMINS_ID, "💎 Sala de Admins", "Sala exclusiva para admins", "La Compu Del Admin", timestamp, 1]
+            });
+            console.log("✅ Sala de Admins creada");
+        }
+        
+        // Asegurar miembros
+        const timestamp = Date.now();
+        for (const admin of ADMINS_LIST) {
+            await db.execute({
+                sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, esAdmin, joinedAt) VALUES (?, ?, ?, ?, ?)",
+                args: [SALA_ADMINS_ID, admin, "admin", 1, timestamp]
+            });
+        }
+        console.log("✅ Miembros de sala de admins asegurados");
+    } catch (e) {
+        console.error("❌ ERROR-crear-sala-admins:", e);
+    }
+
+    // ---- MIGRACIONES ----
+
     // ---- MIGRACIONES ----
     try {
         await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN edited INTEGER DEFAULT 0", args: [] });
@@ -165,6 +217,22 @@ io.on("connection", async (socket) => {
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
             io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre) });
+        });
+
+        // ---- SALAS ----
+        socket.on("Obtener Mis Salas", async (cb) => {
+            try {
+                const salas = await db.execute({
+                    sql: `SELECT s.*, m.esAdmin FROM Salas s 
+                          JOIN MiembrosSala m ON s.id = m.salaId 
+                          WHERE m.usuario = ?`,
+                    args: [user]
+                });
+                cb?.({ status: "ok", salas: salas.rows });
+            } catch (e) {
+                console.error("❌ ERROR OBTENER SALAS:", e);
+                cb?.({ status: "error" });
+            }
         });
 
         // ---- TEXTO ----

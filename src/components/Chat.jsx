@@ -14,7 +14,7 @@ import VideoCall from "./VideoCall";
 import ProfileDropdown from "./ProfileDropdown";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom } = useChat();
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
     const { socket, connected } = useSocket(user, password);
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
@@ -103,6 +103,21 @@ export default function Chat() {
         socket.on("Mensaje en Chat", handleNewMessage);
         return () => socket.off("Mensaje en Chat", handleNewMessage);
     }, [socket, user, isAtBottom, historialListo]);
+
+    // Escuchar usuarios conectados
+    useEffect(() => {
+        if (!socket) return;
+        
+        const handleUsers = ({ users, admins = [] }) => {
+            setConnectedUsers(users);
+            setAdminsList(admins);
+        };
+        
+        socket.on("Usuarios Conectados", handleUsers);
+        return () => socket.off("Usuarios Conectados", handleUsers);
+    }, [socket, setConnectedUsers]);
+
+    const [adminsList, setAdminsList] = useState([]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
@@ -203,7 +218,7 @@ export default function Chat() {
             >
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
-                    <ProfileDropdown />
+                    <ProfileDropdown isAdmin={adminsList.includes(user)} />
                     <RoomSelector scrolled={scrolled} socket={socket} />
                 </div>
 
@@ -255,6 +270,7 @@ export default function Chat() {
                         onImageClick={setLightboxSrc}
                         onPlayMusic={() => {}}
                         userAvatar={msg.user === user ? avatar : null}
+                        adminsList={adminsList}
                     />
                 ))}
 
