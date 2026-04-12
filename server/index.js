@@ -18,9 +18,9 @@ const PAGE_SIZE = 100;
 const generateId = () =>
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-const broadcastMessage = (socket, payload, room) => {
-    socket.emit("Mensaje en Chat", { ...payload, room });
-    if (room) socket.to(room).emit("Mensaje en Chat", { ...payload, room });
+const broadcastMessage = (socket, payload) => {
+    socket.emit("Mensaje en Chat", payload);
+    socket.broadcast.emit("Mensaje en Chat", payload);
 };
 
 const io = new Server(server, {
@@ -141,43 +141,34 @@ async function init() {
             });
         }
         console.log("✅ Miembros de sala de admins asegurados");
-
-        // Migrar TODOS los mensajes existentes a la sala de admins
-        await db.execute({
-            sql: "UPDATE Mensajes SET room = ? WHERE room IS NULL OR room = ''",
-            args: [SALA_ADMINS_ID]
-        });
-        console.log("✅ Mensajes migrados a sala de admins");
+        
+        // Crear sala privada para cada usuario existente
+        const allUsers = await db.execute({ sql: "SELECT nombre FROM Usuarios", args: [] });
+        for (const row of allUsers.rows) {
+            const username = row.nombre;
+            const privadaId = `privada-${username}`;
+            const exists = await db.execute({ sql: "SELECT id FROM Salas WHERE id = ?", args: [privadaId] });
+            if (!exists.rows.length) {
+                await db.execute({
+                    sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
+                    args: [privadaId, "📁 Mi Sala", "Tu sala privada", username, Date.now(), 1]
+                });
+            }
+            await db.execute({
+                sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
+                args: [privadaId, username, "owner", Date.now()]
+            });
+        }
+        console.log("✅ Salas privadas creadas");
+        
     } catch (e) {
         console.error("❌ ERROR-crear-sala-admins:", e);
     }
 
-    // Crear sala privada para cada usuario si no existe
-    const allUsuarios = await db.execute({ sql: "SELECT nombre FROM Usuarios", args: [] });
-    for (const row of allUsuarios.rows) {
-        const username = row.nombre;
-        const salaPrivadaId = `privada-${username}`;
-        
-        const existingSalaPrivada = await db.execute({ 
-            sql: "SELECT id FROM Salas WHERE id = ?", 
-            args: [salaPrivadaId] 
-        });
-        
-        if (!existingSalaPrivada.rows.length) {
-            await db.execute({
-                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
-                args: [salaPrivadaId, `📁 Mi Sala`, "Tu sala privada", username, Date.now(), 1]
-            });
-        }
-        
-        await db.execute({
-            sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
-            args: [salaPrivadaId, username, "owner", Date.now()]
-        });
-    }
-    console.log("✅ Salas privadas creadas para usuarios");
-
     // ---- MIGRACIONES ----
+    try {
+        await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN room TEXT", args: [] });
+    } catch {"_"}
     try {
         await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN edited INTEGER DEFAULT 0", args: [] });
     } catch {"_"}
@@ -187,14 +178,11 @@ async function init() {
     try {
         await db.execute({ sql: "ALTER TABLE Canciones ADD COLUMN portada TEXT", args: [] });
     } catch {"_"}
-    try {
-        await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN room TEXT", args: [] });
-    } catch {"_"}
     
 
     // ---- SOCKET ----
-    io.on("connection", async (socket) => {
-        const user = socket.handshake.auth?.NombreUsuario || "Invitado";
+io.on("connection", async (socket) => {
+    const user = socket.handshake.auth?.NombreUsuario || "Invitado";
         
     console.log("🟢 Conectando:", user);
 
@@ -226,17 +214,6 @@ async function init() {
             await db.execute({
                 sql: "INSERT INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
                 args: [user, null, Date.now()]
-            });
-
-            // Crear sala privada para el nuevo usuario
-            const salaPrivadaId = `privada-${user}`;
-            await db.execute({
-                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
-                args: [salaPrivadaId, "📁 Mi Sala", "Tu sala privada", user, Date.now(), 1]
-            });
-            await db.execute({
-                sql: "INSERT INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
-                args: [salaPrivadaId, user, "owner", Date.now()]
             });
         }
     } catch (e) {
@@ -288,15 +265,14 @@ async function init() {
             const replyToId = payload?.replyToId || null;
             const replyToUser = payload?.replyToUser || null;
             const destructSeconds = payload?.destructSeconds || 0;
-            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, 0, destructSeconds, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, 0, destructSeconds]
                 });
 
-                broadcastMessage(socket, { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds }, room);
+                broadcastMessage(socket, { id, type: "text", content, timestamp, user, replyToId, replyToUser, destructSeconds });
                 cb?.({ status: "ok", id });
             } catch (e) {
                 console.error("❌ ERROR TEXTO:", e);
@@ -309,15 +285,14 @@ async function init() {
             const id = payload?.id || generateId();
             const content = payload?.data || "";
             const timestamp = payload?.timestamp || Date.now();
-            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "image", null, null, 0, 0, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "image", null, null, 0, 0]
                 });
 
-                broadcastMessage(socket, { id, type: "image", content, timestamp, user }, room);
+                broadcastMessage(socket, { id, type: "image", content, timestamp, user });
                 cb?.({ status: "ok", id });
             } catch (e) {
                 console.error("❌ ERROR IMAGEN:", e);
@@ -329,15 +304,14 @@ async function init() {
             const id = payload?.id || generateId();
             const content = payload?.data || "";
             const timestamp = payload?.timestamp || Date.now();
-            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "video", null, null, 0, 0, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "video", null, null, 0, 0]
                 });
 
-                broadcastMessage(socket, { id, type: "video", content, timestamp, user }, room);
+                broadcastMessage(socket, { id, type: "video", content, timestamp, user });
                 cb?.({ status: "ok", id });
             } catch (e) {
                 console.error("❌ ERROR VIDEO:", e);
@@ -349,15 +323,14 @@ async function init() {
             const id = payload?.id || generateId();
             const content = payload?.data || "";
             const timestamp = payload?.timestamp || Date.now();
-            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "audio", null, null, 0, 0, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "audio", null, null, 0, 0]
                 });
 
-                broadcastMessage(socket, { id, type: "audio", content, timestamp, user }, room);
+                broadcastMessage(socket, { id, type: "audio", content, timestamp, user });
                 cb?.({ status: "ok", id });
             } catch (e) {
                 console.error("❌ ERROR AUDIO:", e);
@@ -370,15 +343,14 @@ async function init() {
             const content = payload?.data || "";
             const tipo = payload?.tipo || "emoji";
             const timestamp = payload?.timestamp || Date.now();
-            const room = payload?.room || userRoom;
 
             try {
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, `sticker-${tipo}`, null, null, 0, 0, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, `sticker-${tipo}`, null, null, 0, 0]
                 });
 
-                broadcastMessage(socket, { id, type: `sticker-${tipo}`, content, timestamp, user }, room);
+                broadcastMessage(socket, { id, type: `sticker-${tipo}`, content, timestamp, user });
                 cb?.({ status: "ok", id });
             } catch (e) {
                 console.error("❌ ERROR STICKER:", e);
@@ -387,23 +359,6 @@ async function init() {
 
         // ---- GIF ----
         socket.on("GIF en Chat", async (payload, cb) => {
-            const id = payload?.id || generateId();
-            const content = payload?.data || "";
-            const timestamp = payload?.timestamp || Date.now();
-            const room = payload?.room || userRoom;
-
-            try {
-                await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "gif", null, null, 0, 0, room]
-                });
-
-                broadcastMessage(socket, { id, type: "gif", content, timestamp, user }, room);
-                cb?.({ status: "ok", id });
-            } catch (e) {
-                console.error("❌ ERROR GIF:", e);
-            }
-        });
             const id = generateId();
             const content = payload?.url || "";
             const timestamp = Date.now();
@@ -639,13 +594,13 @@ async function init() {
         });
 
         // ---- PAGINACIÓN ----
-        socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
+        socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp } = {}, cb) => {
             if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
-            const queryRoom = room || userRoom;
+
             try {
                 const results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp, queryRoom]
+                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                    args: [beforeTimestamp]
                 });
 
                 const rows = [...results.rows].reverse().map(row => ({
@@ -653,12 +608,11 @@ async function init() {
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
-                    user: row.user || "Invitado",
+                    user: row.user || "Anonimo",
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0,
-                    room: row.room || null
+                    destructSeconds: row.destructSeconds || 0
                 }));
 
                 let hasMore = false;
@@ -679,10 +633,9 @@ async function init() {
 
         // ---- RECUPERACIÓN INICIAL ----
         try {
-            const results = await db.execute({
-                sql: `SELECT * FROM Mensajes WHERE room = ? OR (room IS NULL AND ? = 'sala-admins-global') ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                args: [userRoom, userRoom]
-            });
+            const results = await db.execute(
+                `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`
+            );
 
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
@@ -691,20 +644,19 @@ async function init() {
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
-                    user: row.user || "Invitado",
+                    user: row.user || "Anonimo",
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0,
-                    room: row.room || null
+                    destructSeconds: row.destructSeconds || 0
                 });
             });
 
             let hasMore = false;
             if (initialRows.length > 0) {
                 const older = await db.execute({
-                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) LIMIT 1",
-                    args: [initialRows[0].timestamp, userRoom]
+                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
+                    args: [initialRows[0].timestamp]
                 });
                 hasMore = older.rows.length > 0;
             }
