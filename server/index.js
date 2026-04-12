@@ -42,6 +42,14 @@ async function init() {
 
     // ---- TABLAS ----
     await db.execute(`
+        CREATE TABLE IF NOT EXISTS Usuarios (
+            nombre TEXT PRIMARY KEY,
+            avatar TEXT,
+            creado INTEGER NOT NULL
+        )
+    `);
+
+    await db.execute(`
         CREATE TABLE IF NOT EXISTS Mensajes (
             id TEXT PRIMARY KEY,
             content TEXT,
