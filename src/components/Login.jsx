@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useChat } from "../hooks/useChat";
 
 const ADMIN_USERS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
@@ -7,13 +7,51 @@ export default function Login() {
     const { login } = useChat();
     const [input, setInput] = useState(() => localStorage.getItem("NombreUsuario") || "");
     const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("RememberMe") === "true");
     const isAdmin = ADMIN_USERS.includes(input.trim());
+
+    useEffect(() => {
+        if (rememberMe && localStorage.getItem("NombreUsuario")) {
+            const savedPassword = localStorage.getItem("UserPassword") || "";
+            login(localStorage.getItem("NombreUsuario"), savedPassword);
+        }
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const nombre = input.trim() || "Invitado";
+        
+        if (rememberMe) {
+            localStorage.setItem("RememberMe", "true");
+            localStorage.setItem("NombreUsuario", nombre);
+            localStorage.setItem("UserPassword", password);
+        } else {
+            localStorage.setItem("RememberMe", "false");
+            localStorage.removeItem("NombreUsuario");
+            localStorage.removeItem("UserPassword");
+        }
+        
         login(nombre, password);
     };
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (!rememberMe) {
+                localStorage.removeItem("NombreUsuario");
+                localStorage.removeItem("UserPassword");
+                localStorage.removeItem("RememberMe");
+            }
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [rememberMe]);
+
+    useEffect(() => {
+        if (!rememberMe) {
+            localStorage.removeItem("NombreUsuario");
+            localStorage.removeItem("UserPassword");
+        }
+    }, [rememberMe]);
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" style={{ height: "100dvh" }}>
@@ -42,6 +80,15 @@ export default function Login() {
                             className="border border-gray-200 rounded-xl px-4 py-2 text-base sm:text-sm focus:outline-none focus:border-pink-400 transition w-full bg-white text-gray-900"
                         />
                     )}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={e => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 text-pink-400 rounded"
+                        />
+                        <span className="text-sm text-gray-600">Recordar sesión</span>
+                    </label>
                     <button
                         type="submit"
                         className="bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 rounded-xl transition"

@@ -255,6 +255,7 @@ io.on("connection", async (socket) => {
 
         // ---- SALAS ----
         socket.on("Obtener Mis Salas", async (cb) => {
+            console.log("📋 Obteniendo salas para:", user);
             try {
                 const salas = await db.execute({
                     sql: `SELECT s.*, m.esAdmin FROM Salas s 
@@ -262,6 +263,7 @@ io.on("connection", async (socket) => {
                           WHERE m.usuario = ?`,
                     args: [user]
                 });
+                console.log("📋 Salas encontradas:", salas.rows.length, salas.rows.map(s => s.id));
                 cb?.({ status: "ok", salas: salas.rows });
             } catch (e) {
                 console.error("❌ ERROR OBTENER SALAS:", e);
