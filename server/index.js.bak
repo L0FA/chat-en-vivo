@@ -641,11 +641,11 @@ async function init() {
         // ---- PAGINACIÓN ----
         socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
             if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
-            const queryRoom = room || userRoom;
+
             try {
                 const results = await db.execute({
                     sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp, queryRoom]
+                    args: [beforeTimestamp, room || null]
                 });
 
                 const rows = [...results.rows].reverse().map(row => ({
