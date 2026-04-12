@@ -252,232 +252,32 @@ export default function Message({ message, currentUser, socket, onImageClick, on
             }}
             id={`msg-${message.id}`}
         >
-
-            {/* Reply preview con contenido */}
-            {message.replyToUser && (
-                <div 
-                    className={`text-xs px-3 py-1 mb-1 rounded-lg border-l-2 border-blue-400 bg-blue-50/50 max-w-65 cursor-pointer hover:bg-blue-100/50 ${isOwn ? "self-end" : "self-start"}`}
-                    onClick={() => {
-                        const el = document.getElementById(`msg-${message.replyToId}`);
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                >
-                    <span className="font-bold text-blue-500">{message.replyToUser}:</span>
-                    <span className="text-gray-500 ml-1 truncate block">{message.replyToContent || "respondiendo..."}</span>
-                </div>
-            )}
-
-            <div className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-
-                {/* Avatar del usuario */}
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg shrink-0" style={{ background: color }}>
-                    {displayAvatar}
-                </div>
-
-                {/* Bubble */}
-                <div className={`relative w-fit max-w-[72vw] sm:max-w-[320px] px-3 py-2 rounded-2xl shadow-sm ${
-                    getThemeStyles()
-                } ${isOwn ? "rounded-br-sm" : "rounded-bl-sm"} ${
-                    message.pending ? "opacity-60" : ""
-                }`}>
-
-                    {/* Nombre */}
-                    {!isOwn && (
-                        <button 
-                            onClick={() => socket?.emit("Obtener Info Usuario", { targetUser: message.user }, (res) => {
-                                if (res.status === "ok") setUserInfoModal(res.info);
-                            })}
-                            className="text-xs font-bold mb-1 block hover:underline"
-                            style={{ color }}
-                        >
-                            {message.user}
-                            {adminsList.includes(message.user) && <span className="ml-1 text-yellow-400">👑</span>}
-                        </button>
-                    )}
-
-                    {renderBody()}
-
-                    {/* Edited tag */}
-                    {!!message.edited && !message.deleted && (
-                        <span className="text-xs opacity-60 italic ml-1">(editado)</span>
-                    )}
-
-                    {/* Hora + tick */}
-                    <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-                        <span className="text-xs opacity-60">{hora}</span>
-                        {isOwn && message.viewers && message.viewers.length > 0 && (
-                            <div className="relative group">
-                                <span className={`text-xs ${message.read ? "text-blue-200" : "opacity-60"}`}>
-                                    {message.pending ? "⏳" : "✓✓"}
-                                </span>
-                                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/90 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                                    Visto por: {message.viewers.join(", ")}
-                                </div>
+            {/* User Info Modal */}
+            {userInfoModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
+                    <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
+                                {userInfoModal.avatar || "😀"}
                             </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Acciones en hover (desktop) o always visible (mobile) */}
-                <div className={`flex flex-col gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity ${isOwn ? "items-end" : "items-start"}`}>
-                    {/* Reaccionar */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowPicker(p => !p)}
-                            className="text-sm bg-white border border-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow hover:scale-110 transition cursor-pointer active:scale-95"
-                            aria-label="Reaccionar"
-                        >
-                            😄
-                        </button>
-                        {showPicker && (
-                            <div className={`absolute ${isOwn ? "right-10" : "left-10"} top-0 flex gap-1 bg-[#1e1e1e] rounded-full px-3 py-2 shadow-xl z-50`}>
-                                {QUICK_EMOJIS.map(emoji => (
-                                    <button
-                                        key={emoji}
-                                        onClick={() => handleReaction(emoji)}
-                                        className="text-xl hover:scale-125 transition p-1"
-                                    >
-                                        {emoji}
-                                    </button>
-                                ))}
+                            <div className="text-center">
+                                <p className="text-white font-bold text-xl">{userInfoModal.nombre}</p>
+                                {adminsList.includes(userInfoModal.nombre) && <span className="text-yellow-400 text-sm">👑 Admin</span>}
                             </div>
-                        )}
+                            <div className="text-white/60 text-sm text-center mt-2">
+                                <p>Usuario desde:</p>
+                                <p className="font-bold">{userInfoModal.creado}</p>
+                            </div>
+                            <button 
+                                onClick={() => setUserInfoModal(null)}
+                                className="mt-4 bg-pink-400 hover:bg-pink-500 text-white px-6 py-2 rounded-full"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
                     </div>
-
-                    {/* Responder */}
-                    <button
-                        onClick={handleReply}
-                        className="text-sm bg-white border border-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow hover:scale-110 transition cursor-pointer active:scale-95"
-                        aria-label="Responder"
-                    >
-                        ↩️
-                    </button>
-
-                    {/* Editar/Eliminar (solo propios) */}
-                    {isOwn && !message.deleted && (
-                        <>
-                            <button
-                                onClick={() => { setEditing(true); setEditValue(message.content); }}
-                                className="text-sm bg-white border border-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow hover:scale-110 transition cursor-pointer active:scale-95"
-                                aria-label="Editar"
-                            >
-                                ✏️
-                            </button>
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="text-sm bg-white border border-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow hover:scale-110 transition cursor-pointer active:scale-95"
-                                aria-label="Eliminar"
-                            >
-                                🗑️
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Reacciones */}
-            {hasReactions && (
-                <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-                    {Object.entries(reactions).map(([emoji, users]) =>
-                        users.length > 0 ? (
-                            <button
-                                key={emoji}
-                                onClick={() => handleReaction(emoji)}
-                                title={users.join(", ")}
-                                className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition hover:scale-105 ${
-                                    users.includes(currentUser)
-                                        ? "bg-blue-100 border-blue-400 text-blue-600"
-                                        : "bg-white border-gray-200 text-gray-600"
-                                }`}
-                            >
-                                {emoji} <span className="font-bold">{users.length}</span>
-                            </button>
-                        ) : null
-                    )}
-                </div>
-            )}
-
-            {/* Confirm delete */}
-            {showDeleteConfirm && (
-                <div className="flex items-center gap-2 mt-1 bg-[#1a1a2e] text-white text-xs px-3 py-2 rounded-xl shadow-lg">
-                    <span>¿Eliminar?</span>
-                    <button onClick={handleDelete} className="bg-red-500 px-2 py-1 rounded-lg hover:bg-red-600 transition">🗑️ Sí</button>
-                    <button onClick={() => setShowDeleteConfirm(false)} className="bg-gray-600 px-2 py-1 rounded-lg hover:bg-gray-700 transition">❌ No</button>
-                </div>
-            )}
-
-            {/* Context Menu */}
-            {showContextMenu && (
-                <div
-                    className="fixed z-50 bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl py-1 min-w-40"
-                    style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-                >
-                    <button
-                        onClick={() => { handleReply(); setShowContextMenu(false); }}
-                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                    >
-                        ↩️ Responder
-                    </button>
-                    <button
-                        onClick={() => { setShowPicker(true); setShowContextMenu(false); }}
-                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                    >
-                        😀 Reaccionar
-                    </button>
-                    {isOwn && !message.deleted && (
-                        <>
-                            <button
-                                onClick={() => { setEditing(true); setEditValue(message.content); setShowContextMenu(false); }}
-                                className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                            >
-                                ✏️ Editar
-                            </button>
-                            <button
-                                onClick={() => { setShowDeleteConfirm(true); setShowContextMenu(false); }}
-                                className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 text-red-500 cursor-pointer"
-                            >
-                                🗑️ Eliminar
-                            </button>
-                        </>
-                    )}
-                    <button
-                        onClick={() => { 
-                            navigator.clipboard.writeText(message.content || message.type === "image" ? "[Imagen]" : "");
-                            setShowContextMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-                    >
-                        📋 Copiar
-                    </button>
                 </div>
             )}
         </div>
-
-        {/* User Info Modal */}
-        {userInfoModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
-                <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
-                            {userInfoModal.avatar || "😀"}
-                        </div>
-                        <div className="text-center">
-                            <p className="text-white font-bold text-xl">{userInfoModal.nombre}</p>
-                            {adminsList.includes(userInfoModal.nombre) && <span className="text-yellow-400 text-sm">👑 Admin</span>}
-                        </div>
-                        <div className="text-white/60 text-sm text-center mt-2">
-                            <p>Usuario desde:</p>
-                            <p className="font-bold">{userInfoModal.creado}</p>
-                        </div>
-                        <button 
-                            onClick={() => setUserInfoModal(null)}
-                            className="mt-4 bg-pink-400 hover:bg-pink-500 text-white px-6 py-2 rounded-full"
-                        >
-                            Cerrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
     );
 }
