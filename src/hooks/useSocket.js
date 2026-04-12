@@ -26,6 +26,10 @@ export function useSocket(nombreUsuario) {
 
         newSocket.on("connect", () => setConnected(true));
         newSocket.on("disconnect", () => setConnected(false));
+        newSocket.on("Error", (data) => {
+            console.error("Socket error:", data.message);
+            alert(data.message);
+        });
 
         return () => {
             newSocket.off("connect");

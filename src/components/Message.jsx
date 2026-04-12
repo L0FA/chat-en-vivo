@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChat } from "../hooks/useChat";
 import { MusicCard } from "./MusicPanel";
 
@@ -22,15 +22,19 @@ function highlightMentions(text, currentUser) {
     });
 }
 
-export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic }) {
-    const { setReplyingTo, theme } = useChat();
+export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar }) {
+    const { setReplyingTo, theme, connectedUsers } = useChat();
     const [showPicker, setShowPicker] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState(message.content);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
     
+    const longPressTimerRef = useRef(null);
 
     const isOwn = message.user === currentUser;
+    const displayAvatar = isOwn && userAvatar ? userAvatar : "😀";
     const getThemeStyles = () => {
     switch (theme) {
 
@@ -125,18 +129,16 @@ export default function Message({ message, currentUser, socket, onImageClick, on
 
     // ---- Contenido del mensaje ----
     const renderBody = () => {
-        // En renderBody(), antes del return final:
-if (message.type === "music") {
-    return (
-        <MusicCard
-            message={message}
-            onPlayHere={(videoId, title) => {
-                // Necesitamos subir esto al Chat — lo manejamos con prop
-                if (typeof onPlayMusic === "function") onPlayMusic(videoId, title);
-            }}
-        />
-    );
-}
+        if (message.type === "music") {
+            return (
+                <MusicCard
+                    message={message}
+                    onPlayHere={(videoId, title) => {
+                        if (typeof onPlayMusic === "function") onPlayMusic(videoId, title);
+                    }}
+                />
+            );
+        }
         if (message.deleted) {
             return <p className="text-sm text-gray-400 italic">🚫 Mensaje eliminado</p>;
         }
@@ -211,25 +213,72 @@ if (message.type === "music") {
     const reactions = message.reactions || {};
     const hasReactions = Object.values(reactions).some(users => users.length > 0);
 
-    return (
-        <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group mb-0.5 w-full`}>
+    // ---- Click derecho ----
+    const handleContextMenu = (e) => {
+        e.preventDefault();
+        setContextMenuPos({ x: e.clientX, y: e.clientY });
+        setShowContextMenu(true);
+    };
 
-            {/* Reply preview */}
+    useEffect(() => {
+        const handleClick = () => setShowContextMenu(false);
+        if (showContextMenu) {
+            document.addEventListener("click", handleClick);
+            return () => document.removeEventListener("click", handleClick);
+        }
+    }, [showContextMenu]);
+
+    return (
+        <div 
+            className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group mb-0.5 w-full select-none`}
+            onContextMenu={handleContextMenu}
+            onTouchStart={(e) => {
+                longPressTimerRef.current = setTimeout(() => {
+                    const touch = e.touches[0];
+                    setContextMenuPos({ x: touch.clientX, y: touch.clientY });
+                    setShowContextMenu(true);
+                }, 500);
+            }}
+            onTouchEnd={() => {
+                if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                }
+            }}
+            onTouchMove={() => {
+                if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                }
+            }}
+            id={`msg-${message.id}`}
+        >
+
+            {/* Reply preview con contenido */}
             {message.replyToUser && (
-                <div className={`text-xs px-3 py-1 mb-1 rounded-lg border-l-2 border-blue-400 bg-blue-50/50 max-w-65 truncate ${isOwn ? "self-end" : "self-start"}`}>
-                    <span className="font-bold text-blue-500">{message.replyToUser}:</span> respondiendo...
+                <div 
+                    className={`text-xs px-3 py-1 mb-1 rounded-lg border-l-2 border-blue-400 bg-blue-50/50 max-w-65 cursor-pointer hover:bg-blue-100/50 ${isOwn ? "self-end" : "self-start"}`}
+                    onClick={() => {
+                        const el = document.getElementById(`msg-${message.replyToId}`);
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                >
+                    <span className="font-bold text-blue-500">{message.replyToUser}:</span>
+                    <span className="text-gray-500 ml-1 truncate block">{message.replyToContent || "respondiendo..."}</span>
                 </div>
             )}
 
             <div className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
 
-                {/* Bubble */}
-<div className={`relative w-fit max-w-[72vw] sm:max-w-[320px] px-3 py-2 rounded-2xl shadow-sm ${
-    getThemeStyles()
-} ${isOwn ? "rounded-br-sm" : "rounded-bl-sm"} ${
-    message.pending ? "opacity-60" : ""
-}`}>
+                {/* Avatar del usuario */}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg shrink-0" style={{ background: color }}>
+                    {displayAvatar}
+                </div>
 
+                {/* Bubble */}
+                <div className={`relative w-fit max-w-[72vw] sm:max-w-[320px] px-3 py-2 rounded-2xl shadow-sm ${
+                    getThemeStyles()
+                } ${isOwn ? "rounded-br-sm" : "rounded-bl-sm"} ${
+                    message.pending ? "opacity-60" : ""
+                }`}>
 
                     {/* Nombre */}
                     {!isOwn && (
@@ -248,10 +297,15 @@ if (message.type === "music") {
                     {/* Hora + tick */}
                     <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
                         <span className="text-xs opacity-60">{hora}</span>
-                        {isOwn && (
-                            <span className={`text-xs ${message.read ? "text-blue-200" : "opacity-60"}`}>
-                                {message.pending ? "⏳" : message.read ? "✓✓" : "✓"}
-                            </span>
+                        {isOwn && message.viewers && message.viewers.length > 0 && (
+                            <div className="relative group">
+                                <span className={`text-xs ${message.read ? "text-blue-200" : "opacity-60"}`}>
+                                    {message.pending ? "⏳" : "✓✓"}
+                                </span>
+                                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/90 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                                    Visto por: {message.viewers.join(", ")}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -341,6 +395,52 @@ if (message.type === "music") {
                     <span>¿Eliminar?</span>
                     <button onClick={handleDelete} className="bg-red-500 px-2 py-1 rounded-lg hover:bg-red-600 transition">🗑️ Sí</button>
                     <button onClick={() => setShowDeleteConfirm(false)} className="bg-gray-600 px-2 py-1 rounded-lg hover:bg-gray-700 transition">❌ No</button>
+                </div>
+            )}
+
+            {/* Context Menu */}
+            {showContextMenu && (
+                <div
+                    className="fixed z-50 bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl shadow-2xl py-1 min-w-40"
+                    style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
+                >
+                    <button
+                        onClick={() => { handleReply(); setShowContextMenu(false); }}
+                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                    >
+                        ↩️ Responder
+                    </button>
+                    <button
+                        onClick={() => { setShowPicker(true); setShowContextMenu(false); }}
+                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                    >
+                        😀 Reaccionar
+                    </button>
+                    {isOwn && !message.deleted && (
+                        <>
+                            <button
+                                onClick={() => { setEditing(true); setEditValue(message.content); setShowContextMenu(false); }}
+                                className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                            >
+                                ✏️ Editar
+                            </button>
+                            <button
+                                onClick={() => { setShowDeleteConfirm(true); setShowContextMenu(false); }}
+                                className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 text-red-500 cursor-pointer"
+                            >
+                                🗑️ Eliminar
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => { 
+                            navigator.clipboard.writeText(message.content || message.type === "image" ? "[Imagen]" : "");
+                            setShowContextMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                    >
+                        📋 Copiar
+                    </button>
                 </div>
             )}
         </div>

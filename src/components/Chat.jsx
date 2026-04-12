@@ -6,17 +6,20 @@ import { useTyping } from "../hooks/useTyping";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import ThemeSelector from "./ThemeSelector";
+import RoomSelector from "./RoomSelector";
 import UsersPanel from "./UsersPanel";
 import Lightbox from "./Lightbox";
 import MusicApp from "./MusicApp";
 import VideoCall from "./VideoCall";
+import ProfileDropdown from "./ProfileDropdown";
 
 export default function Chat() {
-    const { user, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc } = useChat();
+    const { user, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom } = useChat();
     const { socket, connected } = useSocket(user);
-    const { historialListo, hasMore, loadOlder } = useMessages(socket);
+    const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const mensajesRef = useRef(null);
     const bottomRef = useRef(null);
@@ -24,6 +27,82 @@ export default function Chat() {
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [showMusicApp, setShowMusicApp] = useState(false);
+
+    // Efecto para actualizar título con notificaciones
+    useEffect(() => {
+        if (unreadCount > 0) {
+            document.title = `💬 (${unreadCount}) WhatsAppn't`;
+        } else {
+            document.title = "💬 WhatsAppn't";
+        }
+    }, [unreadCount]);
+
+    // Efecto para contar mensajes no leídos
+    useEffect(() => {
+        if (!socket || !historialListo) return;
+        
+        const playNotificationSound = () => {
+            const notificationSound = localStorage.getItem("notification-sound") || "default";
+            if (notificationSound === "none") return;
+            
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                if (notificationSound === "ding") {
+                    oscillator.frequency.value = 800;
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.3);
+                } else if (notificationSound === "chime") {
+                    oscillator.frequency.value = 600;
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                    
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.frequency.value = 900;
+                    gain2.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.15);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc2.start(audioCtx.currentTime + 0.15);
+                    osc2.stop(audioCtx.currentTime + 0.4);
+                } else if (notificationSound === "pop") {
+                    oscillator.frequency.value = 400;
+                    gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.1);
+                } else {
+                    // default
+                    oscillator.frequency.value = 600;
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.2);
+                }
+            } catch (e) {}
+        };
+        
+        const handleNewMessage = (msg) => {
+            if (msg.user !== user && !isAtBottom) {
+                setUnreadCount(prev => prev + 1);
+                playNotificationSound();
+            } else if (msg.user !== user) {
+                playNotificationSound();
+            }
+        };
+        
+        socket.on("Mensaje en Chat", handleNewMessage);
+        return () => socket.off("Mensaje en Chat", handleNewMessage);
+    }, [socket, user, isAtBottom, historialListo]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
@@ -73,6 +152,18 @@ export default function Chat() {
         setIsAtBottom(atBottom);
         if (atBottom) setShowScrollBtn(false);
         setScrolled(el.scrollTop > 10);
+        
+        // Marcar mensajes como leídos cuando se ven
+        if (socket && messages.length > 0) {
+            const visibleMessages = Array.from(el.querySelectorAll('[id^="msg-"]'));
+            visibleMessages.forEach(msgEl => {
+                const msgId = msgEl.id.replace('msg-', '');
+                const msg = messages.find(m => m.id === msgId);
+                if (msg && msg.user !== user) {
+                    socket.emit("Mensaje Leído", { messageId: msgId });
+                }
+            });
+        }
     };
 
     const handleLoadOlder = () => {
@@ -93,6 +184,7 @@ export default function Chat() {
         const el = mensajesRef.current;
         if (el) el.scrollTop = el.scrollHeight;
         setShowScrollBtn(false);
+        setUnreadCount(0);
     };
 
     return (
@@ -111,15 +203,8 @@ export default function Chat() {
             >
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
-                    <span className="text-xl">💬</span>
-                    <div>
-                        <h1 className={`font-bold text-sm leading-tight transition-colors duration-300 ${scrolled ? "text-gray-800" : "text-white drop-shadow"}`}>
-                            Whatsappn't
-                        </h1>
-                        <p className={`text-xs transition-colors duration-300 ${scrolled ? "text-gray-400" : "text-white/70 drop-shadow"}`}>
-                            {connected ? "🟢 Conectado" : "🔴 Desconectado"}
-                        </p>
-                    </div>
+                    <ProfileDropdown />
+                    <RoomSelector scrolled={scrolled} socket={socket} />
                 </div>
 
                 {/* Botones */}
@@ -169,6 +254,7 @@ export default function Chat() {
                         socket={socket}
                         onImageClick={setLightboxSrc}
                         onPlayMusic={() => {}}
+                        userAvatar={msg.user === user ? avatar : null}
                     />
                 ))}
 
@@ -204,6 +290,7 @@ export default function Chat() {
                 socket={socket}
                 onType={onType}
                 stopTyping={stopTyping}
+                currentRoom={currentRoom}
             />
 
             {/* Music App */}

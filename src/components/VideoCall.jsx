@@ -17,6 +17,7 @@ export default function VideoCall({ socket, onClose }) {
     const [callDuration, setCallDuration] = useState(0);
     const [incomingCall, setIncomingCall] = useState(null);
     const [showCallMenu, setShowCallMenu] = useState(false);
+    const [showDeviceSettings, setShowDeviceSettings] = useState(false);
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
@@ -25,6 +26,12 @@ export default function VideoCall({ socket, onClose }) {
     const timerRef = useRef(null);
 
     const otherUsers = connectedUsers.filter(u => u !== user);
+
+    const getDevicePreferences = () => {
+        const saved = localStorage.getItem("device-preferences");
+        if (saved) return JSON.parse(saved);
+        return { video: true, audio: true, facingMode: "user" };
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -81,10 +88,11 @@ export default function VideoCall({ socket, onClose }) {
     }, [socket]);
 
     const startLocalStream = async (video) => {
+        const prefs = getDevicePreferences();
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: video ? { facingMode: "user" } : false
+                audio: prefs.audio,
+                video: video && prefs.video ? { facingMode: prefs.facingMode || "user" } : false
             });
             localStreamRef.current = stream;
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
@@ -253,9 +261,70 @@ export default function VideoCall({ socket, onClose }) {
                                         </div>
                                     ))
                                 )}
+                                <div className="border-t border-white/10 mt-2 pt-2">
+                                    <button 
+                                        onClick={() => { setShowCallMenu(false); setShowDeviceSettings(true); }}
+                                        className="w-full text-white/60 text-xs px-3 py-2 hover:bg-white/10 cursor-pointer text-left"
+                                    >
+                                        🎛️ Configurar dispositivos
+                                    </button>
+                                </div>
                             </div>
                         </>
                     )}
+                </div>
+            )}
+
+            {/* Device Settings Modal */}
+            {showDeviceSettings && (
+                <div className="fixed inset-0 bg-black/70 z-10001 flex items-center justify-center p-4">
+                    <div className="bg-[#1e1e1e] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
+                        <h3 className="text-white font-bold text-lg mb-4">🎛️ Preferencias de dispositivo</h3>
+                        <div className="flex flex-col gap-4">
+                            <label className="flex items-center justify-between">
+                                <span className="text-white/80">🎤 Micrófono</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={getDevicePreferences().audio}
+                                    onChange={(e) => {
+                                        const prefs = getDevicePreferences();
+                                        localStorage.setItem("device-preferences", JSON.stringify({ ...prefs, audio: e.target.checked }));
+                                    }}
+                                    className="w-5 h-5"
+                                />
+                            </label>
+                            <label className="flex items-center justify-between">
+                                <span className="text-white/80">📹 Cámara</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={getDevicePreferences().video}
+                                    onChange={(e) => {
+                                        const prefs = getDevicePreferences();
+                                        localStorage.setItem("device-preferences", JSON.stringify({ ...prefs, video: e.target.checked }));
+                                    }}
+                                    className="w-5 h-5"
+                                />
+                            </label>
+                            <label className="flex items-center justify-between">
+                                <span className="text-white/80">👤 Cámara frontal</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={getDevicePreferences().facingMode === "user"}
+                                    onChange={(e) => {
+                                        const prefs = getDevicePreferences();
+                                        localStorage.setItem("device-preferences", JSON.stringify({ ...prefs, facingMode: e.target.checked ? "user" : "environment" }));
+                                    }}
+                                    className="w-5 h-5"
+                                />
+                            </label>
+                        </div>
+                        <button 
+                            onClick={() => setShowDeviceSettings(false)}
+                            className="mt-6 w-full bg-pink-500 text-white py-2 rounded-xl font-bold hover:bg-pink-600 cursor-pointer"
+                        >
+                            ✓ Listo
+                        </button>
+                    </div>
                 </div>
             )}
 

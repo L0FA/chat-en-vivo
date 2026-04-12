@@ -3,7 +3,7 @@ import { useChat } from "../hooks/useChat";
 import EmojiStickerPanel from "./EmojiStickerPanel";
 import MediaDropdown from "./MediaDropdown";
 
-export default function MessageInput({ socket, onType, stopTyping }) {
+export default function MessageInput({ socket, onType, stopTyping, currentRoom }) {
     const { replyingTo, setReplyingTo } = useChat();
     const [input, setInput] = useState("");
     const [showEmojiPanel, setShowEmojiPanel] = useState(false);
@@ -14,16 +14,18 @@ export default function MessageInput({ socket, onType, stopTyping }) {
 
     const handleSubmit = (e) => {
         if (e?.preventDefault) e.preventDefault();
-        if (!input.trim() || !socket) return;
+        if (!input.trim() || !socket || !currentRoom) return;
 
         const localId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const payload = {
             id: localId,
             msg: input,
             timestamp: Date.now(),
+            room: currentRoom,
             ...(replyingTo && {
                 replyToId: replyingTo.id,
-                replyToUser: replyingTo.user
+                replyToUser: replyingTo.user,
+                replyToContent: replyingTo.content?.substring(0, 100)
             })
         };
 
@@ -36,7 +38,9 @@ export default function MessageInput({ socket, onType, stopTyping }) {
 
 const handleChange = (e) => {
     setInput(e.target.value);
-    onType();
+    if (currentRoom) {
+        onType(currentRoom);
+    }
 
     typingCountRef.current++;
 

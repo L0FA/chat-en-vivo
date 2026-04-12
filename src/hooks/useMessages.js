@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "../hooks/useChat";
 
-export function useMessages(socket) {
+export function useMessages(socket, currentRoom = null) {
     const {
         addMessage, updateMessage, removeMessage,
         updateReaction, setConnectedUsers, setTypingUsers
@@ -10,11 +10,22 @@ export function useMessages(socket) {
     const [historialListo, setHistorialListo] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const oldestTimestamp = useRef(null);
+    const currentRoomRef = useRef(currentRoom);
 
     useEffect(() => {
-    if (!socket) return;
+        currentRoomRef.current = currentRoom;
+    }, [currentRoom]);
+
+    useEffect(() => {
+    if (!socket || !currentRoom) return;
+
+    oldestTimestamp.current = null;
+    setHistorialListo(false);
+    setHasMore(false);
 
 socket.on("Mensaje en Chat", (data) => {
+    if (data.room && data.room !== currentRoomRef.current) return;
+    
     const normalized = {
         ...data,
         deleted: Number(data.deleted) === 1,
@@ -44,22 +55,50 @@ socket.on("Mensaje en Chat", (data) => {
         updateReaction(messageId, emoji, user, action);
     });
 
-    socket.on("Usuarios Conectados", ({ users }) => {
-        setConnectedUsers(users);
+    socket.on("Estado Leído", ({ messageId, user: viewer, viewers }) => {
+        updateMessage(messageId, { read: true, viewers: viewers || [] });
     });
 
-    socket.on("Usuario Escribiendo", ({ user, typing }) => {
+    socket.on("Usuario Escribiendo", ({ user, typing, room }) => {
+        if (room !== currentRoomRef.current) return;
+        
+        if (typing) {
+            const typingSound = localStorage.getItem("typing-sound") || "default";
+            const lastTypingSoundTime = parseInt(localStorage.getItem("last-typing-sound") || "0");
+            const now = Date.now();
+            
+            if (typingSound !== "none" && now - lastTypingSoundTime > 3000) {
+                localStorage.setItem("last-typing-sound", now.toString());
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    if (typingSound === "soft") {
+                        oscillator.frequency.value = 300;
+                        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    } else if (typingSound === "click") {
+                        oscillator.frequency.value = 500;
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                    } else {
+                        oscillator.frequency.value = 400;
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    }
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.1);
+                } catch (e) {}
+            }
+        }
         setTypingUsers(prev =>
             typing
                 ? prev.includes(user) ? prev : [...prev, user]
                 : prev.filter(u => u !== user)
         );
-    });
-
-    socket.on("Reacciones Iniciales", (reacciones) => {
-        reacciones.forEach(({ messageId, emoji, user, action }) => {
-            updateReaction(messageId, emoji, user, action);
-        });
     });
 
     return () => {
@@ -68,16 +107,15 @@ socket.on("Mensaje en Chat", (data) => {
         socket.off("Mensaje Editado");
         socket.off("Mensaje Eliminado");
         socket.off("Reacción Actualizada");
-        socket.off("Usuarios Conectados");
+        socket.off("Estado Leído");
         socket.off("Usuario Escribiendo");
-        socket.off("Reacciones Iniciales");
     };
 // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [socket]);
+}, [socket, currentRoom]);
 
     const loadOlder = (callback) => {
-        if (!socket || !oldestTimestamp.current) return;
-        socket.emit("Cargar mensajes anteriores", { beforeTimestamp: oldestTimestamp.current }, (response) => {
+        if (!socket || !oldestTimestamp.current || !currentRoom) return;
+        socket.emit("Cargar mensajes anteriores", { beforeTimestamp: oldestTimestamp.current, room: currentRoom }, (response) => {
             if (!response || response.status !== "ok") return;
             const msgs = response.messages || [];
             if (msgs.length > 0) {

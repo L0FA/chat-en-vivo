@@ -7,7 +7,7 @@ export default function Login() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const nombre = input.trim() || "Anonimo";
+        const nombre = input.trim() || "Invitado";
         login(nombre);
     };
 
