@@ -214,7 +214,7 @@ io.on("connection", async (socket) => {
     console.log("🟢 Conectando:", user);
 
     // Verificar si el usuario ya está conectado y desconectar la sesión anterior
-    const existingSocketId = [...connectedUsers.entries()].find(([_, u]) => u.nombre === user)?.[0];
+        const existingSocketId = [...connectedUsers.entries()].find(([key, u]) => u.nombre === user)?.[0];
     if (existingSocketId) {
         console.log("🔄 Desconectando sesión anterior del usuario:", user);
         const oldSocket = io.sockets.sockets.get(existingSocketId);
@@ -302,7 +302,7 @@ io.on("connection", async (socket) => {
         }
 
         // Lista de admins: admins conectados + el nuevo si es admin
-        let adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
+        let adminsArray = [...connectedUsers.entries()].filter(([key, u]) => u.esAdmin).map(([key, u]) => u.nombre);
         
         // Siempre incluir admins hardcodeados
         adminsArray = [...new Set([...adminsArray, ...ADMIN_LIST])];
@@ -344,7 +344,7 @@ io.on("connection", async (socket) => {
             console.log("🔴 Desconectado:", user);
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
-            const remainingAdmins = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
+            const remainingAdmins = [...connectedUsers.entries()].filter(([key, u]) => u.esAdmin).map(([key, u]) => u.nombre);
             io.emit("Usuarios Conectados", { 
                 users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
                 admins: remainingAdmins 
@@ -466,7 +466,7 @@ io.on("connection", async (socket) => {
         socket.on("Banear Usuario", async ({ targetUser }, cb) => {
             if (!isAdmin) { cb?.({ status: "error", error: "No autorizado" }); return; }
             try {
-                const bannedUser = [...connectedUsers.entries()].find(([_, u]) => u.nombre === targetUser);
+                const bannedUser = [...connectedUsers.entries()].find(([key, u]) => u.nombre === targetUser);
                 if (bannedUser) {
                     const [socketId] = bannedUser;
                     io.to(socketId).emit("Baneado", { mensaje: "Has sido baneado del chat" });
