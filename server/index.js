@@ -301,21 +301,27 @@ io.on("connection", async (socket) => {
         connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar: userAvatar });
         callState.registerUser(socket.id, user);
         
-        // Obtener todos los usuarios con avatares de la DB para enviar a todos
+        // Obtener avatars de todos los usuarios de la DB para enriquecer los datos de usuarios conectados
         const allUsersResult = await db.execute({
             sql: "SELECT nombre, avatar FROM Usuarios",
             args: []
         });
         
-        const allUsersWithAvatars = allUsersResult.rows.map(row => ({
-            nombre: row.nombre,
-            avatar: row.avatar
+        const avatarsMap = {};
+        allUsersResult.rows.forEach(row => {
+            avatarsMap[row.nombre] = row.avatar;
+        });
+        
+        // Combinar usuarios conectados con sus avatares de la DB
+        const connectedUsersWithAvatars = [...connectedUsers.values()].map(u => ({
+            nombre: u.nombre,
+            avatar: u.avatar || avatarsMap[u.nombre] || null
         }));
         
-        console.log("📤 Enviando usuarios desde DB (conexión):", allUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
+        console.log("📤 Enviando usuarios conectados:", connectedUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
         
         io.emit("Usuarios Conectados", { 
-            users: allUsersWithAvatars,
+            users: connectedUsersWithAvatars,
             admins: adminsArray 
         });
         socket.emit("Logged In", { user, isAdmin });
@@ -353,20 +359,15 @@ io.on("connection", async (socket) => {
                 // Actualizar connectedUsers también
                 connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
                 
-                // Obtener TODOS los usuarios con sus avatares de la DB
-                const allUsersResult = await db.execute({
-                    sql: "SELECT nombre, avatar FROM Usuarios",
-                    args: []
-                });
-                
-                const allUsersWithAvatars = allUsersResult.rows.map(row => ({
-                    nombre: row.nombre,
-                    avatar: row.avatar
+                // Enviar solo usuarios conectados actualizados
+                const connectedUsersWithAvatars = [...connectedUsers.values()].map(u => ({
+                    nombre: u.nombre,
+                    avatar: u.avatar
                 }));
                 
-                console.log("📤 Enviando usuarios con avatares desde DB:", allUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
+                console.log("📤 Enviando usuarios conectados tras actualizar avatar:", connectedUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
                 io.emit("Usuarios Conectados", { 
-                    users: allUsersWithAvatars, 
+                    users: connectedUsersWithAvatars, 
                     admins: adminsArray 
                 });
                 cb?.({ status: "ok" });

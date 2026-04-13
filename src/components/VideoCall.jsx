@@ -24,6 +24,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [showVolumeSlider, setShowVolumeSlider] = useState(false);
     const [hasLocalVideo, setHasLocalVideo] = useState(false);
+    const [remoteHasVideo, setRemoteHasVideo] = useState(false);
     const [availableDevices, setAvailableDevices] = useState({ audioInputs: [], videoInputs: [], audioOutputs: [] });
     const [speakerVolume, setSpeakerVolume] = useState(() => {
         const saved = localStorage.getItem("speaker-volume");
@@ -98,8 +99,29 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
             const audio = new Audio("https://www.soundjay.com/phone/cell-phone-ringing-01.mp3");
             audio.loop = true;
             audio.volume = 0.7;
-            audio.play().catch(() => {});
-        } catch (e) {}
+            audio.play().then(() => {
+                console.log("🔔 Ringtone reproducido exitosamente");
+            }).catch(e => console.log("No se pudo reproducir ringtone:", e));
+        } catch (e) {
+            console.log("Error creando audio:", e);
+        }
+    };
+
+    const testAudioOutput = () => {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 440;
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+            console.log("🔊 Test de audio ejecutado");
+        } catch (e) {
+            console.error("Error en test de audio:", e);
+        }
     };
 
     const startLocalStream = async (video) => {
@@ -129,6 +151,9 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
 
         pc.ontrack = (e) => {
             const stream = e.streams[0];
+            const hasVideo = stream.getVideoTracks().length > 0;
+            setRemoteHasVideo(hasVideo);
+            
             if (remoteVideoRef.current && stream) {
                 remoteVideoRef.current.srcObject = stream;
             }
@@ -377,6 +402,26 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     }, [currentRoom]);
 
     useEffect(() => {
+        if (remoteAudioRef.current) {
+            remoteAudioRef.current.volume = speakerVolume / 100;
+        }
+    }, [speakerVolume]);
+
+    useEffect(() => {
+        if (callState === "active" && remoteAudioRef.current && localStreamRef.current) {
+            const audioTrack = localStreamRef.current.getAudioTracks()[0];
+            if (audioTrack) {
+                console.log("🎤 Audio track encontrado:", audioTrack.enabled ? "activo" : "muted");
+            }
+            
+            if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+                const remoteAudioTracks = remoteVideoRef.current.srcObject.getAudioTracks();
+                console.log("🔊 Tracks de audio remotos:", remoteAudioTracks.length);
+            }
+        }
+    }, [callState]);
+
+    useEffect(() => {
         if (incomingCall) {
             playRingtone();
         }
@@ -533,6 +578,13 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                             className="mb-4 text-sm text-pink-400 hover:text-pink-300 cursor-pointer flex items-center gap-2"
                         >
                             <span>🔄</span> Actualizar dispositivos
+                        </button>
+                        
+                        <button 
+                            onClick={testAudioOutput}
+                            className="mb-4 ml-2 text-sm text-green-400 hover:text-green-300 cursor-pointer flex items-center gap-2"
+                        >
+                            <span>🔊</span> Probar audio
                         </button>
                         
                         <div className="space-y-6">
@@ -761,10 +813,8 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                             showRemoteFull ? "w-full h-full" : "w-56 h-40"
                         }`}
                     >
-                        {(callType === "video" || !isVideoOff) ? (
-                            <>
-                                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
-                            </>
+                        {remoteHasVideo ? (
+                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                                 <div className="text-center">
@@ -781,7 +831,12 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                                 </div>
                             </div>
                         )}
-                        <audio ref={remoteAudioRef} autoPlay />
+                        <audio 
+                            ref={remoteAudioRef} 
+                            autoPlay 
+                            controls 
+                            className={remoteHasVideo ? "hidden" : "w-full mt-2"}
+                        />
                         
                         <div 
                             className="absolute inset-0 flex items-end justify-center pb-2 opacity-0 hover:opacity-100 bg-black/40 pointer-events-none"
