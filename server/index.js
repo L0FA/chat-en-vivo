@@ -300,8 +300,22 @@ io.on("connection", async (socket) => {
         
         connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar: userAvatar });
         callState.registerUser(socket.id, user);
+        
+        // Obtener todos los usuarios con avatares de la DB para enviar a todos
+        const allUsersResult = await db.execute({
+            sql: "SELECT nombre, avatar FROM Usuarios",
+            args: []
+        });
+        
+        const allUsersWithAvatars = allUsersResult.rows.map(row => ({
+            nombre: row.nombre,
+            avatar: row.avatar
+        }));
+        
+        console.log("📤 Enviando usuarios desde DB (conexión):", allUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
+        
         io.emit("Usuarios Conectados", { 
-            users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+            users: allUsersWithAvatars,
             admins: adminsArray 
         });
         socket.emit("Logged In", { user, isAdmin });

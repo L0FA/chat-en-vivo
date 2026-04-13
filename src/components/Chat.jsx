@@ -116,12 +116,15 @@ export default function Chat() {
         if (!socket) return;
         
         const handleUsers = ({ users, admins = [] }) => {
+            console.log("📋 RAW usuarios recibidos:", JSON.stringify(users).slice(0, 200));
+            
             // Normalizar usuarios - puede ser array de strings o de objetos
             const normalizedUsers = users.map(u => {
                 if (typeof u === "string") return { nombre: u, avatar: null };
                 return { nombre: u?.nombre || u, avatar: u?.avatar || null };
             });
-            console.log("📋 Usuarios recibidos:", normalizedUsers.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
+            
+            console.log("📋 Normalizado:", normalizedUsers.map(u => `${u.nombre.substring(0,10)}: avatar=${u.avatar ? "SÍ" : "NO"}`));
             setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
         };
