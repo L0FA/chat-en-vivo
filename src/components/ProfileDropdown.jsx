@@ -31,6 +31,8 @@ export default function ProfileDropdown({ isAdmin = false }) {
     const [newAvatar, setNewAvatar] = useState(avatar);
     const [newSound, setNewSound] = useState(() => localStorage.getItem("notification-sound") || "default");
     const [newTypingSound, setNewTypingSound] = useState(() => localStorage.getItem("typing-sound") || "default");
+    const [avatarMode, setAvatarMode] = useState("emoji");
+    const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -73,6 +75,7 @@ export default function ProfileDropdown({ isAdmin = false }) {
     };
 
     const currentAvatar = avatar || "😀";
+    const isCurrentImageAvatar = currentAvatar.startsWith("data:image");
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -80,10 +83,14 @@ export default function ProfileDropdown({ isAdmin = false }) {
                 onClick={() => open ? handleClose() : setOpen(true)}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-white/10 transition cursor-pointer"
             >
-                <div className="w-8 h-8 rounded-full bg-pink-400 flex items-center justify-center text-lg shadow">
-                    {currentAvatar}
-                </div>
-                <div className="hidden sm:block text-left">
+                {isCurrentImageAvatar ? (
+                    <img src={currentAvatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover shadow" />
+                ) : (
+                    <div className="w-8 h-8 rounded-full bg-pink-400 flex items-center justify-center text-lg shadow">
+                        {currentAvatar}
+                    </div>
+                )}
+                <div className="text-left">
                     <p className={`text-xs font-bold ${open ? "text-white" : "text-white drop-shadow"}`}>
                         {user}
                         {isAdmin && <span className="ml-1 text-yellow-300">👑</span>}
@@ -106,9 +113,13 @@ export default function ProfileDropdown({ isAdmin = false }) {
                     {!editMode ? (
                         <div className="flex flex-col gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 rounded-full bg-pink-400 flex items-center justify-center text-3xl shadow-lg">
-                                    {currentAvatar}
-                                </div>
+                                {isCurrentImageAvatar ? (
+                                    <img src={currentAvatar} alt="Avatar" className="w-14 h-14 rounded-full object-cover shadow-lg" />
+                                ) : (
+                                    <div className="w-14 h-14 rounded-full bg-pink-400 flex items-center justify-center text-3xl shadow-lg">
+                                        {currentAvatar}
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-white font-bold text-lg">{user}</p>
                                     <p className="text-white/60 text-xs">En línea</p>
@@ -144,21 +155,81 @@ export default function ProfileDropdown({ isAdmin = false }) {
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-white/70 text-xs">Tu avatar</label>
-                                <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto p-1">
-                                    {AVATAR_OPTIONS.map((a) => (
-                                        <button
-                                            key={a}
-                                            onClick={() => setNewAvatar(a)}
-                                            className={`text-2xl p-1 rounded-lg transition cursor-pointer ${
-                                                newAvatar === a 
-                                                    ? "bg-pink-500/50 scale-110" 
-                                                    : "hover:bg-white/10"
-                                            }`}
-                                        >
-                                            {a}
-                                        </button>
-                                    ))}
+                                <div className="flex gap-2 mb-2">
+                                    <button
+                                        onClick={() => setAvatarMode("emoji")}
+                                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg transition cursor-pointer ${
+                                            avatarMode === "emoji" ? "bg-pink-500/50 border border-pink-400" : "bg-white/10"
+                                        }`}
+                                    >
+                                        😊 Emoji
+                                    </button>
+                                    <button
+                                        onClick={() => setAvatarMode("photo")}
+                                        className={`flex-1 text-xs px-2 py-1.5 rounded-lg transition cursor-pointer ${
+                                            avatarMode === "photo" ? "bg-pink-500/50 border border-pink-400" : "bg-white/10"
+                                        }`}
+                                    >
+                                        📷 Foto
+                                    </button>
                                 </div>
+                                {avatarMode === "emoji" ? (
+                                    <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto p-1">
+                                        {AVATAR_OPTIONS.map((a) => (
+                                            <button
+                                                key={a}
+                                                onClick={() => setNewAvatar(a)}
+                                                className={`text-2xl p-1 rounded-lg transition cursor-pointer ${
+                                                    newAvatar === a 
+                                                        ? "bg-pink-500/50 scale-110" 
+                                                        : "hover:bg-white/10"
+                                                }`}
+                                            >
+                                                {a}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2">
+                                        {newAvatar && newAvatar.startsWith("data:image") ? (
+                                            <div className="relative">
+                                                <img src={newAvatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-pink-400" />
+                                                <button
+                                                    onClick={() => setNewAvatar("")}
+                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center text-4xl">
+                                                👤
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setNewAvatar(reader.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="text-xs bg-blue-500/80 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition cursor-pointer"
+                                        >
+                                            {newAvatar && newAvatar.startsWith("data:image") ? "Cambiar foto" : "Subir foto"}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-white/70 text-xs">Sonido de notificación</label>

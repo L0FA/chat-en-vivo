@@ -17,8 +17,6 @@ export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
     const { socket, connected, isAdmin: userIsAdmin } = useSocket(user, password);
     
-    console.log("🔵 Chat rendered, messages count:", messages?.length, "currentRoom:", currentRoom, "socket:", !!socket);
-    
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);
@@ -50,6 +48,9 @@ export default function Chat() {
             
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") {
+                    audioCtx.resume();
+                }
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 
@@ -107,6 +108,8 @@ export default function Chat() {
         return () => socket.off("Mensaje en Chat", handleNewMessage);
     }, [socket, user, isAtBottom, historialListo]);
 
+    const [adminsList, setAdminsList] = useState(() => userIsAdmin ? [user] : []);
+
     // Escuchar usuarios conectados
     useEffect(() => {
         if (!socket) return;
@@ -119,8 +122,6 @@ export default function Chat() {
         socket.on("Usuarios Conectados", handleUsers);
         return () => socket.off("Usuarios Conectados", handleUsers);
     }, [socket, setConnectedUsers]);
-
-    const [adminsList, setAdminsList] = useState(() => userIsAdmin ? [user] : []);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
@@ -276,13 +277,6 @@ export default function Chat() {
                         adminsList={adminsList}
                     />
                 ))}
-
-                {/* DEBUG: if messages exist but nothing rendered */}
-                {messages.length > 0 && (
-                    <div className="text-center text-red-500 text-xs p-2">
-                        Hay {messages.length} mensajes pero no se ven
-                    </div>
-                )}
 
                 {/* Indicador de escritura */}
                 {typingUsers.filter(u => u !== user).length > 0 && (

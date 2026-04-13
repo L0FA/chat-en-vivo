@@ -16,15 +16,29 @@ export function useMessages(socket, currentRoom = null) {
         currentRoomRef.current = currentRoom;
     }, [currentRoom]);
 
+    // Efecto para cargar mensajes cuando cambia la sala
     useEffect(() => {
-    if (!socket) return;
+        if (!socket || !currentRoom) return;
+        
+        oldestTimestamp.current = null;
+        setHistorialListo(false);
+        setHasMore(false);
 
-    oldestTimestamp.current = null;
-    setHistorialListo(false);
-    setHasMore(false);
+        socket.emit("Cargar Mensajes Sala", { room: currentRoom }, (res) => {
+            if (res?.status === "ok") {
+                console.log(`📥 Cargados ${res.count} mensajes para sala ${currentRoom}`);
+            }
+        });
+    }, [socket, currentRoom]);
 
-socket.on("Mensaje en Chat", (data) => {
-    console.log("📨 Mensaje recibido:", data.room, "currentRoom:", currentRoomRef.current);
+    useEffect(() => {
+        if (!socket) return;
+
+        oldestTimestamp.current = null;
+        setHistorialListo(false);
+        setHasMore(false);
+
+    socket.on("Mensaje en Chat", (data) => {
     // if (data.room && data.room !== currentRoomRef.current) return;
     
     const normalized = {
@@ -72,6 +86,9 @@ socket.on("Mensaje en Chat", (data) => {
                 localStorage.setItem("last-typing-sound", now.toString());
                 try {
                     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioCtx.state === "suspended") {
+                        audioCtx.resume();
+                    }
                     const oscillator = audioCtx.createOscillator();
                     const gainNode = audioCtx.createGain();
                     oscillator.connect(gainNode);

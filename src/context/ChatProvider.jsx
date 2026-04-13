@@ -4,7 +4,7 @@ import { ChatContext } from "./ChatContext";
 export function ChatProvider({ children }) {
     const [user, setUser] = useState(() => localStorage.getItem("NombreUsuario") || "");
     const [password, setPassword] = useState(() => localStorage.getItem("UserPassword") || "");
-    const [avatar, setAvatar] = useState(() => localStorage.getItem("UserAvatar") || "");
+    const [avatar, setAvatar] = useState(() => localStorage.getItem("UserAvatar") || "😀");
     const [messages, setMessages] = useState([]);
     const [theme, setTheme] = useState(() => localStorage.getItem("chat-theme") || "default");
     const [connectedUsers, setConnectedUsers] = useState([]);
@@ -98,10 +98,7 @@ export function ChatProvider({ children }) {
         localStorage.setItem("UserPassword", password);
         setUser(nombre);
         setPassword(password);
-        if (nuevoAvatar !== null) {
-            setAvatar(nuevoAvatar);
-            localStorage.setItem("UserAvatar", nuevoAvatar);
-        }
+        setAvatar(localStorage.getItem("UserAvatar") || "😀");
     }, []);
 
     const updateProfile = useCallback((nombre, nuevoAvatar) => {
@@ -110,8 +107,10 @@ export function ChatProvider({ children }) {
             setUser(nombre);
         }
         if (nuevoAvatar !== undefined) {
-            setAvatar(nuevoAvatar);
-            localStorage.setItem("UserAvatar", nuevoAvatar);
+            if (nuevoAvatar === "" || nuevoAvatar.startsWith("data:image")) {
+                setAvatar(nuevoAvatar);
+                localStorage.setItem("UserAvatar", nuevoAvatar);
+            }
         }
     }, []);
 

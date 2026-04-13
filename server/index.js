@@ -51,10 +51,11 @@ async function init() {
 
     // Agregar admins por defecto si no existen
     const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+    const APP_START_DATE = new Date("2026-04-01").getTime();
     for (const admin of ADMINS) {
         await db.execute({
             sql: "INSERT OR IGNORE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
-            args: [admin, null, Date.now()]
+            args: [admin, null, APP_START_DATE]
         });
     }
 
@@ -158,7 +159,7 @@ async function init() {
             if (!exists.rows.length) {
                 await db.execute({
                     sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
-                    args: [privadaId, "📁 Mi Sala", "Tu sala privada", username, Date.now(), 1]
+                    args: [privadaId, "💬 Chat contigo", "Tu espacio personal", username, Date.now(), 1]
                 });
             }
             await db.execute({
@@ -167,6 +168,24 @@ async function init() {
             });
         }
         console.log("✅ Salas privadas creadas");
+        
+        // Crear sala global si no existe
+        const SALA_GLOBAL_ID = "sala-global";
+        const globalExists = await db.execute({ sql: "SELECT id FROM Salas WHERE id = ?", args: [SALA_GLOBAL_ID] });
+        if (!globalExists.rows.length) {
+            await db.execute({
+                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
+                args: [SALA_GLOBAL_ID, "🌍 Chat Global", "Chat para todos", "Sistema", Date.now(), 0]
+            });
+        }
+        // Agregar todos los usuarios como miembros de la sala global
+        for (const row of allUsers.rows) {
+            await db.execute({
+                sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
+                args: [SALA_GLOBAL_ID, row.nombre, "member", Date.now()]
+            });
+        }
+        console.log("✅ Sala global creada");
         
     } catch (e) {
         console.error("❌ ERROR-crear-sala-admins:", e);
@@ -222,6 +241,23 @@ io.on("connection", async (socket) => {
                 sql: "INSERT INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
                 args: [user, null, Date.now()]
             });
+            
+            // Crear sala privada para el nuevo usuario
+            const privadaId = `privada-${user}`;
+            await db.execute({
+                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado, esPrivada) VALUES (?, ?, ?, ?, ?, ?)",
+                args: [privadaId, "💬 Chat contigo", "Tu espacio personal", user, Date.now(), 1]
+            });
+            await db.execute({
+                sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
+                args: [privadaId, user, "owner", Date.now()]
+            });
+            
+            // Agregar a sala global
+            await db.execute({
+                sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
+                args: ["sala-global", user, "member", Date.now()]
+            });
         }
     } catch (e) {
         console.error("❌ ERROR VALIDAR USUARIO:", e);
@@ -231,14 +267,19 @@ io.on("connection", async (socket) => {
     }
 
     const isAdmin = ADMIN_LIST.includes(user);
-    const userRoom = isAdmin ? "sala-admins-global" : `privada-${user}`;
+    const userRoom = isAdmin ? "sala-admins-global" : "sala-global";
 
         console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
-        console.log("🔧 ADMINS del ENV:", process.env.ADMINS);
 
-        // Registrar usuario
-        const adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
-        if (isAdmin) adminsArray.push(user);
+        // Lista de admins: admins conectados + el nuevo si es admin
+        let adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
+        
+        // Siempre incluir admins hardcodeados
+        adminsArray = [...new Set([...adminsArray, ...ADMIN_LIST])];
+        
+        if (isAdmin && !adminsArray.includes(user)) {
+            adminsArray.push(user);
+        }
         
         connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin });
         callState.registerUser(socket.id, user);
@@ -721,27 +762,69 @@ io.on("connection", async (socket) => {
             }
         });
 
-        // ---- RECUPERACIÓN INICIAL ----
-        console.log("📥 Recuperando mensajes para:", user, "isAdmin:", isAdmin, "userRoom:", userRoom);
-        
+        // ---- CARGAR MENSAJES POR SALA ----
+        socket.on("Cargar Mensajes Sala", async ({ room }, cb) => {
+            try {
+                let results;
+                if (isAdmin) {
+                    results = await db.execute({
+                        sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                        args: []
+                    });
+                } else {
+                    results = await db.execute({
+                        sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                        args: [room]
+                    });
+                }
+                
+                const rows = [...results.rows].reverse();
+                rows.forEach(row => {
+                    socket.emit("Mensaje en Chat", {
+                        id: row.id,
+                        type: row.type || "text",
+                        content: row.content,
+                        timestamp: row.timestamp,
+                        user: row.user || "Invitado",
+                        replyToId: row.replyToId || null,
+                        replyToUser: row.replyToUser || null,
+                        edited: Number(row.edited) === 1,
+                        destructSeconds: row.destructSeconds || 0,
+                        room: row.room || null
+                    });
+                });
+
+                let hasMore = false;
+                if (rows.length > 0) {
+                    const older = await db.execute({
+                        sql: "SELECT 1 FROM Mensajes WHERE room = ? AND timestamp < ? LIMIT 1",
+                        args: [room, rows[0].timestamp]
+                    });
+                    hasMore = older.rows.length > 0;
+                }
+
+                socket.emit("historial cargado", { hasMore, pageSize: PAGE_SIZE });
+                cb?.({ status: "ok", count: rows.length });
+            } catch (e) {
+                console.error("❌ ERROR CARGAR SALA:", e);
+                cb?.({ status: "error" });
+            }
+        });
+
+        // ---- RECUPERACIÓN INICIAL (solo para sala actual) ----
         try {
             let results;
-            console.log("🟢 isAdmin =", isAdmin, "para usuario", user);
             if (isAdmin) {
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: []
                 });
-                console.log("📥 Admin recibe todos los mensajes:", results.rows.length);
             } else {
                 results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE room = ? OR (room IS NULL AND ? = 'sala-admins-global') ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [userRoom, userRoom]
+                    sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                    args: [userRoom]
                 });
-                console.log("📥 Mensajes por sala:", results.rows.length);
             }
-
-            console.log("📤 Enviando", results.rows.length, "mensajes al socket...");
             
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
@@ -762,8 +845,8 @@ io.on("connection", async (socket) => {
             let hasMore = false;
             if (initialRows.length > 0) {
                 const older = await db.execute({
-                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
-                    args: [initialRows[0].timestamp]
+                    sql: "SELECT 1 FROM Mensajes WHERE room = ? AND timestamp < ? LIMIT 1",
+                    args: [userRoom, initialRows[0].timestamp]
                 });
                 hasMore = older.rows.length > 0;
             }

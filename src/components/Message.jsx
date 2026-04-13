@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useChat } from "../hooks/useChat";
 import { MusicCard } from "./MusicPanel";
 
@@ -22,7 +22,7 @@ function highlightMentions(text, currentUser) {
     });
 }
 
-export default function Message({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar, adminsList = [] }) {
+function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar, adminsList = [] }) {
     const { setReplyingTo, theme, connectedUsers } = useChat();
     const [showPicker, setShowPicker] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -31,11 +31,37 @@ export default function Message({ message, currentUser, socket, onImageClick, on
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
     const [userInfoModal, setUserInfoModal] = useState(null);
+    const [loadingUserInfo, setLoadingUserInfo] = useState(false);
     
     const longPressTimerRef = useRef(null);
 
     const isOwn = message.user === currentUser;
+    const isImageAvatar = userAvatar && userAvatar.startsWith("data:image");
     const displayAvatar = isOwn && userAvatar ? userAvatar : "😀";
+    
+    const fetchUserInfo = (targetUser) => {
+        setLoadingUserInfo(true);
+        socket?.emit("Obtener Info Usuario", { targetUser }, (res) => {
+            if (res?.status === "ok" && res.info) {
+                setUserInfoModal({
+                    nombre: res.info.nombre,
+                    avatar: res.info.avatar || "😀",
+                    creado: res.info.creado
+                });
+            } else {
+                setUserInfoModal({
+                    nombre: targetUser,
+                    avatar: "😀",
+                    creado: "Fecha desconocida"
+                });
+            }
+            setLoadingUserInfo(false);
+        });
+    };
+
+    const getUserInfo = (targetUser) => {
+        fetchUserInfo(targetUser);
+    };
     
     const getThemeStyles = () => {
     switch (theme) {
@@ -104,8 +130,6 @@ export default function Message({ message, currentUser, socket, onImageClick, on
     const hora = !isNaN(date.getTime())
         ? date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
         : "";
-    
-    console.log("💬 Message component rendering:", message.id, "type:", message.type, "content:", message.content?.slice(0, 20));
 
     // ---- Acciones ----
     const handleReaction = (emoji) => {
@@ -281,6 +305,104 @@ export default function Message({ message, currentUser, socket, onImageClick, on
                     </div>
                 </div>
             )}
+
+            {/* Mensaje real */}
+            <div className={`flex ${isOwn ? "flex-row-reverse" : "flex-row"} items-end gap-1.5 max-w-[85%] ${isOwn ? "self-end" : "self-start"}`}>
+                {/* Avatar */}
+                {isImageAvatar ? (
+                    <img 
+                        src={userAvatar}
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-full object-cover shrink-0 cursor-pointer"
+                        onClick={() => getUserInfo(message.user)}
+                    />
+                ) : (
+                    <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 cursor-pointer"
+                        style={{ backgroundColor: color }}
+                        onClick={() => getUserInfo(message.user)}
+                    >
+                        {displayAvatar}
+                    </div>
+                )}
+
+                {/* Contenido del mensaje */}
+                <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} min-w-0`}>
+                    {/* Username + Admin badge */}
+                    {!isOwn && (
+                        <div className="flex items-center gap-1 mb-0.5">
+                            <span 
+                                className="text-xs font-semibold cursor-pointer hover:underline"
+                                style={{ color }}
+                                onClick={() => getUserInfo(message.user)}
+                            >
+                                {message.user}
+                            </span>
+                            {adminsList.includes(message.user) && (
+                                <span className="text-[10px]" title="Admin">👑</span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Bubble del mensaje */}
+                    <div className={`px-3 py-2 rounded-2xl break-words max-w-full ${getThemeStyles()}`}>
+                        {renderBody()}
+                    </div>
+
+                    {/* Hora + reacciones */}
+                    <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+                        <span className="text-[10px] text-gray-400">{hora}</span>
+                        {hasReactions && (
+                            <div className="flex gap-0.5 text-xs bg-black/20 px-1.5 py-0.5 rounded-full">
+                                {Object.entries(reactions).filter(([_, users]) => users.length > 0).map(([emoji, users]) => (
+                                    <span key={emoji}>{emoji} {users.length}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Context Menu */}
+            {showContextMenu && (
+                <div 
+                    className="fixed bg-gray-900/95 backdrop-blur border border-white/20 rounded-xl py-2 z-50 shadow-2xl"
+                    style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
+                >
+                    <button onClick={handleReply} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">↩️ Responder</button>
+                    <button onClick={() => setShowPicker(true)} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">😀 Reaccionar</button>
+                    {isOwn && (
+                        <>
+                            <button onClick={() => { setEditing(true); setShowContextMenu(false); }} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">✏️ Editar</button>
+                            <button onClick={() => setShowDeleteConfirm(true)} className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10 text-sm">🗑️ Eliminar</button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* Emoji Picker */}
+            {showPicker && (
+                <div className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 z-50 shadow-lg grid grid-cols-5 gap-1">
+                    {QUICK_EMOJIS.map(emoji => (
+                        <button key={emoji} onClick={() => handleReaction(emoji)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-lg">{emoji}</button>
+                    ))}
+                </div>
+            )}
+
+            {/* Delete Confirmation */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirm(false)}>
+                    <div className="bg-gray-900 border border-white/20 rounded-2xl p-6" onClick={e => e.stopPropagation()}>
+                        <p className="text-white text-center mb-4">¿Eliminar este mensaje?</p>
+                        <div className="flex gap-2 justify-center">
+                            <button onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
+                            <button onClick={() => setShowDeleteConfirm(false)} className="bg-gray-600 text-white px-4 py-2 rounded-lg">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+export default React.memo(MessageInner);
