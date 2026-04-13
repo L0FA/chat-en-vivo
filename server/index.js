@@ -271,6 +271,20 @@ io.on("connection", async (socket) => {
 
         console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
 
+        // Cargar avatar del usuario desde DB
+        let userAvatar = null;
+        try {
+            const userResult = await db.execute({
+                sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                args: [user]
+            });
+            if (userResult.rows.length > 0) {
+                userAvatar = userResult.rows[0].avatar;
+            }
+        } catch (e) {
+            console.error("❌ ERROR CARGAR AVATAR:", e);
+        }
+
         // Lista de admins: admins conectados + el nuevo si es admin
         let adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
         
@@ -281,7 +295,7 @@ io.on("connection", async (socket) => {
             adminsArray.push(user);
         }
         
-        connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar: null });
+        connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar: userAvatar });
         callState.registerUser(socket.id, user);
         io.emit("Usuarios Conectados", { 
             users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
