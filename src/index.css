@@ -649,3 +649,32 @@ html.theme-fire body {
         transform: scale(1);
     }
 }
+
+/* VideoCall Popup animations */
+.animate-fade-in {
+    animation: fadeIn 0.2s ease forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.2s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

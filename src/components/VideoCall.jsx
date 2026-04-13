@@ -18,6 +18,9 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
     const [incomingCall, setIncomingCall] = useState(null);
     const [showCallMenu, setShowCallMenu] = useState(false);
     const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+    const [showRemoteFull, setShowRemoteFull] = useState(false);
+    const [mobileNameShown, setMobileNameShown] = useState(false);
+    const mobileTapTimer = useRef(null);
 
     // Efecto para detectar el trigger externo
     useEffect(() => {
@@ -26,6 +29,11 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
             setShowCallMenu(true);
         }
     }, [externalTrigger]);
+
+    // Cerrar menú cuando cambia de sala
+    useEffect(() => {
+        setShowCallMenu(false);
+    }, [currentRoom]);
     const [showButton, setShowButton] = useState(true);
 
     const localVideoRef = useRef(null);
@@ -34,7 +42,11 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
     const peerConnectionRef = useRef(null);
     const timerRef = useRef(null);
 
-    const otherUsers = connectedUsers.filter(u => u !== user);
+    // connectedUsers puede ser array de strings o de objetos {nombre, avatar}
+    const otherUsers = connectedUsers.filter(u => {
+        const nombre = typeof u === "string" ? u : u?.nombre;
+        return nombre !== user;
+    });
 
     const getDevicePreferences = () => {
         const saved = localStorage.getItem("device-preferences");
@@ -246,51 +258,86 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
 
     return createPortal(
         <>
-            {/* Botón de llamada */}
-            <div className="relative z-50">
-                <button 
-                    onClick={(e) => {
-                        console.log("📞 Click en botón de llamada, showCallMenu:", !showCallMenu);
-                        setShowCallMenu(p => !p);
-                    }} 
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
-                        scrolled
-                            ? "bg-white/90 border-gray-200"
-                            : "bg-white/20 border-white/30 backdrop-blur-sm"
-                    }`}
-                >
-                    📞
-                </button>
-                {showCallMenu && (
-                    <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowCallMenu(false)}/>
-                        <div className="absolute right-0 top-10 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-xl z-50 py-2 min-w-44">
-                            <div className="text-white/40 text-xs px-3 py-1 border-b border-white/10 mb-1">📞 Llamar a:</div>
+            {/* Menú de llamada como popup animado con backdrop */}
+            {showCallMenu && (
+                <>
+                    {/* Backdrop oscuro */}
+                    <div 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in"
+                        onClick={() => setShowCallMenu(false)}
+                    />
+                    
+                    {/* Popup centrado */}
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+                        <div 
+                            className="bg-[#1e1e1e] border border-white/20 rounded-2xl shadow-2xl p-6 w-80 max-h-[70vh] overflow-y-auto pointer-events-auto animate-scale-in"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-white font-bold text-lg">📞 Iniciar Llamada</h3>
+                                <button 
+                                    onClick={() => setShowCallMenu(false)}
+                                    className="text-white/50 hover:text-white transition"
+                                >
+                                    ✖
+                                </button>
+                            </div>
+                            
+                            <div className="text-white/40 text-xs mb-3">Selecciona un usuario:</div>
+                            
                             {otherUsers.length === 0 ? (
-                                <div className="text-white/30 text-xs px-3 py-3 text-center">No hay usuarios</div>
+                                <div className="text-white/30 text-center py-6 text-sm">
+                                    No hay otros usuarios en la sala
+                                </div>
                             ) : (
-                                otherUsers.map(u => (
-                                    <div key={u} className="border-b border-white/5 last:border-0">
-                                        <div className="text-white/60 text-xs px-3 pt-2 pb-1">{u}</div>
-                                        <div className="flex">
-                                            <button onClick={() => initiateCall(u, "audio")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">🎤 Voz</button>
-                                            <button onClick={() => initiateCall(u, "video")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">📹 Video</button>
+                                <div className="flex flex-col gap-2">
+                                    {otherUsers.map(u => {
+                                        const nombre = typeof u === "string" ? u : u?.nombre || "Usuario";
+                                        const avatar = typeof u === "string" ? null : u?.avatar;
+                                        const isImageAvatar = avatar && avatar.startsWith("data:image");
+                                        
+                                        return (
+                                        <div key={nombre} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition cursor-pointer">
+                                            {isImageAvatar ? (
+                                                <img src={avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-pink-400 flex items-center justify-center text-lg">😀</div>
+                                            )}
+                                            <span className="flex-1 text-white font-medium">{nombre}</span>
+                                            <div className="flex gap-1">
+                                                <button 
+                                                    onClick={() => initiateCall(nombre, "audio")}
+                                                    className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition"
+                                                    title="Llamada de voz"
+                                                >
+                                                    🎤
+                                                </button>
+                                                <button 
+                                                    onClick={() => initiateCall(nombre, "video")}
+                                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition"
+                                                    title="Videollamada"
+                                                >
+                                                    📹
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                        );
+                                    })}
+                                </div>
                             )}
-                            <div className="border-t border-white/10 mt-2 pt-2">
+                            
+                            <div className="mt-4 pt-4 border-t border-white/10">
                                 <button 
                                     onClick={() => { setShowCallMenu(false); setShowDeviceSettings(true); }}
-                                    className="w-full text-white/60 text-xs px-3 py-2 hover:bg-white/10 cursor-pointer text-left"
+                                    className="w-full text-white/60 text-sm px-3 py-2 hover:bg-white/10 rounded-lg transition text-left flex items-center gap-2"
                                 >
                                     🎛️ Configurar dispositivos
                                 </button>
                             </div>
                         </div>
-                    </>
-                )}
-            </div>
+                    </div>
+                </>
+            )}
 
             {/* Device Settings Modal */}
             {showDeviceSettings && (
@@ -347,17 +394,37 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
 
             {/* Llamada entrante */}
             {incomingCall && (
-                <div className="fixed inset-0 bg-black/80 z-10000 flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] border border-white/10 p-6 rounded-2xl text-center">
-                        <div className="text-5xl mb-4 animate-bounce">📞</div>
-                        <p className="text-white font-bold text-lg mb-1">{incomingCall.from}</p>
-                        <p className="text-white/50 text-sm mb-6">{incomingCall.type === "video" ? "📹 Videollamada" : "🎤 Voz"}</p>
-                        <div className="flex gap-4 justify-center">
-                            <button onClick={acceptCall} className="bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 cursor-pointer font-bold">✅ Aceptar</button>
-                            <button onClick={rejectCall} className="bg-red-500 text-white px-6 py-3 rounded-full hover:bg-red-600 cursor-pointer font-bold">❌ Rechazar</button>
+                <>
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in" />
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center animate-scale-in">
+                        <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl w-80 mx-4">
+                            <div className="relative w-24 h-24 mx-auto mb-4">
+                                <div className="absolute inset-0 rounded-full bg-pink-400 animate-ping opacity-20" />
+                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg">
+                                    👤
+                                </div>
+                            </div>
+                            <div className="text-white font-bold text-xl mb-1">{incomingCall.from}</div>
+                            <p className="text-white/50 text-sm mb-6">
+                                {incomingCall.type === "video" ? "📹 Te está llamando" : "🎤 Te está llamando"}
+                            </p>
+                            <div className="flex gap-4 justify-center">
+                                <button 
+                                    onClick={acceptCall} 
+                                    className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full hover:scale-105 transition cursor-pointer font-bold shadow-lg"
+                                >
+                                    ✅ Aceptar
+                                </button>
+                                <button 
+                                    onClick={rejectCall} 
+                                    className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full hover:scale-105 transition cursor-pointer font-bold shadow-lg"
+                                >
+                                    ❌
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
 
             {/* Llamando... */}
@@ -372,32 +439,96 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
                 </div>
             )}
 
-            {/* Llamada activa */}
+            {/* Llamada activa - ventana flotante */}
             {callState === "active" && (
-                <div className="fixed inset-0 bg-black z-9999 flex flex-col">
-                    {callType === "video" ? (
-                        <video ref={remoteVideoRef} autoPlay playsInline className="flex-1 object-cover w-full"/>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-900 to-black">
-                            <div className="text-center">
-                                <div className="w-32 h-32 rounded-full bg-pink-400 flex items-center justify-center text-6xl mx-auto mb-4">👤</div>
-                                <p className="text-white text-2xl font-bold">{remoteUser}</p>
-                                <p className="text-white/50 text-sm mt-2">{fmt(callDuration)}</p>
+                <div className="fixed z-[9997]">
+                    {/* Video/Ventana flotante */}
+                    <div 
+                        className={`relative bg-black rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 cursor-move ${
+                            showRemoteFull ? "inset-4" : "w-48 h-48 bottom-20 right-4"
+                        }`}
+                        onClick={(e) => {
+                            if (!showRemoteFull && window.innerWidth >= 768) {
+                                e.stopPropagation();
+                            }
+                        }}
+                        style={!showRemoteFull ? { position: 'fixed' } : {}}
+                    >
+                        {callType === "video" ? (
+                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                                <div className="text-center">
+                                    <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl mx-auto mb-2">👤</div>
+                                    <p className="text-white font-bold">{remoteUser}</p>
+                                </div>
                             </div>
+                        )}
+                        
+                        {/* Hover/Touch para mostrar nombre */}
+                        <div 
+                            className={`absolute inset-0 flex items-end justify-center pb-2 transition-all ${
+                                mobileNameShown ? "opacity-100 bg-black/40" : "opacity-0 hover:opacity-100 bg-black/40"
+                            }`}
+                            onClick={(e) => {
+                                if ('ontouchstart' in window) {
+                                    e.stopPropagation();
+                                    if (mobileTapTimer.current) {
+                                        // Doble click - expandir
+                                        setShowRemoteFull(p => !p);
+                                        clearTimeout(mobileTapTimer.current);
+                                        mobileTapTimer.current = null;
+                                    } else {
+                                        // Primer click - mostrar nombre
+                                        mobileTapTimer.current = setTimeout(() => {
+                                            setMobileNameShown(true);
+                                            setTimeout(() => setMobileNameShown(false), 3000);
+                                            mobileTapTimer.current = null;
+                                        }, 300);
+                                    }
+                                }
+                            }}
+                        >
+                            <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full">{remoteUser}</span>
                         </div>
-                    )}
-                    {callType === "video" && !isVideoOff && (
-                        <div className="absolute top-4 right-4 w-28 h-36 rounded-2xl overflow-hidden border-2 border-white/30">
-                            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover"/>
-                        </div>
-                    )}
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                        <span className="bg-red-500 text-white text-xs px-3 py-1 rounded-full animate-pulse font-bold">🔴 {fmt(callDuration)}</span>
                     </div>
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
-                        <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${isMuted ? "bg-red-500" : "bg-white/20"}`}>{isMuted ? "🔇" : "🎤"}</button>
-                        {callType === "video" && <button onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${isVideoOff ? "bg-red-500" : "bg-white/20"}`}>{isVideoOff ? "📵" : "📹"}</button>}
-                        <button onClick={endCall} className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-3xl">📴</button>
+
+                    {/* Controls flotantes */}
+                    <div 
+                        className="fixed bottom-4 left-1/2 -translate-x-1/2 flex gap-3 bg-black/80 backdrop-blur-md px-4 py-3 rounded-full shadow-lg"
+                    >
+                        <button 
+                            onClick={toggleMute} 
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${isMuted ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
+                        >
+                            {isMuted ? "🔇" : "🎤"}
+                        </button>
+                        {callType === "video" && (
+                            <button 
+                                onClick={toggleVideo} 
+                                className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${isVideoOff ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
+                            >
+                                {isVideoOff ? "📵" : "📹"}
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => setShowRemoteFull(p => !p)}
+                            className="w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xl transition"
+                            title="Expandir"
+                        >
+                            {showRemoteFull ? "🔲" : "⛶"}
+                        </button>
+                        <button 
+                            onClick={endCall} 
+                            className="w-14 h-12 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-2xl"
+                        >
+                            📴
+                        </button>
+                    </div>
+
+                    {/* Timer */}
+                    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded-full">
+                        <span className="text-white text-xs font-bold">🔴 {fmt(callDuration)}</span>
                     </div>
                 </div>
             )}
