@@ -797,7 +797,7 @@ io.on("connection", async (socket) => {
         });
 
         socket.on("llamada:ice", ({ candidate, to }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:ice", { candidate, from: user });
             }

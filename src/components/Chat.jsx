@@ -263,10 +263,9 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* VideoCall - montado pero fuera de pantalla */}
+            {/* VideoCall - montado para recibir eventos */}
             <VideoCall 
                 socket={socket} 
-                scrolled={scrolled} 
                 currentRoom={currentRoom} 
                 externalTrigger={callTrigger}
             />
@@ -300,7 +299,12 @@ export default function Chat() {
                 )}
 
                 {/* Lista de mensajes */}
-                {messages.map(msg => (
+                {messages.map(msg => {
+                    // Obtener avatar del usuario que envió el mensaje
+                    const senderUser = connectedUsers.find(u => u.nombre === msg.user);
+                    const senderAvatar = senderUser?.avatar || null;
+                    
+                    return (
                     <Message
                         key={msg.id}
                         message={msg}
@@ -308,10 +312,10 @@ export default function Chat() {
                         socket={socket}
                         onImageClick={setLightboxSrc}
                         onPlayMusic={() => {}}
-                        userAvatar={msg.user === user ? avatar : null}
+                        userAvatar={msg.user === user ? avatar : senderAvatar}
                         adminsList={adminsList}
                     />
-                ))}
+                );})}
 
                 {/* Indicador de escritura */}
                 {typingUsers.filter(u => u !== user).length > 0 && (
@@ -354,12 +358,6 @@ export default function Chat() {
                 currentUser={user}
                 open={showMusicApp}
                 onClose={() => setShowMusicApp(false)}
-            />
-
-            {/* Video Call - siempre montado para recibir eventos */}
-            <VideoCall
-                socket={socket}
-                onClose={() => setShowVideoCall(false)}
             />
 
             {/* Lightbox */}

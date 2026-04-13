@@ -66,8 +66,9 @@ export function ChatProvider({ children }) {
     }, []);
 
     const changeRoom = useCallback((roomId) => {
-        setCurrentRoom(roomId);
-        localStorage.setItem("currentRoom", roomId);
+        const targetRoom = roomId || "sala-global";
+        setCurrentRoom(targetRoom);
+        localStorage.setItem("currentRoom", targetRoom);
         setMessages([]);
     }, []);
 
@@ -101,6 +102,9 @@ export function ChatProvider({ children }) {
         setUser(nombre);
         setPassword(password);
         setAvatar(savedAvatar);
+        // Establecer sala global por defecto
+        setCurrentRoom("sala-global");
+        localStorage.setItem("currentRoom", "sala-global");
     }, []);
 
     const updateProfile = useCallback((nombre, nuevoAvatar) => {
