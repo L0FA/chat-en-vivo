@@ -243,13 +243,8 @@ io.on("connection", async (socket) => {
             args: [user]
         });
 
+        // Si el usuario no existe, crearlo
         if (existingUser.rows.length === 0) {
-            const allUsers = await db.execute({ sql: "SELECT nombre FROM Usuarios", args: [] });
-            if (allUsers.rows.length > 0) {
-                socket.emit("Error", { message: "Ese nombre de usuario ya existe. Elegí otro." });
-                socket.disconnect();
-                return;
-            }
             await db.execute({
                 sql: "INSERT INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
                 args: [user, null, Date.now()]
@@ -271,6 +266,9 @@ io.on("connection", async (socket) => {
                 sql: "INSERT OR REPLACE INTO MiembrosSala (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
                 args: ["sala-global", user, "member", Date.now()]
             });
+            console.log("✅ Nuevo usuario creado:", user);
+        } else {
+            console.log("🔄 Usuario existente reconectando:", user);
         }
     } catch (e) {
         console.error("❌ ERROR VALIDAR USUARIO:", e);
