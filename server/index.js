@@ -767,10 +767,18 @@ io.on("connection", async (socket) => {
             const queryRoom = room || userRoom;
 
             try {
-                const results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp, queryRoom]
-                });
+                // Los admins solo cargan más mensajes en la sala de admins
+                if (isAdmin && queryRoom === "sala-admins-global") {
+                    var results = await db.execute({
+                        sql: `SELECT * FROM Mensajes WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                        args: [beforeTimestamp]
+                    });
+                } else {
+                    var results = await db.execute({
+                        sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                        args: [beforeTimestamp, queryRoom]
+                    });
+                }
 
                 const rows = [...results.rows].reverse().map(row => ({
                     id: row.id,
@@ -787,10 +795,18 @@ io.on("connection", async (socket) => {
 
                 let hasMore = false;
                 if (rows.length > 0) {
-                    const older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND (room = ? OR room IS NULL) LIMIT 1",
-                        args: [rows[0].timestamp, queryRoom]
-                    });
+                    let older;
+                    if (isAdmin && queryRoom === "sala-admins-global") {
+                        older = await db.execute({
+                            sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
+                            args: [rows[0].timestamp]
+                        });
+                    } else {
+                        older = await db.execute({
+                            sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
+                            args: [rows[0].timestamp, queryRoom]
+                        });
+                    }
                     hasMore = older.rows.length > 0;
                 }
 
