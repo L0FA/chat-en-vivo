@@ -234,6 +234,7 @@ io.on("connection", async (socket) => {
     const userRoom = isAdmin ? "sala-admins-global" : `privada-${user}`;
 
         console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
+        console.log("🔧 ADMINS del ENV:", process.env.ADMINS);
 
         // Registrar usuario
         const adminsArray = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
