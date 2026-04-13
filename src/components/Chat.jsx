@@ -116,6 +116,7 @@ export default function Chat() {
         if (!socket) return;
         
         const handleUsers = ({ users, admins = [] }) => {
+            console.log("📋 Usuarios recibidos:", users.map(u => ({ nombre: typeof u === 'string' ? u : u?.nombre, avatar: typeof u === 'string' ? null : u?.avatar })));
             setConnectedUsers(users);
             setAdminsList(admins);
         };
