@@ -320,13 +320,16 @@ io.on("connection", async (socket) => {
         // ---- ACTUALIZAR AVATAR ----
         socket.on("Actualizar Avatar", async ({ avatar }, cb) => {
             try {
+                console.log("📸 Actualizando avatar para:", user, "avatar length:", avatar?.length);
                 await db.execute({
                     sql: "UPDATE Usuarios SET avatar = ? WHERE nombre = ?",
                     args: [avatar, user]
                 });
                 connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
+                const userData = [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar }));
+                console.log("📤 Enviando usuarios con avatares:", userData.map(u => ({ nombre: u.nombre, tieneAvatar: !!u.avatar })));
                 io.emit("Usuarios Conectados", { 
-                    users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+                    users: userData, 
                     admins: adminsArray 
                 });
                 cb?.({ status: "ok" });

@@ -20,7 +20,34 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
     const [showDeviceSettings, setShowDeviceSettings] = useState(false);
     const [showRemoteFull, setShowRemoteFull] = useState(false);
     const [mobileNameShown, setMobileNameShown] = useState(false);
+    const [callPosition, setCallPosition] = useState({ x: 4, y: 20 }); // posición en porcentaje desde right y bottom
+    const [isDragging, setIsDragging] = useState(false);
     const mobileTapTimer = useRef(null);
+
+    const handleDragStart = (e) => {
+        if (showRemoteFull) return;
+        setIsDragging(true);
+    };
+
+    const handleDrag = (e) => {
+        if (!isDragging || showRemoteFull) return;
+        // Calcular nueva posición basada en movimiento del mouse
+        const container = e.currentTarget.closest('.call-container');
+        if (!container) return;
+        
+        const rect = container.getBoundingClientRect();
+        const x = ((window.innerWidth - rect.right) / window.innerWidth) * 100;
+        const y = ((window.innerHeight - rect.bottom) / window.innerHeight) * 100;
+        
+        setCallPosition({ 
+            x: Math.max(0, Math.min(80, x)), 
+            y: Math.max(20, Math.min(80, y)) 
+        });
+    };
+
+    const handleDragEnd = () => {
+        setIsDragging(false);
+    };
 
     // Efecto para detectar el trigger externo
     useEffect(() => {
@@ -80,7 +107,9 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
 
         socket.on("llamada:answer", async ({ answer, from }) => {
             console.log("📞 Respuesta recibida de:", from);
-            await peerConnectionRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
+            if (peerConnectionRef.current?.signalingState === "have-local-offer") {
+                await peerConnectionRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
+            }
         });
 
         socket.on("llamada:ice", async ({ candidate, from }) => {
@@ -441,18 +470,27 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
 
             {/* Llamada activa - ventana flotante */}
             {callState === "active" && (
-                <div className="fixed z-[9997]">
+                <div 
+                    className={`call-container fixed z-[9997] transition-all duration-300 ${
+                        showRemoteFull 
+                            ? "inset-0 bg-black" 
+                            : ""
+                    }`}
+                    style={!showRemoteFull ? { 
+                        right: `${callPosition.x}%`, 
+                        bottom: `${callPosition.y}%`,
+                        transition: isDragging ? 'none' : 'all 0.3s ease'
+                    } : {}}
+                    onMouseDown={handleDragStart}
+                    onMouseMove={handleDrag}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                >
                     {/* Video/Ventana flotante */}
                     <div 
                         className={`relative bg-black rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 cursor-move ${
-                            showRemoteFull ? "inset-4" : "w-48 h-48 bottom-20 right-4"
+                            showRemoteFull ? "w-full h-full" : "w-56 h-40"
                         }`}
-                        onClick={(e) => {
-                            if (!showRemoteFull && window.innerWidth >= 768) {
-                                e.stopPropagation();
-                            }
-                        }}
-                        style={!showRemoteFull ? { position: 'fixed' } : {}}
                     >
                         {callType === "video" ? (
                             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
@@ -467,69 +505,57 @@ export default function VideoCall({ socket, onClose, scrolled = false, currentRo
                         
                         {/* Hover/Touch para mostrar nombre */}
                         <div 
-                            className={`absolute inset-0 flex items-end justify-center pb-2 transition-all ${
+                            className={`absolute inset-0 flex items-end justify-center pb-2 transition-all pointer-events-none ${
                                 mobileNameShown ? "opacity-100 bg-black/40" : "opacity-0 hover:opacity-100 bg-black/40"
                             }`}
-                            onClick={(e) => {
-                                if ('ontouchstart' in window) {
-                                    e.stopPropagation();
-                                    if (mobileTapTimer.current) {
-                                        // Doble click - expandir
-                                        setShowRemoteFull(p => !p);
-                                        clearTimeout(mobileTapTimer.current);
-                                        mobileTapTimer.current = null;
-                                    } else {
-                                        // Primer click - mostrar nombre
-                                        mobileTapTimer.current = setTimeout(() => {
-                                            setMobileNameShown(true);
-                                            setTimeout(() => setMobileNameShown(false), 3000);
-                                            mobileTapTimer.current = null;
-                                        }, 300);
-                                    }
-                                }
-                            }}
                         >
-                            <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full">{remoteUser}</span>
+                            <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full pointer-events-auto">{remoteUser}</span>
                         </div>
                     </div>
 
-                    {/* Controls flotantes */}
+                    {/* Controls flotantes - siempre visibles */}
                     <div 
-                        className="fixed bottom-4 left-1/2 -translate-x-1/2 flex gap-3 bg-black/80 backdrop-blur-md px-4 py-3 rounded-full shadow-lg"
+                        className={`flex gap-2 bg-black/80 backdrop-blur-md px-3 py-2 rounded-full shadow-lg transition-all ${
+                            showRemoteFull 
+                                ? "absolute bottom-4 left-1/2 -translate-x-1/2" 
+                                : "mt-2 justify-center"
+                        }`}
                     >
                         <button 
                             onClick={toggleMute} 
-                            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${isMuted ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition ${isMuted ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
                         >
                             {isMuted ? "🔇" : "🎤"}
                         </button>
                         {callType === "video" && (
                             <button 
                                 onClick={toggleVideo} 
-                                className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${isVideoOff ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition ${isVideoOff ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
                             >
                                 {isVideoOff ? "📵" : "📹"}
                             </button>
                         )}
                         <button 
                             onClick={() => setShowRemoteFull(p => !p)}
-                            className="w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xl transition"
-                            title="Expandir"
+                            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-lg transition"
+                            title={showRemoteFull ? "Minimizar" : "Expandir"}
                         >
                             {showRemoteFull ? "🔲" : "⛶"}
                         </button>
                         <button 
                             onClick={endCall} 
-                            className="w-14 h-12 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-2xl"
+                            className="w-12 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-xl"
                         >
                             📴
                         </button>
                     </div>
 
                     {/* Timer */}
-                    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded-full">
-                        <span className="text-white text-xs font-bold">🔴 {fmt(callDuration)}</span>
-                    </div>
+                    {!showRemoteFull && (
+                        <div className="text-center mt-1">
+                            <span className="text-white/60 text-xs">🔴 {fmt(callDuration)}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </>,
