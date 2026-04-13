@@ -328,11 +328,20 @@ io.on("connection", async (socket) => {
                 });
                 connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
                 
-                // Forzar actualización a todos
-                const allUsers = [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar }));
-                console.log("📤 Enviando usuarios con avatares actualizados:", allUsers.map(u => ({ nombre: u.nombre, tieneAvatar: !!u.avatar })));
+                // Obtener TODOS los usuarios con sus avatares de la DB
+                const allUsersResult = await db.execute({
+                    sql: "SELECT nombre, avatar FROM Usuarios",
+                    args: []
+                });
+                
+                const allUsersWithAvatars = allUsersResult.rows.map(row => ({
+                    nombre: row.nombre,
+                    avatar: row.avatar
+                }));
+                
+                console.log("📤 Enviando usuarios con avatares desde DB:", allUsersWithAvatars.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
                 io.emit("Usuarios Conectados", { 
-                    users: allUsers, 
+                    users: allUsersWithAvatars, 
                     admins: adminsArray 
                 });
                 cb?.({ status: "ok" });

@@ -121,7 +121,7 @@ export default function Chat() {
                 if (typeof u === "string") return { nombre: u, avatar: null };
                 return { nombre: u?.nombre || u, avatar: u?.avatar || null };
             });
-            console.log("📋 Usuarios recibidos:", normalizedUsers.map(u => `${u.nombre}:${u.avatar ? "con avatar" : "sin"}`));
+            console.log("📋 Usuarios recibidos:", normalizedUsers.map(u => `${u.nombre}:${u.avatar ? "✅" : "❌"}`));
             setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
         };
