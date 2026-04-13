@@ -247,6 +247,11 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
         setContextMenuPos({ x: e.clientX, y: e.clientY });
         setShowContextMenu(true);
     };
+    
+    // Debug: ver propiedades del mensaje
+    if (message.replyToId) {
+        console.log("🔍 Mensaje con reply:", { replyToId: message.replyToId, replyToUser: message.replyToUser, replyToContent: message.replyToContent });
+    }
 
     useEffect(() => {
         const handleClick = () => setShowContextMenu(false);

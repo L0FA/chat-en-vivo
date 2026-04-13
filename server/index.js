@@ -68,6 +68,7 @@ async function init() {
             type TEXT,
             replyToId TEXT,
             replyToUser TEXT,
+            replyToContent TEXT,
             edited INTEGER DEFAULT 0,
             destructSeconds INTEGER DEFAULT 0
         )
@@ -489,20 +490,25 @@ io.on("connection", async (socket) => {
             const room = payload?.room || userRoom;
 
             try {
+                console.log("📝 Payload recibido para mensaje:", { replyToId, replyToUser, replyToContent: payload?.replyToContent });
+                
                 let replyToContent = null;
                 if (replyToId) {
                     const originalMsg = await db.execute({
                         sql: "SELECT content FROM Mensajes WHERE id = ?",
                         args: [replyToId]
                     });
+                    console.log("📝 Mensaje original encontrado:", originalMsg.rows);
                     if (originalMsg.rows.length > 0) {
                         replyToContent = originalMsg.rows[0].content?.substring(0, 100);
                     }
                 }
                 
+                console.log("📝 Guardando mensaje con replyToContent:", replyToContent);
+                
                 await db.execute({
-                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, 0, destructSeconds, room]
+                    sql: "INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [id, content, user, timestamp, "text", replyToId, replyToUser, replyToContent, 0, destructSeconds, room]
                 });
 
                 socket.emit("Mensaje en Chat", { id, type: "text", content, timestamp, user, replyToId, replyToUser, replyToContent, destructSeconds, room });

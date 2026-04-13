@@ -25,9 +25,11 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
             ...(replyingTo && {
                 replyToId: replyingTo.id,
                 replyToUser: replyingTo.user,
-                replyToContent: replyingTo.content?.substring(0, 100)
+                replyToContent: (replyingTo.content || "").substring(0, 100)
             })
         };
+        
+        console.log("📝 Enviando mensaje con replyTo:", payload);
 
         socket.emit("Mensaje en Chat", payload);
         setInput("");
