@@ -116,8 +116,13 @@ export default function Chat() {
         if (!socket) return;
         
         const handleUsers = ({ users, admins = [] }) => {
-            console.log("📋 Usuarios recibidos:", users.map(u => ({ nombre: typeof u === 'string' ? u : u?.nombre, avatar: typeof u === 'string' ? null : u?.avatar })));
-            setConnectedUsers(users);
+            // Normalizar usuarios - puede ser array de strings o de objetos
+            const normalizedUsers = users.map(u => {
+                if (typeof u === "string") return { nombre: u, avatar: null };
+                return { nombre: u?.nombre || u, avatar: u?.avatar || null };
+            });
+            console.log("📋 Usuarios recibidos:", normalizedUsers.map(u => `${u.nombre}:${u.avatar ? "con avatar" : "sin"}`));
+            setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
         };
         
