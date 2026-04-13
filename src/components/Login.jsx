@@ -10,9 +10,6 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("RememberMe") === "true");
     const [isAdmin, setIsAdmin] = useState(false);
     
-    // Si ya está logueado, no mostrar login
-    if (user) return null;
-    
     const handleInputChange = (e) => {
         const value = e.target.value;
         setInput(value);
@@ -27,7 +24,10 @@ export default function Login() {
             const savedPassword = localStorage.getItem("UserPassword") || "";
             login(localStorage.getItem("NombreUsuario"), savedPassword);
         }
-    }, [login]);
+    }, [login, rememberMe]);
+
+    // Si ya está logueado, no mostrar login
+    if (user) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -62,16 +62,7 @@ export default function Login() {
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [rememberMe]);
 
-    useEffect(() => {
-        // Solo ejecutar en desktop, no en mobile
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) return;
-        
-        if (!rememberMe) {
-            localStorage.removeItem("NombreUsuario");
-            localStorage.removeItem("UserPassword");
-        }
-    }, [rememberMe]);
+    if (user) return null;
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" style={{ height: "100dvh" }}>

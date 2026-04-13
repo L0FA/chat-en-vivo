@@ -43,6 +43,11 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
         }
     }, [open, user, avatar]);
 
+    const handleClose = () => {
+        setVisible(false);
+        setTimeout(() => { setOpen(false); setEditMode(false); }, 200);
+    };
+
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -52,11 +57,6 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
         if (open) document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [open]);
-
-    const handleClose = () => {
-        setVisible(false);
-        setTimeout(() => { setOpen(false); setEditMode(false); }, 200);
-    };
 
     const handleSave = () => {
         updateProfile(newName.trim() || "Invitado", newAvatar);
