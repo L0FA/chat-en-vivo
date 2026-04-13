@@ -226,7 +226,7 @@ io.on("connection", async (socket) => {
     }
     
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
-    const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(s => s.trim());
+    const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,El Celu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(s => s.trim());
 
     try {
         const isAdmin = ADMIN_LIST.includes(user);

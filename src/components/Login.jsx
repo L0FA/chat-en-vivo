@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useChat } from "../hooks/useChat";
 
-const ADMIN_USERS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+const ADMIN_USERS = ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
 
 export default function Login() {
     const { login, user } = useChat();
