@@ -51,6 +51,8 @@ const [tab, setTab] = useState("cola");
     const [portadaPreview, setPortadaPreview] = useState(null);
     const [urlStream, setUrlStream] = useState("");
 
+    const [show, setShow] = useState(false);
+
     const audioRef = useRef(null);
     const ytPlayerRef = useRef(null);
     const ytContainerRef = useRef(null);
@@ -435,20 +437,37 @@ const [tab, setTab] = useState("cola");
         }
     }, [titulo, artista, youtubeUrl, urlStream, audioFile, portadaFile, socket]);
 
-    if (!open) return null;
+    // Animación de fade
+    useEffect(() => {
+        if (open) {
+            setShow(true);
+        } else {
+            const timer = setTimeout(() => setShow(false), 300);
+            return () => clearTimeout(timer);
+        }
+    }, [open]);
+
+    if (!show) return null;
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     return createPortal(
         <>
-            <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={onClose} />
+            <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} style={{ zIndex: 9998 }} onClick={onClose} />
             <div
                 style={{ zIndex: 9999 }}
-                className="fixed bottom-20 right-4 w-80 bg-[#0f0f1a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className={`fixed bottom-20 right-4 w-80 rounded-3xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl border border-white/10 transition-all duration-300 ${
+                    open 
+                        ? "opacity-100 translate-y-0 scale-100" 
+                        : "opacity-0 translate-y-4 scale-95"
+                }`}
                 onClick={e => e.stopPropagation()}
             >
+                {/* Fondo con gradiente glass */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/3 to-black/20 pointer-events-none rounded-3xl" />
+                
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <span className="text-white font-bold text-sm">🎵 Música</span>
                     <button onClick={onClose} className="text-white/50 hover:text-white transition cursor-pointer">✖</button>
                 </div>

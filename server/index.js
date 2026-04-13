@@ -766,7 +766,8 @@ io.on("connection", async (socket) => {
         socket.on("Cargar Mensajes Sala", async ({ room }, cb) => {
             try {
                 let results;
-                if (isAdmin) {
+                // Los admins ven todos los mensajes solo en la sala de admins
+                if (isAdmin && room === "sala-admins-global") {
                     results = await db.execute({
                         sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                         args: []

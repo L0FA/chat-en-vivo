@@ -7,7 +7,7 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" }
 ];
 
-export default function VideoCall({ socket, onClose }) {
+export default function VideoCall({ socket, onClose, scrolled = false, currentRoom = null, externalTrigger = 0 }) {
     const { user, connectedUsers } = useChat();
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
@@ -18,6 +18,15 @@ export default function VideoCall({ socket, onClose }) {
     const [incomingCall, setIncomingCall] = useState(null);
     const [showCallMenu, setShowCallMenu] = useState(false);
     const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+
+    // Efecto para detectar el trigger externo
+    useEffect(() => {
+        if (externalTrigger > 0) {
+            console.log("📞 Trigger externo recibido, mostrando menú");
+            setShowCallMenu(true);
+        }
+    }, [externalTrigger]);
+    const [showButton, setShowButton] = useState(true);
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
@@ -237,43 +246,51 @@ export default function VideoCall({ socket, onClose }) {
 
     return createPortal(
         <>
-            {/* Menú de llamada en header */}
-            {!callState && (
-                <div className="relative">
-                    <button onClick={() => setShowCallMenu(p => !p)} className="w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border bg-white/90 border-gray-200">
-                        📞
-                    </button>
-                    {showCallMenu && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowCallMenu(false)}/>
-                            <div className="absolute right-0 top-10 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-xl z-50 py-2 min-w-44">
-                                <div className="text-white/40 text-xs px-3 py-1 border-b border-white/10 mb-1">📞 Llamar a:</div>
-                                {otherUsers.length === 0 ? (
-                                    <div className="text-white/30 text-xs px-3 py-3 text-center">No hay usuarios</div>
-                                ) : (
-                                    otherUsers.map(u => (
-                                        <div key={u} className="border-b border-white/5 last:border-0">
-                                            <div className="text-white/60 text-xs px-3 pt-2 pb-1">{u}</div>
-                                            <div className="flex">
-                                                <button onClick={() => initiateCall(u, "audio")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">🎤 Voz</button>
-                                                <button onClick={() => initiateCall(u, "video")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">📹 Video</button>
-                                            </div>
+            {/* Botón de llamada */}
+            <div className="relative z-50">
+                <button 
+                    onClick={(e) => {
+                        console.log("📞 Click en botón de llamada, showCallMenu:", !showCallMenu);
+                        setShowCallMenu(p => !p);
+                    }} 
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
+                        scrolled
+                            ? "bg-white/90 border-gray-200"
+                            : "bg-white/20 border-white/30 backdrop-blur-sm"
+                    }`}
+                >
+                    📞
+                </button>
+                {showCallMenu && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowCallMenu(false)}/>
+                        <div className="absolute right-0 top-10 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-xl z-50 py-2 min-w-44">
+                            <div className="text-white/40 text-xs px-3 py-1 border-b border-white/10 mb-1">📞 Llamar a:</div>
+                            {otherUsers.length === 0 ? (
+                                <div className="text-white/30 text-xs px-3 py-3 text-center">No hay usuarios</div>
+                            ) : (
+                                otherUsers.map(u => (
+                                    <div key={u} className="border-b border-white/5 last:border-0">
+                                        <div className="text-white/60 text-xs px-3 pt-2 pb-1">{u}</div>
+                                        <div className="flex">
+                                            <button onClick={() => initiateCall(u, "audio")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">🎤 Voz</button>
+                                            <button onClick={() => initiateCall(u, "video")} className="flex-1 text-white text-xs px-3 py-2 hover:bg-white/10 cursor-pointer">📹 Video</button>
                                         </div>
-                                    ))
-                                )}
-                                <div className="border-t border-white/10 mt-2 pt-2">
-                                    <button 
-                                        onClick={() => { setShowCallMenu(false); setShowDeviceSettings(true); }}
-                                        className="w-full text-white/60 text-xs px-3 py-2 hover:bg-white/10 cursor-pointer text-left"
-                                    >
-                                        🎛️ Configurar dispositivos
-                                    </button>
-                                </div>
+                                    </div>
+                                ))
+                            )}
+                            <div className="border-t border-white/10 mt-2 pt-2">
+                                <button 
+                                    onClick={() => { setShowCallMenu(false); setShowDeviceSettings(true); }}
+                                    className="w-full text-white/60 text-xs px-3 py-2 hover:bg-white/10 cursor-pointer text-left"
+                                >
+                                    🎛️ Configurar dispositivos
+                                </button>
                             </div>
-                        </>
-                    )}
-                </div>
-            )}
+                        </div>
+                    </>
+                )}
+            </div>
 
             {/* Device Settings Modal */}
             {showDeviceSettings && (

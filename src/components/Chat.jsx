@@ -28,6 +28,7 @@ export default function Chat() {
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [showMusicApp, setShowMusicApp] = useState(false);
+    const [callTrigger, setCallTrigger] = useState(0);
 
     // Efecto para actualizar título con notificaciones
     useEffect(() => {
@@ -229,7 +230,16 @@ export default function Chat() {
                 {/* Botones */}
                 <div className="flex items-center gap-1.5">
                     <UsersPanel />
-                    <VideoCall socket={socket} />
+                    <button 
+                        onClick={() => setCallTrigger(t => t + 1)} 
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
+                            scrolled
+                                ? "bg-white/90 border-gray-200"
+                                : "bg-white/20 border-white/30 backdrop-blur-sm"
+                        }`}
+                    >
+                        📞
+                    </button>
                     <button
                         onClick={() => setShowMusicApp(p => !p)}
                         className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
@@ -243,6 +253,14 @@ export default function Chat() {
                     <ThemeSelector scrolled={scrolled} />
                 </div>
             </div>
+
+            {/* VideoCall - montado pero fuera de pantalla */}
+            <VideoCall 
+                socket={socket} 
+                scrolled={scrolled} 
+                currentRoom={currentRoom} 
+                externalTrigger={callTrigger}
+            />
 
             {/* Mensajes */}
             <div
