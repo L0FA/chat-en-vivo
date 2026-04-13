@@ -22,7 +22,7 @@ const TYPING_SOUND_OPTIONS = [
     { value: "none", label: "🔇 Silencio" },
 ];
 
-export default function ProfileDropdown({ isAdmin = false }) {
+export default function ProfileDropdown({ isAdmin = false, socket = null }) {
     const { user, avatar, updateProfile } = useChat();
     const [open, setOpen] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -62,6 +62,14 @@ export default function ProfileDropdown({ isAdmin = false }) {
         updateProfile(newName.trim() || "Invitado", newAvatar);
         localStorage.setItem("notification-sound", newSound);
         localStorage.setItem("typing-sound", newTypingSound);
+        
+        // Enviar avatar al servidor si es una imagen
+        if (newAvatar && newAvatar.startsWith("data:image")) {
+            socket?.emit("Actualizar Avatar", { avatar: newAvatar }, (res) => {
+                console.log("📤 Avatar actualizado en servidor:", res?.status);
+            });
+        }
+        
         setEditMode(false);
     };
 

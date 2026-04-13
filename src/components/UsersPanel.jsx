@@ -21,13 +21,24 @@ export default function UsersPanel() {
                         <button onClick={() => setOpen(false)} className="text-white text-sm hover:scale-110 transition">✖</button>
                     </div>
                     <ul className="p-2 flex flex-col gap-1">
-                        {connectedUsers.map(u => (
-                            <li key={u} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-white ${u === user ? "bg-blue-500/20" : "hover:bg-white/5"}`}>
+                        {connectedUsers.map(u => {
+                            const nombre = typeof u === "string" ? u : u?.nombre || "Usuario";
+                            const avatar = typeof u === "string" ? null : u?.avatar;
+                            const isMe = nombre === user;
+                            const isImageAvatar = avatar && avatar.startsWith("data:image");
+                            
+                            return (
+                            <li key={nombre} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-white ${isMe ? "bg-blue-500/20" : "hover:bg-white/5"}`}>
                                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)] shrink-0"/>
-                                <span className="flex-1 truncate">{u}</span>
-                                {u === user && <span className="text-xs bg-blue-500/30 text-blue-300 px-1.5 rounded-full">vos</span>}
+                                {isImageAvatar ? (
+                                    <img src={avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                ) : (
+                                    <span className="text-sm">😀</span>
+                                )}
+                                <span className="flex-1 truncate">{nombre}</span>
+                                {isMe && <span className="text-xs bg-blue-500/30 text-blue-300 px-1.5 rounded-full">vos</span>}
                             </li>
-                        ))}
+                        );})}
                     </ul>
                 </div>
             )}

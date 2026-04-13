@@ -223,7 +223,7 @@ export default function Chat() {
             >
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
-                    <ProfileDropdown isAdmin={adminsList.includes(user)} />
+                    <ProfileDropdown isAdmin={adminsList.includes(user)} socket={socket} />
                     <RoomSelector scrolled={scrolled} socket={socket} />
                 </div>
 

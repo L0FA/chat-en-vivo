@@ -39,7 +39,8 @@ export function useMessages(socket, currentRoom = null) {
         setHasMore(false);
 
     socket.on("Mensaje en Chat", (data) => {
-    // if (data.room && data.room !== currentRoomRef.current) return;
+    // Solo mostrar mensajes de la sala actual
+    if (data.room && data.room !== currentRoomRef.current) return;
     
     const normalized = {
         ...data,

@@ -281,9 +281,12 @@ io.on("connection", async (socket) => {
             adminsArray.push(user);
         }
         
-        connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin });
+        connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar: null });
         callState.registerUser(socket.id, user);
-        io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: adminsArray });
+        io.emit("Usuarios Conectados", { 
+            users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+            admins: adminsArray 
+        });
         socket.emit("Logged In", { user, isAdmin });
 
         // ---- DISCONNECT ----
@@ -292,7 +295,29 @@ io.on("connection", async (socket) => {
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
             const remainingAdmins = [...connectedUsers.entries()].filter(([_, u]) => u.esAdmin).map(([_, u]) => u.nombre);
-            io.emit("Usuarios Conectados", { users: [...connectedUsers.values()].map(u => u.nombre), admins: remainingAdmins });
+            io.emit("Usuarios Conectados", { 
+                users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+                admins: remainingAdmins 
+            });
+        });
+
+        // ---- ACTUALIZAR AVATAR ----
+        socket.on("Actualizar Avatar", async ({ avatar }, cb) => {
+            try {
+                await db.execute({
+                    sql: "UPDATE Usuarios SET avatar = ? WHERE nombre = ?",
+                    args: [avatar, user]
+                });
+                connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
+                io.emit("Usuarios Conectados", { 
+                    users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+                    admins: adminsArray 
+                });
+                cb?.({ status: "ok" });
+            } catch (e) {
+                console.error("❌ ERROR ACTUALIZAR AVATAR:", e);
+                cb?.({ status: "error" });
+            }
         });
 
         // ---- SALAS ----
@@ -773,6 +798,7 @@ io.on("connection", async (socket) => {
                         args: []
                     });
                 } else {
+                    // Todos (incluyendo admins) solo ven mensajes de su sala actual
                     results = await db.execute({
                         sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                         args: [room]
