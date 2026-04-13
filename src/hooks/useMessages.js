@@ -25,7 +25,6 @@ export function useMessages(socket, currentRoom = null) {
 
 socket.on("Mensaje en Chat", (data) => {
     console.log("📨 Mensaje recibido:", data.room, "currentRoom:", currentRoomRef.current);
-    // Temporarily removed room filter for debugging
     // if (data.room && data.room !== currentRoomRef.current) return;
     
     const normalized = {

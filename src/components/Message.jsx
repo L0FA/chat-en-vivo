@@ -37,8 +37,6 @@ export default function Message({ message, currentUser, socket, onImageClick, on
     const isOwn = message.user === currentUser;
     const displayAvatar = isOwn && userAvatar ? userAvatar : "😀";
     
-    console.log("💬 Render message:", message.id, "content:", message.content, "type:", message.type);
-    
     const getThemeStyles = () => {
     switch (theme) {
 
