@@ -63,14 +63,14 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
         localStorage.setItem("notification-sound", newSound);
         localStorage.setItem("typing-sound", newTypingSound);
         
-        // Enviar avatar al servidor si es una imagen
-        if (newAvatar && newAvatar.startsWith("data:image") && socket) {
-            console.log("📤 Enviando avatar al servidor, socket existe:", !!socket);
+        // Enviar avatar al servidor SIEMPRE (si hay un socket)
+        if (socket && newAvatar) {
+            console.log("📤 Enviando avatar al servidor...", newAvatar.substring(0, 30), "...");
             socket.emit("Actualizar Avatar", { avatar: newAvatar }, (res) => {
-                console.log("📤 Avatar actualizado en servidor:", res?.status);
+                console.log("📤 Respuesta del servidor:", res);
             });
         } else {
-            console.log("⚠️ No se envía avatar - newAvatar:", !!newAvatar, "socket:", !!socket);
+            console.log("⚠️ No se envía avatar - socket:", !!socket, "newAvatar:", !!newAvatar);
         }
         
         setEditMode(false);

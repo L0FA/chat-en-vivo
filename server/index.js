@@ -335,11 +335,22 @@ io.on("connection", async (socket) => {
         // ---- ACTUALIZAR AVATAR ----
         socket.on("Actualizar Avatar", async ({ avatar }, cb) => {
             try {
-                console.log("📸 Actualizando avatar para:", user, "avatar length:", avatar?.length);
+                console.log("📸 Antes de actualizar - avatar:", avatar?.substring(0, 50), "...");
+                
+                // Usar INSERT OR REPLACE para asegurar que se guarde
                 await db.execute({
-                    sql: "UPDATE Usuarios SET avatar = ? WHERE nombre = ?",
-                    args: [avatar, user]
+                    sql: "INSERT OR REPLACE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
+                    args: [user, avatar, Date.now()]
                 });
+                
+                // Verificar que se guardó
+                const verify = await db.execute({
+                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                    args: [user]
+                });
+                console.log("📸 Después de actualizar - avatar en DB:", verify.rows[0]?.avatar ? "SÍ" : "NO");
+                
+                // Actualizar connectedUsers también
                 connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
                 
                 // Obtener TODOS los usuarios con sus avatares de la DB
