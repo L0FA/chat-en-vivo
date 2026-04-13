@@ -706,7 +706,7 @@ io.on("connection", async (socket) => {
 
         // ---- LLAMADAS ----
         socket.on("llamada:invite", ({ to, type }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (!toSocketId) {
                 console.log(`❌ Usuario ${to} no encontrado`);
                 socket.emit("llamada:reject", { from: to, reason: "Usuario no encontrado" });
@@ -718,7 +718,7 @@ io.on("connection", async (socket) => {
         });
 
         socket.on("llamada:accept", ({ to, callId }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:accept", { from: user, callId });
                 socket.emit("llamada:accept", { from: to, callId });
@@ -727,14 +727,14 @@ io.on("connection", async (socket) => {
         });
 
         socket.on("llamada:reject", ({ to }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:reject", { from: user });
             }
         });
 
         socket.on("llamada:end", ({ to }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:end", { from: user });
             }
@@ -743,14 +743,14 @@ io.on("connection", async (socket) => {
 
         // ---- WEBRTC ----
         socket.on("llamada:offer", ({ offer, to }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:offer", { offer, from: user });
             }
         });
 
         socket.on("llamada:answer", ({ answer, to }) => {
-            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u === to)?.[0];
+            const toSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (toSocketId) {
                 io.to(toSocketId).emit("llamada:answer", { answer, from: user });
             }
