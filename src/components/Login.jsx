@@ -4,18 +4,30 @@ import { useChat } from "../hooks/useChat";
 const ADMIN_USERS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
 
 export default function Login() {
-    const { login } = useChat();
+    const { login, user } = useChat();
     const [input, setInput] = useState(() => localStorage.getItem("NombreUsuario") || "");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("RememberMe") === "true");
-    const isAdmin = ADMIN_USERS.includes(input.trim());
+    const [isAdmin, setIsAdmin] = useState(false);
+    
+    // Si ya está logueado, no mostrar login
+    if (user) return null;
+    
+    const handleInputChange = (e) => {
+        const value = e.target.value;
+        setInput(value);
+        setIsAdmin(ADMIN_USERS.includes(value.trim()));
+    };
 
     useEffect(() => {
+        // Solo ejecutar en desktop
+        if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return;
+        
         if (rememberMe && localStorage.getItem("NombreUsuario")) {
             const savedPassword = localStorage.getItem("UserPassword") || "";
             login(localStorage.getItem("NombreUsuario"), savedPassword);
         }
-    }, []);
+    }, [login]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -35,6 +47,10 @@ export default function Login() {
     };
 
     useEffect(() => {
+        // Solo ejecutar en desktop, no en mobile
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) return;
+        
         const handleBeforeUnload = () => {
             if (!rememberMe) {
                 localStorage.removeItem("NombreUsuario");
@@ -47,6 +63,10 @@ export default function Login() {
     }, [rememberMe]);
 
     useEffect(() => {
+        // Solo ejecutar en desktop, no en mobile
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) return;
+        
         if (!rememberMe) {
             localStorage.removeItem("NombreUsuario");
             localStorage.removeItem("UserPassword");
@@ -66,7 +86,7 @@ export default function Login() {
                     <input
                         type="text"
                         value={input}
-                        onChange={e => setInput(e.target.value)}
+                        onChange={handleInputChange}
                         placeholder="Tu nombre..."
                         autoFocus
                         className="border border-gray-200 rounded-xl px-4 py-2 text-base sm:text-sm focus:outline-none focus:border-pink-400 transition w-full bg-white text-gray-900"
