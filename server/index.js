@@ -267,7 +267,9 @@ io.on("connection", async (socket) => {
     }
 
     const isAdmin = ADMIN_LIST.includes(user);
-    const userRoom = isAdmin ? "sala-admins-global" : "sala-global";
+    // Todos (incluyendo admins) empiezan en sala-global
+    // Los admins pueden acceder a sala-admins-global si la eligen
+    const userRoom = "sala-global";
 
         console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
 
@@ -881,17 +883,11 @@ io.on("connection", async (socket) => {
         // ---- RECUPERACIÓN INICIAL (solo para sala actual) ----
         try {
             let results;
-            if (isAdmin) {
-                results = await db.execute({
-                    sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: []
-                });
-            } else {
-                results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [userRoom]
-                });
-            }
+            // TODOS (incluyendo admins) filtran por su sala en la carga inicial
+            results = await db.execute({
+                sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                args: [userRoom]
+            });
             
             const initialRows = [...results.rows].reverse();
             initialRows.forEach(row => {
