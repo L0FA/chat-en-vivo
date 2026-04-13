@@ -160,6 +160,9 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
             if (remoteAudioRef.current && stream) {
                 remoteAudioRef.current.srcObject = stream;
                 remoteAudioRef.current.volume = speakerVolume / 100;
+                remoteAudioRef.current.play().then(() => {
+                    console.log("🔊 Audio remoto reproduce!");
+                }).catch(e => console.log("Error reproduciendo audio:", e));
             }
         };
 
@@ -413,11 +416,14 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
             if (audioTrack) {
                 console.log("🎤 Audio track encontrado:", audioTrack.enabled ? "activo" : "muted");
             }
-            
-            if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
-                const remoteAudioTracks = remoteVideoRef.current.srcObject.getAudioTracks();
-                console.log("🔊 Tracks de audio remotos:", remoteAudioTracks.length);
-            }
+        }
+    }, [callState]);
+
+    useEffect(() => {
+        if (callState === "active" && remoteAudioRef.current) {
+            remoteAudioRef.current.play().catch(e => {
+                console.log("🔇 Audio butuh interacción:", e.message);
+            });
         }
     }, [callState]);
 
@@ -792,7 +798,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
 
             {callState === "active" && (
                 <div 
-                    className={`call-container fixed z-[9997] transition-all duration-300 ${
+                    className={`call-container fixed z-[9997] transition-all duration-300 select-none ${
                         showRemoteFull ? "inset-0 bg-black" : ""
                     }`}
                     style={!showRemoteFull ? { 
@@ -834,8 +840,8 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                         <audio 
                             ref={remoteAudioRef} 
                             autoPlay 
-                            controls 
-                            className={remoteHasVideo ? "hidden" : "w-full mt-2"}
+                            playsInline
+                            className="hidden"
                         />
                         
                         <div 
@@ -858,10 +864,10 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                         </button>
                         <button 
                             onClick={toggleVideo} 
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition ${isVideoOff ? "bg-red-500" : "bg-white/20 hover:bg-white/30"}`}
-                            title={isVideoOff ? "Encender cámara" : "Apagar cámara"}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition ${hasLocalVideo && !isVideoOff ? "bg-green-500" : "bg-red-500"}`}
+                            title={hasLocalVideo && !isVideoOff ? "Apagar cámara" : "Encender cámara"}
                         >
-                            {isVideoOff ? "📵" : "📹"}
+                            {hasLocalVideo && !isVideoOff ? "📹" : "📵"}
                         </button>
                         {callType === "video" && (
                             <button 
