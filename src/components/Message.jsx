@@ -279,6 +279,24 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
             }}
             id={`msg-${message.id}`}
         >
+            {/* Reply reference */}
+            {message.replyToId && (
+                <div 
+                    className="w-full border-l-2 border-blue-400 pl-2 mb-1 cursor-pointer hover:bg-white/10 rounded"
+                    onClick={() => {
+                        const originalMsg = document.getElementById(`msg-${message.replyToId}`);
+                        if (originalMsg) {
+                            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+                            originalMsg.classList.add("animate-highlight");
+                            setTimeout(() => originalMsg.classList.remove("animate-highlight"), 2000);
+                        }
+                    }}
+                >
+                    <p className="text-xs text-blue-400 font-medium">↩️ Respondiendo a {message.replyToUser}</p>
+                    <p className="text-xs text-white/60 truncate">{message.replyToContent}</p>
+                </div>
+            )}
+            
             {/* User Info Modal */}
             {userInfoModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
