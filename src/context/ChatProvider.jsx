@@ -96,9 +96,11 @@ export function ChatProvider({ children }) {
     const login = useCallback((nombre, password = "") => {
         localStorage.setItem("NombreUsuario", nombre);
         localStorage.setItem("UserPassword", password);
+        const savedAvatar = localStorage.getItem("UserAvatar") || "😀";
+        console.log("🔐 Login - cargando avatar desde localStorage:", savedAvatar.startsWith("data:image") ? "SÍ (imagen)" : "NO (emoji)");
         setUser(nombre);
         setPassword(password);
-        setAvatar(localStorage.getItem("UserAvatar") || "😀");
+        setAvatar(savedAvatar);
     }, []);
 
     const updateProfile = useCallback((nombre, nuevoAvatar) => {

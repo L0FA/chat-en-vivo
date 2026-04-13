@@ -282,6 +282,7 @@ io.on("connection", async (socket) => {
             });
             if (userResult.rows.length > 0) {
                 userAvatar = userResult.rows[0].avatar;
+                console.log("📸 Avatar cargado desde DB para", user, ":", userAvatar ? "SÍ" : "NO");
             }
         } catch (e) {
             console.error("❌ ERROR CARGAR AVATAR:", e);

@@ -284,9 +284,13 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
                     <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex flex-col items-center gap-3">
-                            <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
-                                {userInfoModal.avatar || "😀"}
-                            </div>
+                            {userInfoModal.avatar && userInfoModal.avatar.startsWith("data:image") ? (
+                                <img src={userInfoModal.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
+                                    {userInfoModal.avatar || "😀"}
+                                </div>
+                            )}
                             <div className="text-center">
                                 <p className="text-white font-bold text-xl">{userInfoModal.nombre}</p>
                                 {adminsList.includes(userInfoModal.nombre) && <span className="text-yellow-400 text-sm">👑 Admin</span>}
