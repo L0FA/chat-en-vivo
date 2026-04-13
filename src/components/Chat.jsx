@@ -16,6 +16,9 @@ import ProfileDropdown from "./ProfileDropdown";
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
     const { socket, connected, isAdmin: userIsAdmin } = useSocket(user, password);
+    
+    console.log("🔵 Chat rendered, messages count:", messages?.length, "currentRoom:", currentRoom, "socket:", !!socket);
+    
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);

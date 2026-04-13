@@ -17,7 +17,7 @@ export function useMessages(socket, currentRoom = null) {
     }, [currentRoom]);
 
     useEffect(() => {
-    if (!socket || !currentRoom) return;
+    if (!socket) return;
 
     oldestTimestamp.current = null;
     setHistorialListo(false);
