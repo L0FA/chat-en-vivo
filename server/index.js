@@ -229,7 +229,9 @@ io.on("connection", async (socket) => {
     const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,El Celu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(s => s.trim());
 
     try {
-        const isAdmin = ADMIN_LIST.includes(user);
+        const userTrimmed = user.trim();
+        const isAdmin = ADMIN_LIST.some(admin => admin.toLowerCase() === userTrimmed.toLowerCase());
+        console.log("Verificando admin para:", userTrimmed, "isAdmin:", isAdmin, "adminList:", ADMIN_LIST);
         const password = socket.handshake.auth?.password || "";
 
         if (isAdmin && password !== ADMIN_PASSWORD) {
@@ -277,7 +279,7 @@ io.on("connection", async (socket) => {
         return;
     }
 
-    const isAdmin = ADMIN_LIST.includes(user);
+    const isAdmin = ADMIN_LIST.some(admin => admin.toLowerCase() === user.trim().toLowerCase());
     // Todos (incluyendo admins) empiezan en sala-global
     // Los admins pueden acceder a sala-admins-global si la eligen
     const userRoom = "sala-global";
