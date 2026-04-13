@@ -212,6 +212,18 @@ io.on("connection", async (socket) => {
         
     console.log("🟢 Conectando:", user);
 
+    // Verificar si el usuario ya está conectado y desconectar la sesión anterior
+    const existingSocketId = [...connectedUsers.entries()].find(([_, u]) => u.nombre === user)?.[0];
+    if (existingSocketId) {
+        console.log("🔄 Desconectando sesión anterior del usuario:", user);
+        const oldSocket = io.sockets.sockets.get(existingSocketId);
+        if (oldSocket) {
+            oldSocket.disconnect(true);
+        }
+        connectedUsers.delete(existingSocketId);
+        callState.unregisterUser(existingSocketId);
+    }
+    
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
     const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(s => s.trim());
 
