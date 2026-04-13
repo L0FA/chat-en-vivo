@@ -277,6 +277,13 @@ export default function Chat() {
                     />
                 ))}
 
+                {/* DEBUG: if messages exist but nothing rendered */}
+                {messages.length > 0 && (
+                    <div className="text-center text-red-500 text-xs p-2">
+                        Hay {messages.length} mensajes pero no se ven
+                    </div>
+                )}
+
                 {/* Indicador de escritura */}
                 {typingUsers.filter(u => u !== user).length > 0 && (
                     <div className="flex items-center gap-2 px-3 py-2 w-fit">

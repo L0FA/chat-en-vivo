@@ -104,6 +104,8 @@ export default function Message({ message, currentUser, socket, onImageClick, on
     const hora = !isNaN(date.getTime())
         ? date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
         : "";
+    
+    console.log("💬 Message component rendering:", message.id, "type:", message.type, "content:", message.content?.slice(0, 20));
 
     // ---- Acciones ----
     const handleReaction = (emoji) => {
