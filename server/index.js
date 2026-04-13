@@ -801,13 +801,21 @@ io.on("connection", async (socket) => {
                             sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
                             args: [rows[0].timestamp]
                         });
+                        const countResult = await db.execute({ sql: "SELECT COUNT(*) as count FROM Mensajes", args: [] });
+                        const totalMessages = countResult.rows[0]?.count || 0;
+                        hasMore = older.rows.length > 0 && totalMessages > rows.length;
                     } else {
                         older = await db.execute({
                             sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
                             args: [rows[0].timestamp, queryRoom]
                         });
+                        const countResult = await db.execute({
+                            sql: "SELECT COUNT(*) as count FROM Mensajes WHERE room = ?",
+                            args: [queryRoom]
+                        });
+                        const totalMessages = countResult.rows[0]?.count || 0;
+                        hasMore = older.rows.length > 0 && totalMessages > rows.length;
                     }
-                    hasMore = older.rows.length > 0;
                 }
 
                 cb?.({ status: "ok", messages: rows, hasMore });
@@ -853,11 +861,13 @@ io.on("connection", async (socket) => {
 
                 let hasMore = false;
                 if (rows.length > 0) {
-                    const older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE room = ? AND timestamp < ? LIMIT 1",
-                        args: [room, rows[0].timestamp]
+                    // Solo buscar si hay más mensajes CON room asignado
+                    const countResult = await db.execute({
+                        sql: "SELECT COUNT(*) as count FROM Mensajes WHERE room = ?",
+                        args: [room]
                     });
-                    hasMore = older.rows.length > 0;
+                    const totalMessages = countResult.rows[0]?.count || 0;
+                    hasMore = totalMessages > rows.length;
                 }
 
                 socket.emit("historial cargado", { hasMore, pageSize: PAGE_SIZE });
@@ -901,11 +911,12 @@ io.on("connection", async (socket) => {
 
             let hasMore = false;
             if (initialRows.length > 0) {
-                const older = await db.execute({
-                    sql: "SELECT 1 FROM Mensajes WHERE room = ? AND timestamp < ? LIMIT 1",
-                    args: [userRoom, initialRows[0].timestamp]
+                const countResult = await db.execute({
+                    sql: "SELECT COUNT(*) as count FROM Mensajes WHERE room = ?",
+                    args: [userRoom]
                 });
-                hasMore = older.rows.length > 0;
+                const totalMessages = countResult.rows[0]?.count || 0;
+                hasMore = totalMessages > initialRows.length;
             }
 
             // Recuperar reacciones
