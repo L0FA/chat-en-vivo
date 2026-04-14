@@ -8,6 +8,8 @@ export default function MediaDropdown({ socket }) {
     const [audioBlob, setAudioBlob] = useState(null);
     const [showAudioPreview, setShowAudioPreview] = useState(false);
     const [mediaPreview, setMediaPreview] = useState(null);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [audioLevels, setAudioLevels] = useState([]);
     const [showCamera, setShowCamera] = useState(false);
 
     const fileInputRef = useRef(null);
@@ -60,28 +62,63 @@ export default function MediaDropdown({ socket }) {
     }, [socket]);
 
     // ---- Voz ----
+    const recordingTimerRef = useRef(null);
+
     const startVoice = useCallback(async () => {
         setOpen(false);
+        setRecordingTime(0);
+        setAudioLevels([]);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: true,
                 video: false 
             });
             streamRef.current = stream;
+            
+            // Analizador simple para el waveform
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            
+            const updateLevels = () => {
+                if (!streamRef.current) return;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                setAudioLevels(prev => [...prev.slice(-30), avg]);
+                if (streamRef.current) {
+                    recordingTimerRef.current = requestAnimationFrame(updateLevels);
+                }
+            };
+            
             const recorder = new MediaRecorder(stream);
             audioChunksRef.current = [];
-            recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
             recorder.onstop = () => {
+                cancelAnimationFrame(recordingTimerRef.current);
+                audioContext.close();
                 const mimeType = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : 
                                  MediaRecorder.isTypeSupported("audio/3gpp") ? "audio/3gpp" : "audio/webm";
                 const blob = new Blob(audioChunksRef.current, { type: mimeType });
-                console.log("🎵 Blob creado:", blob.type, blob.size);
                 setAudioBlob(blob);
                 setShowAudioPreview(true);
             };
-            recorder.start();
+            recorder.start(100);
             mediaRecorderRef.current = recorder;
             setRecording(true);
+            
+            // Timer para el tiempo
+            const timer = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+            recordingTimerRef.current = timer;
+            
+            // Iniciar análisis de audio
+            updateLevels();
         } catch (err) {
             console.error("Error micrófono:", err);
             alert("No se pudo acceder al micrófono: " + (err.message || err.name || "error desconocido"));
@@ -89,6 +126,9 @@ export default function MediaDropdown({ socket }) {
     }, []);
 
     const stopVoice = useCallback(() => {
+        if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+        }
         mediaRecorderRef.current?.stop();
         streamRef.current?.getTracks().forEach(t => t.stop());
         setRecording(false);
@@ -227,17 +267,75 @@ export default function MediaDropdown({ socket }) {
             />
 
             {/* Grabando voz */}
-            {recording && (
-                <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full flex items-center gap-3 shadow-xl z-50">
-                    <span className="w-3 h-3 bg-white rounded-full animate-pulse"/>
-                    <span className="text-sm font-bold">Grabando...</span>
+            {recording && createPortal(
+                <div style={{
+                    position: "fixed", 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0, 
+                    background: "linear-gradient(to top, #128c7e, #075e54)",
+                    padding: "20px 20px 40px 20px",
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "1rem",
+                    zIndex: 999999
+                }}>
+                    <button
+                        onClick={() => {
+                            // Cancelar - no guardar
+                            setRecording(false);
+                            if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+                            streamRef.current?.getTracks().forEach(t => t.stop());
+                        }}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.5rem" }}
+                    >
+                        ✕
+                    </button>
+                    
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        {/* Waveform visual */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "30px" }}>
+                            {audioLevels.slice(-20).map((level, i) => (
+                                <div 
+                                    key={i}
+                                    style={{
+                                        width: "3px",
+                                        height: Math.max(4, level / 8),
+                                        background: "#fff",
+                                        borderRadius: "2px"
+                                    }}
+                                />
+                            ))}
+                        </div>
+                        
+                        <span style={{ color: "white", fontWeight: "bold", fontSize: "0.9rem", minWidth: "45px" }}>
+                            {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
+                        </span>
+                    </div>
+                    
                     <button
                         onClick={stopVoice}
-                        className="bg-white text-red-500 text-xs font-bold px-3 py-1 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                        style={{ 
+                            background: "#25d366", 
+                            color: "white", 
+                            border: "none", 
+                            borderRadius: "50%", 
+                            width: "50px", 
+                            height: "50px",
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                        }}
                     >
-                        ⏹ Detener
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Preview audio */}
