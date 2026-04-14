@@ -49,24 +49,12 @@ export default function MediaDropdown({ socket }) {
         setOpen(false);
     }, [socket]);
 
-    const getSavedPermissions = () => {
-        const saved = localStorage.getItem("media-permissions");
-        if (saved) return JSON.parse(saved);
-        return { audio: true, video: true };
-    };
-
-    const savePermissions = (audio, video) => {
-        localStorage.setItem("media-permissions", JSON.stringify({ audio, video }));
-    };
-
     // ---- Voz ----
     const startVoice = useCallback(async () => {
         setOpen(false);
-        const perms = getSavedPermissions();
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: perms.audio });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
-            savePermissions(true, perms.video);
             const recorder = new MediaRecorder(stream);
             audioChunksRef.current = [];
             recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
@@ -110,14 +98,12 @@ export default function MediaDropdown({ socket }) {
     // ---- Cámara ----
     const openCamera = useCallback(async () => {
         setOpen(false);
-        const perms = getSavedPermissions();
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: perms.video ? { facingMode: "user" } : false,
-                audio: perms.audio
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user" },
+                audio: false 
             });
             streamRef.current = stream;
-            savePermissions(perms.audio, true);
             setShowCamera(true);
         } catch (err) {
             console.error("Error cámara:", err);
