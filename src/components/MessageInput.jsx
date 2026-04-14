@@ -36,7 +36,9 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
             console.log("📝 [ERROR] Socket no conectado!");    
         }
         
-        socket.emit("Mensaje en Chat", payload);
+        socket.emit("Mensaje en Chat", payload, (response) => {
+            console.log("📝 [CLIENT] Respuesta del servidor:", response);
+        });
         
         setInput("");
         setReplyingTo(null);

@@ -496,8 +496,8 @@ async function init() {
 
         // ---- TEXTO ----
         socket.on("Mensaje en Chat", async (payload, cb) => {
-            console.log("📝 [DEBUG] Evento Mensaje en Chat recibido!", payload);
-            console.log("📝 [DEBUG] Socket ID:", socket.id, "User:", user);
+            console.log("📝 [SERVER] Evento Mensaje en Chat recibido de", user, "!", payload);
+            console.log("📝 [SERVER] Socket ID:", socket.id);
             const id = payload?.id || generateId();
             const content = typeof payload === "string" ? payload : payload?.msg || "";
             const timestamp = payload?.timestamp || Date.now();
