@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 export default function Settings({ open, onClose }) {
     const [ringtone, setRingtone] = useState(() => localStorage.getItem("ringtone-url") || "");
     const [customRingtone, setCustomRingtone] = useState(null);
+    const [notificationSound, setNotificationSound] = useState(() => localStorage.getItem("notification-sound") || "default");
+    const [typingSound, setTypingSound] = useState(() => localStorage.getItem("typing-sound") || "default");
     const fileInputRef = useRef(null);
 
     const defaultRingtones = [
@@ -12,10 +14,35 @@ export default function Settings({ open, onClose }) {
         { name: "Retro", url: "https://www.soundjay.com/phone/cell-phone-ringing-03.mp3" },
     ];
 
+    const notificationOptions = [
+        { value: "default", label: "🔔 Default" },
+        { value: "ding", label: "🔔 Ding" },
+        { value: "chime", label: "🔔 Chime" },
+        { value: "pop", label: "🔔 Pop" },
+        { value: "none", label: "🔇 Silencio" },
+    ];
+
+    const typingOptions = [
+        { value: "default", label: "🔔 Default" },
+        { value: "soft", label: "🔔 Suave" },
+        { value: "click", label: "🔔 Click" },
+        { value: "none", label: "🔇 Silencio" },
+    ];
+
     const handleSelectRingtone = (url) => {
         localStorage.setItem("ringtone-url", url);
         setRingtone(url);
         setCustomRingtone(null);
+    };
+
+    const handleNotificationChange = (value) => {
+        localStorage.setItem("notification-sound", value);
+        setNotificationSound(value);
+    };
+
+    const handleTypingChange = (value) => {
+        localStorage.setItem("typing-sound", value);
+        setTypingSound(value);
     };
 
     const handleFileUpload = (e) => {
@@ -111,6 +138,52 @@ export default function Settings({ open, onClose }) {
                                 🔊 Probar ringtone
                             </button>
                         )}
+                    </div>
+
+                    {/* Notificación */}
+                    <div className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-xl">💬</span>
+                            <span className="text-white font-medium">Sonido de mensaje</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {notificationOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => handleNotificationChange(opt.value)}
+                                    className={`text-xs px-2 py-2 rounded-lg transition cursor-pointer ${
+                                        notificationSound === opt.value
+                                            ? "bg-pink-500/50 border border-pink-400"
+                                            : "bg-white/10 border border-transparent hover:bg-white/20"
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Typing */}
+                    <div className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-xl">⌨️</span>
+                            <span className="text-white font-medium">Sonido de escritura</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {typingOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => handleTypingChange(opt.value)}
+                                    className={`text-xs px-2 py-2 rounded-lg transition cursor-pointer ${
+                                        typingSound === opt.value
+                                            ? "bg-pink-500/50 border border-pink-400"
+                                            : "bg-white/10 border border-transparent hover:bg-white/20"
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

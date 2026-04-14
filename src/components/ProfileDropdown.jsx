@@ -7,21 +7,6 @@ const AVATAR_OPTIONS = [
     "⚽", "🎨", "🚀", "💡", "🎯", "🏆", "🌈", "❤️", "✨", "🌙"
 ];
 
-const SOUND_OPTIONS = [
-    { value: "default", label: "🔔 Default" },
-    { value: "ding", label: "🔔 Ding" },
-    { value: "chime", label: "🔔 Chime" },
-    { value: "pop", label: "🔔 Pop" },
-    { value: "none", label: "🔇 Silencio" },
-];
-
-const TYPING_SOUND_OPTIONS = [
-    { value: "default", label: "🔔 Default" },
-    { value: "soft", label: "🔔 Suave" },
-    { value: "click", label: "🔔 Click" },
-    { value: "none", label: "🔇 Silencio" },
-];
-
 export default function ProfileDropdown({ isAdmin = false, socket = null }) {
     const { user, avatar, updateProfile } = useChat();
     const [open, setOpen] = useState(false);
@@ -29,8 +14,6 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
     const [editMode, setEditMode] = useState(false);
     const [newName, setNewName] = useState(user);
     const [newAvatar, setNewAvatar] = useState(avatar);
-    const [newSound, setNewSound] = useState(() => localStorage.getItem("notification-sound") || "default");
-    const [newTypingSound, setNewTypingSound] = useState(() => localStorage.getItem("typing-sound") || "default");
     const [avatarMode, setAvatarMode] = useState("emoji");
     const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -62,8 +45,6 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
 
     const handleSave = () => {
         updateProfile(newName.trim() || "Invitado", newAvatar);
-        localStorage.setItem("notification-sound", newSound);
-        localStorage.setItem("typing-sound", newTypingSound);
         
         // Enviar avatar al servidor SIEMPRE (si hay un socket)
         if (socket && newAvatar) {
@@ -243,42 +224,6 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
                                         </button>
                                     </div>
                                 )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-white/70 text-xs">Sonido de notificación</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {SOUND_OPTIONS.map((s) => (
-                                        <button
-                                            key={s.value}
-                                            onClick={() => setNewSound(s.value)}
-                                            className={`text-xs px-2 py-2 rounded-lg transition cursor-pointer ${
-                                                newSound === s.value
-                                                    ? "bg-pink-500/50 border border-pink-400"
-                                                    : "bg-white/10 border border-transparent hover:bg-white/20"
-                                            }`}
-                                        >
-                                            {s.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-white/70 text-xs">Sonido de escritura</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {TYPING_SOUND_OPTIONS.map((s) => (
-                                        <button
-                                            key={s.value}
-                                            onClick={() => setNewTypingSound(s.value)}
-                                            className={`text-xs px-2 py-2 rounded-lg transition cursor-pointer ${
-                                                newTypingSound === s.value
-                                                    ? "bg-pink-500/50 border border-pink-400"
-                                                    : "bg-white/10 border border-transparent hover:bg-white/20"
-                                            }`}
-                                        >
-                                            {s.label}
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
                             <div className="flex gap-2">
                                 <button
