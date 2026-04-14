@@ -86,9 +86,11 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = stream;
             }
+            
+            // Audio always
             if (remoteAudioRef.current) {
                 remoteAudioRef.current.srcObject = stream;
-                remoteAudioRef.current.play().catch(e => console.log("🔇 Audio play error:", e));
+                remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
             }
         };
 
@@ -190,9 +192,12 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
         startLocalStream(type === "video").then(async stream => {
             if (!stream) return;
 
+            console.log("🎤 Stream creado, tracks:", stream.getTracks().map(t => t.kind + ":" + t.enabled));
+            
             setCallState("active");
             
             const pc = createPeerConnection(from);
+            console.log("🔗 PC creada, enviando offer...");
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
             socket?.emit("webrtc:offer", { offer, target: from });
@@ -358,6 +363,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
         
         startLocalStream(type === "video").then(stream => {
             if (stream) {
+                console.log("🎤 Stream creado (initiate), tracks:", stream.getTracks().map(t => t.kind + ":" + t.enabled));
                 setRemoteUser(targetUser);
                 
                 // Crear peer connection y enviar oferta
