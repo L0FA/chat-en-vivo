@@ -241,9 +241,7 @@ export default function Chat() {
                     <UsersPanel />
                     <VideoCall 
                         socket={socket} 
-                        currentRoom={currentRoom} 
                         callTrigger={callTrigger}
-                        userAvatar={avatar}
                     />
                     <button 
                         onClick={() => setCallTrigger(t => t + 1)}

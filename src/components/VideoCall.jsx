@@ -26,6 +26,11 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     const localStreamRef = useRef(null);
     const peerConnectionRef = useRef(null);
     const timerRef = useRef(null);
+    const [callPosition, setCallPosition] = useState({ x: 4, y: 20 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const screenStreamRef = useRef(null);
 
     const playRingtone = () => {
         if (ringtoneRef.current) {
@@ -203,6 +208,53 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     };
 
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+    const handleDragStart = () => setIsDragging(true);
+    
+    const handleDrag = (e) => {
+        if (!isDragging) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = ((window.innerWidth - clientX - 192) / window.innerWidth) * 100;
+        setCallPosition({ x: Math.max(0, Math.min(80, x)), y: 20 });
+    };
+    
+    const handleDragEnd = () => setIsDragging(false);
+
+    const toggleFullscreen = () => {
+        setIsFullscreen(!isFullscreen);
+    };
+
+    const toggleScreenShare = async () => {
+        if (isScreenSharing) {
+            if (screenStreamRef.current) {
+                screenStreamRef.current.getTracks().forEach(t => t.stop());
+                screenStreamRef.current = null;
+            }
+            setIsScreenSharing(false);
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStreamRef.current = stream;
+                const track = stream.getVideoTracks()[0];
+                const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === "video");
+                if (sender && track) sender.replaceTrack(track);
+                track.onended = () => toggleScreenShare();
+                setIsScreenSharing(true);
+            } catch (err) {
+                console.error("Error screen share:", err);
+            }
+        }
+    };
+
+    const getRemoteUserAvatar = () => {
+        if (!remoteUser) return null;
+        const remote = connectedUsers.find(u => {
+            const nombre = typeof u === "string" ? u : u?.nombre;
+            return nombre === remoteUser;
+        });
+        if (!remote || typeof remote === "string") return null;
+        return remote.avatar;
+    };
 
     useEffect(() => {
         if (callTrigger > 0) {
@@ -390,10 +442,20 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
 
             {incomingCall && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
-                    <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl">
-                        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-pink-400 flex items-center justify-center text-5xl">
-                            👤
-                        </div>
+                    <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-scale-in">
+                        {(() => {
+                            const remote = connectedUsers.find(u => {
+                                const nombre = typeof u === "string" ? u : u?.nombre;
+                                return nombre === incomingCall.from;
+                            });
+                            const avatar = remote?.avatar;
+                            const isImage = avatar && avatar.startsWith("data:image");
+                            return isImage ? (
+                                <img src={avatar} alt="" className="w-24 h-24 rounded-full object-cover mx-auto mb-4 shadow-lg" />
+                            ) : (
+                                <div className="w-24 h-24 rounded-full bg-pink-400 flex items-center justify-center text-5xl mx-auto mb-4">👤</div>
+                            );
+                        })()}
                         <div className="text-white font-bold text-xl mb-1">{incomingCall.from}</div>
                         <p className="text-white/50 text-sm mb-6">
                             {incomingCall.type === "video" ? "📹 Te llama" : "🎤 Te llama"}
@@ -401,7 +463,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                         <div className="flex gap-4 justify-center">
                             <button 
                                 onClick={acceptCall} 
-                                className="bg-green-500 hover:bg-green-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                                className="bg-green-500 hover:bg-green-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl animate-bounce"
                             >
                                 📞
                             </button>
@@ -430,19 +492,59 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             )}
 
             {callState === "active" && (
-                <div className="fixed bottom-20 right-4 z-40">
-                    <div className="bg-[#1e1e1e] border border-white/20 rounded-2xl p-3 shadow-xl">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"/>
-                            <span className="text-white text-sm">{remoteUser} • {fmt(callDuration)}</span>
+                <div 
+                    className={`fixed z-40 transition-all ${isDragging ? 'transition-none' : ''} ${isFullscreen ? 'inset-0' : ''}`}
+                    style={!isFullscreen ? { 
+                        right: `${callPosition.x}%`, 
+                        bottom: `${callPosition.y}%`,
+                        transition: isDragging ? 'none' : 'all 0.3s ease'
+                    } : {}}
+                    onMouseDown={handleDragStart}
+                    onMouseMove={handleDrag}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                    onTouchStart={handleDragStart}
+                    onTouchMove={handleDrag}
+                    onTouchEnd={handleDragEnd}
+                >
+                    <div className={`bg-[#1e1e1e] border border-white/20 rounded-2xl p-3 shadow-xl ${isFullscreen ? 'h-full flex flex-col' : ''}`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"/>
+                                <span className="text-white text-sm">{remoteUser}</span>
+                                <span className="text-white/50 text-xs">• {fmt(callDuration)}</span>
+                            </div>
+                            {callType === "video" && (
+                                <button
+                                    onClick={toggleScreenShare}
+                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${isScreenSharing ? "bg-green-500" : "bg-white/10 hover:bg-white/20"}`}
+                                    title={isScreenSharing ? "Dejar de compartir" : "Compartir pantalla"}
+                                >
+                                    🖥️
+                                </button>
+                            )}
+                            <button
+                                onClick={toggleFullscreen}
+                                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs"
+                                title={isFullscreen ? "Minimizar" : "Fullscreen"}
+                            >
+                                {isFullscreen ? "🔲" : "⛶"}
+                            </button>
                         </div>
                         
-                        <div className="w-48 h-36 bg-black rounded-lg overflow-hidden mb-2 relative">
+                        <div className={`bg-black rounded-lg overflow-hidden mb-2 relative ${isFullscreen ? 'flex-1' : 'w-48 h-36'}`}>
                             {remoteHasVideo ? (
                                 <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                                    <div className="text-3xl">👤</div>
+                                    {(() => {
+                                        const avatar = getRemoteUserAvatar();
+                                        return avatar && avatar.startsWith("data:image") ? (
+                                            <img src={avatar} alt="" className="w-20 h-20 rounded-full object-cover" />
+                                        ) : (
+                                            <div className="text-5xl">👤</div>
+                                        );
+                                    })()}
                                 </div>
                             )}
                             <audio ref={remoteAudioRef} autoPlay playsInline className="hidden"/>
