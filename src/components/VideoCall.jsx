@@ -142,22 +142,29 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     };
 
     const createPeerConnection = (peerUser) => {
+        console.log("🔗 Creando PeerConnection para:", peerUser);
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         peerConnectionRef.current = pc;
 
+        console.log("📤 Agregando tracks locales al PC");
         localStreamRef.current?.getTracks().forEach(track => {
+            console.log("📤 Track:", track.kind, track.enabled);
             pc.addTrack(track, localStreamRef.current);
         });
 
         pc.ontrack = (e) => {
+            console.log("📹 ontrack recibido!", e.streams[0]?.id, "tracks:", e.streams[0]?.getTracks().length);
             const stream = e.streams[0];
             const hasVideo = stream.getVideoTracks().length > 0;
+            console.log("📹 Tiene video:", hasVideo);
             setRemoteHasVideo(hasVideo);
             
             if (remoteVideoRef.current && stream) {
+                console.log("📹 Asignando stream a remoteVideo");
                 remoteVideoRef.current.srcObject = stream;
             }
             if (remoteAudioRef.current && stream) {
+                console.log("🔊 Asignando stream a remoteAudio");
                 remoteAudioRef.current.srcObject = stream;
                 remoteAudioRef.current.volume = speakerVolume / 100;
                 remoteAudioRef.current.play().then(() => {
@@ -211,15 +218,22 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     };
 
     const startWebRTC = async (peerUser) => {
+        console.log("📞 startWebRTC llamado con:", peerUser, "callType:", callType);
         const stream = await startLocalStream(callType === "video");
-        if (!stream) return;
+        if (!stream) {
+            console.error("❌ No se pudo obtener stream local");
+            return;
+        }
 
         setCallState("active");
         setRemoteUser(peerUser);
 
         const pc = createPeerConnection(peerUser);
+        console.log("📝 Creando offer...");
         const offer = await pc.createOffer();
+        console.log("📝 Offer creada, configurando local description...");
         await pc.setLocalDescription(offer);
+        console.log("📤 Enviando offer a:", peerUser);
         socket.emit("llamada:offer", { offer, to: peerUser });
 
         startTimer();
