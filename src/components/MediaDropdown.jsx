@@ -52,8 +52,11 @@ export default function MediaDropdown({ socket }) {
     // ---- Voz ----
     const startVoice = useCallback(async () => {
         setOpen(false);
+        console.log("🎤 Iniciando grabación...");
         try {
+            console.log("🎤 Pidiendo permisos de audio...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("🎤 Permisos obtenidos, stream:", stream.id);
             streamRef.current = stream;
             const recorder = new MediaRecorder(stream);
             audioChunksRef.current = [];
