@@ -12,6 +12,7 @@ import Lightbox from "./Lightbox";
 import MusicApp from "./MusicApp";
 import VideoCall from "./VideoCall";
 import ProfileDropdown from "./ProfileDropdown";
+import Settings from "./Settings";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
@@ -28,6 +29,7 @@ export default function Chat() {
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [showMusicApp, setShowMusicApp] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const [callTrigger, setCallTrigger] = useState(0);
 
     // Efecto para actualizar título con notificaciones
@@ -263,6 +265,16 @@ export default function Chat() {
                     >
                         🎵
                     </button>
+                    <button
+                        onClick={() => setShowSettings(p => !p)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
+                            scrolled
+                                ? "bg-white/90 border-gray-200"
+                                : "bg-white/20 border-white/30 backdrop-blur-sm"
+                        }`}
+                    >
+                        ⚙️
+                    </button>
                     <ThemeSelector scrolled={scrolled} />
                 </div>
             </div>
@@ -357,6 +369,12 @@ export default function Chat() {
                 currentUser={user}
                 open={showMusicApp}
                 onClose={() => setShowMusicApp(false)}
+            />
+
+            {/* Settings */}
+            <Settings
+                open={showSettings}
+                onClose={() => setShowSettings(false)}
             />
 
             {/* Lightbox */}

@@ -33,7 +33,9 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     const screenStreamRef = useRef(null);
 
     const playRingtone = () => {
+        const ringtoneUrl = localStorage.getItem("ringtone-url") || "https://www.soundjay.com/phone/cell-phone-ringing-01.mp3";
         if (ringtoneRef.current) {
+            ringtoneRef.current.src = ringtoneUrl;
             ringtoneRef.current.play().catch(() => {});
         }
     };
@@ -475,7 +477,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                             </button>
                         </div>
                     </div>
-                    <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/cell-phone-ringing-01.mp3" loop />
+                    <audio ref={ringtoneRef} loop />
                 </div>
             )}
 
