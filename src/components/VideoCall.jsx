@@ -11,10 +11,12 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     const { user, connectedUsers } = useChat();
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
+    const [remoteUser, setRemoteUser] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+    const [showCallDropdown, setShowCallDropdown] = useState(false);
     const [remoteHasVideo, setRemoteHasVideo] = useState(false);
     const [speakerVolume, setSpeakerVolume] = useState(() => {
         const saved = localStorage.getItem("speaker-volume");
@@ -100,6 +102,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
             peerConnectionRef.current = null;
         }
         setCallState("idle");
+        setRemoteUser(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
     };
@@ -149,6 +152,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
         socket.on("call:invite", async ({ from, type }) => {
             console.log("📞 Invited to call by:", from);
             setCallType(type);
+            setRemoteUser(from);
             
             const stream = await startLocalStream(type === "video");
             if (!stream) return;
@@ -216,10 +220,11 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
         };
     }, [socket, callType, user]);
 
-    const initiateCall = (type) => {
+    const initiateCall = (targetUser, type) => {
+        setShowCallDropdown(false);
         setCallType(type);
         setCallState("calling");
-        socket?.emit("call:invite", { type, room: currentRoom });
+        socket?.emit("call:invite", { to: targetUser, type, room: currentRoom });
         
         startLocalStream(type === "video").then(stream => {
             if (stream) {
@@ -247,30 +252,61 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
         <>
             {callState === "idle" && externalTrigger > 0 && (
                 <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
-                    <div className="flex gap-2 bg-[#1e1e1e] border border-white/20 p-2 rounded-full shadow-xl">
-                        {otherUsers.slice(0, 3).map(u => {
-                            const nombre = typeof u === "string" ? u : u?.nombre;
-                            const avatar = typeof u === "string" ? null : u?.avatar;
-                            return (
-                                <button
-                                    key={nombre}
-                                    onClick={() => initiateCall("video")}
-                                    className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white text-lg"
-                                    title={`Llamar a ${nombre}`}
-                                >
-                                    {avatar && avatar.startsWith("data:image") ? (
-                                        <img src={avatar} alt="" className="w-full h-full rounded-full object-cover" />
-                                    ) : "📹"}
-                                </button>
-                            );
-                        })}
+                    <div className="relative">
                         <button
-                            onClick={() => initiateCall("audio")}
-                            className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white"
-                            title="Llamada de voz"
+                            onClick={() => setShowCallDropdown(!showCallDropdown)}
+                            className="w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white text-xl shadow-xl transition hover:scale-110"
+                            title="Llamar"
                         >
-                            🎤
+                            📞
                         </button>
+                        
+                        {showCallDropdown && (
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#1e1e1e] border border-white/20 rounded-2xl p-3 shadow-2xl min-w-48 animate-scale-in">
+                                <div className="text-white/60 text-xs mb-2 px-2">Llamar a...</div>
+                                {otherUsers.length === 0 ? (
+                                    <div className="text-white/30 text-sm text-center py-2">No hay usuarios</div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        {otherUsers.map(u => {
+                                            const nombre = typeof u === "string" ? u : u?.nombre;
+                                            const avatar = typeof u === "string" ? null : u?.avatar;
+                                            const isImage = avatar && avatar.startsWith("data:image");
+                                            
+                                            return (
+                                                <div key={nombre} className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => initiateCall(nombre, "video")}
+                                                        className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition text-left"
+                                                    >
+                                                        {isImage ? (
+                                                            <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-full bg-pink-400 flex items-center justify-center">😀</div>
+                                                        )}
+                                                        <span className="text-white text-sm font-medium truncate">{nombre}</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => initiateCall(nombre, "audio")}
+                                                        className="w-8 h-8 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center text-white"
+                                                        title="Audio"
+                                                    >
+                                                        🎤
+                                                    </button>
+                                                    <button
+                                                        onClick={() => initiateCall(nombre, "video")}
+                                                        className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white"
+                                                        title="Video"
+                                                    >
+                                                        📹
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
