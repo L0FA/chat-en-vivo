@@ -203,6 +203,9 @@ async function init() {
         await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN destructSeconds INTEGER DEFAULT 0", args: [] });
     } catch {"_"}
     try {
+        await db.execute({ sql: "ALTER TABLE Mensajes ADD COLUMN replyToContent TEXT", args: [] });
+    } catch {"_"}
+    try {
         await db.execute({ sql: "ALTER TABLE Canciones ADD COLUMN portada TEXT", args: [] });
     } catch {"_"}
     
