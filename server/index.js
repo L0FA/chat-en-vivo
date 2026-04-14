@@ -343,13 +343,29 @@ async function init() {
         socket.emit("Logged In", { user, isAdmin });
 
         // ---- DISCONNECT ----
-        socket.on("disconnect", () => {
+        socket.on("disconnect", async () => {
             console.log("🔴 Desconectado:", user);
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
+            
+            // Obtener avatares de TODOS los usuarios desde DB
+            const allUsersResult = await db.execute({
+                sql: "SELECT nombre, avatar FROM Usuarios",
+                args: []
+            });
+            const avatarsMap = {};
+            allUsersResult.rows.forEach(row => {
+                avatarsMap[row.nombre] = row.avatar;
+            });
+            
+            const usersWithAvatars = [...connectedUsers.values()].map(u => ({
+                nombre: u.nombre,
+                avatar: u.avatar || avatarsMap[u.nombre] || null
+            }));
+            
             const remainingAdmins = [...connectedUsers.entries()].filter(([, u]) => u.esAdmin).map(([, u]) => u.nombre);
             io.emit("Usuarios Conectados", { 
-                users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
+                users: usersWithAvatars, 
                 admins: remainingAdmins 
             });
         });
