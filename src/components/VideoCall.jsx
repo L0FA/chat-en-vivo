@@ -7,7 +7,7 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" }
 ];
 
-export default function VideoCall({ socket, currentRoom = null, externalTrigger = 0 }) {
+export default function VideoCall({ socket, currentRoom = null, externalTrigger = 0, userAvatar = null }) {
     const { user, connectedUsers } = useChat();
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
@@ -936,10 +936,21 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                     )}
                     
                     {/* Vista previa local */}
-                    {hasLocalVideo && !isVideoOff && (
+                    {(hasLocalVideo && !isVideoOff) ? (
                         <div className="mt-2">
                             <div className="relative w-20 h-15 rounded-lg overflow-hidden bg-black">
                                 <video ref={localVideoSmallRef} autoPlay playsInline muted className="w-full h-full object-cover"/>
+                                <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1 rounded">Tú</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mt-2">
+                            <div className="relative w-20 h-15 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center">
+                                {userAvatar && userAvatar.startsWith("data:image") ? (
+                                    <img src={userAvatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-3xl">{userAvatar || "😀"}</span>
+                                )}
                                 <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1 rounded">Tú</div>
                             </div>
                         </div>

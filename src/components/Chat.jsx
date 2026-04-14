@@ -268,6 +268,7 @@ export default function Chat() {
                 socket={socket} 
                 currentRoom={currentRoom} 
                 externalTrigger={callTrigger}
+                userAvatar={avatar}
             />
 
             {/* Mensajes */}
