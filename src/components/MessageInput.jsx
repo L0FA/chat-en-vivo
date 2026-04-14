@@ -141,7 +141,7 @@ const handleChange = (e) => {
         onKeyDown={handleKeyDown}
         placeholder="Escribí un mensaje..."
         autoComplete="off"
-        className="flex-1 text-sm bg-transparent focus:outline-none"
+        className="flex-1 text-sm bg-transparent focus:outline-none text-gray-800 placeholder-gray-400"
     />
 
                     <button

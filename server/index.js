@@ -394,14 +394,29 @@ io.on("connection", async (socket) => {
         socket.on("Obtener Mis Salas", async (cb) => {
             console.log("📋 Obteniendo salas para:", user);
             try {
-                const salas = await db.execute({
-                    sql: `SELECT s.*, m.esAdmin FROM Salas s 
+                let query = `SELECT s.*, m.esAdmin FROM Salas s 
                           JOIN MiembrosSala m ON s.id = m.salaId 
-                          WHERE m.usuario = ?`,
-                    args: [user]
-                });
-                console.log("📋 Salas encontradas:", salas.rows.length, salas.rows.map(s => s.id));
-                cb?.({ status: "ok", salas: salas.rows });
+                          WHERE m.usuario = ?`;
+                let results;
+                
+                // Si es admin, también incluir la sala de admins aunque no sea miembro
+                if (isAdmin) {
+                    query = `SELECT s.*, m.esAdmin FROM Salas s 
+                            LEFT JOIN MiembrosSala m ON s.id = m.salaId AND m.usuario = ?
+                            WHERE s.id = ? OR m.usuario = ?`;
+                    results = await db.execute({
+                        sql: query,
+                        args: [user, SALA_ADMINS_ID, user]
+                    });
+                } else {
+                    results = await db.execute({
+                        sql: query,
+                        args: [user]
+                    });
+                }
+                
+                console.log("📋 Salas encontradas:", results.rows.length, results.rows.map(s => s.id));
+                cb?.({ status: "ok", salas: results.rows });
             } catch (e) {
                 console.error("❌ ERROR OBTENER SALAS:", e);
                 cb?.({ status: "error" });
