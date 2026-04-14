@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useChat } from "../hooks/useChat";
 
@@ -65,7 +65,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
         }
     };
 
-    const createPeerConnection = (peerId) => {
+    const createPeerConnection = useCallback((peerId) => {
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         peerConnectionRef.current = pc;
 
@@ -88,7 +88,6 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 remoteVideoRef.current.srcObject = stream;
             }
             
-            // Audio always
             if (remoteAudioRef.current) {
                 remoteAudioRef.current.srcObject = stream;
                 remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
@@ -105,36 +104,61 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             console.log("🔗 Connection state:", pc.connectionState);
             if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
                 console.log("🔗 Call ended");
-                endCallCleanup();
+                endCallCleanupRef.current();
             }
         };
 
         return pc;
-    };
+    }, [socket]);
 
-    const startTimer = () => {
-        timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
-    };
+    const endCallCleanupRef = useRef(null);
+    useEffect(() => {
+        endCallCleanupRef.current = () => {
+            stopRingtone();
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(t => t.stop());
+                localStreamRef.current = null;
+            }
+            if (peerConnectionRef.current) {
+                peerConnectionRef.current.close();
+                peerConnectionRef.current = null;
+            }
+            setCallState("idle");
+            setRemoteUser(null);
+            setIncomingCall(null);
+            setCallDuration(0);
+            setRemoteHasVideo(false);
+        };
+    }, []);
 
-    const endCallCleanup = () => {
+    const endCallCleanup = endCallCleanupRef.current || (() => {
         stopRingtone();
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(t => t.stop());
-            localStreamRef.current = null;
-        }
-        if (peerConnectionRef.current) {
-            peerConnectionRef.current.close();
-            peerConnectionRef.current = null;
-        }
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+        if (peerConnectionRef.current) peerConnectionRef.current.close();
         setCallState("idle");
         setRemoteUser(null);
         setIncomingCall(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
+    });
+
+    const endCallForAllRef = useRef(null);
+    useEffect(() => {
+        endCallForAllRef.current = () => {
+            socket?.emit("call:end", {});
+            endCallCleanupRef.current();
+        };
+    }, [socket]);
+
+    const endCallForAll = () => endCallForAllRef.current?.();
+
+    const startTimer = () => {
+        timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
     };
 
     const toggleMute = () => {
@@ -171,12 +195,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
 
     const endCall = () => {
         socket?.emit("call:leave");
-        endCallCleanup();
-    };
-
-    const endCallForAll = () => {
-        socket?.emit("call:end", {});
-        endCallCleanup();
+        endCallCleanupRef.current?.();
     };
 
     const acceptCall = async () => {
@@ -358,7 +377,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             socket.off("webrtc:answer");
             socket.off("webrtc:ice");
         };
-    }, [socket, callType, user, remoteUser, createPeerConnection, endCallCleanup, endCallForAll]);
+    }, [socket, callType, user, remoteUser, createPeerConnection]);
 
     const initiateCall = (targetUser, type) => {
         console.log("📞 Initiating call to:", targetUser, "type:", type);
@@ -395,7 +414,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     return createPortal(
         <>
             {callState === "idle" && showCallDropdown && (
-                <div className="fixed inset-0 z-[9998]">
+                <div className="fixed inset-0 z-9998">
                     <div 
                         className="absolute inset-0 bg-black/40" 
                         onClick={() => setShowCallDropdown(false)}
@@ -454,7 +473,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             )}
 
             {incomingCall && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
+                <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70">
                     <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-scale-in">
                         {(() => {
                             const remote = connectedUsers.find(u => {
