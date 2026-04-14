@@ -12,11 +12,13 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
     const [remoteUser, setRemoteUser] = useState(null);
+    const [incomingCall, setIncomingCall] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [showCallDropdown, setShowCallDropdown] = useState(false);
     const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+    const ringtoneRef = useRef(null);
     const [speakerVolume, setSpeakerVolume] = useState(() => {
         const saved = localStorage.getItem("speaker-volume");
         return saved ? parseInt(saved) : 100;
@@ -28,6 +30,19 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     const localStreamRef = useRef(null);
     const peerConnectionRef = useRef(null);
     const timerRef = useRef(null);
+
+    const playRingtone = () => {
+        if (ringtoneRef.current) {
+            ringtoneRef.current.play().catch(() => {});
+        }
+    };
+
+    const stopRingtone = () => {
+        if (ringtoneRef.current) {
+            ringtoneRef.current.pause();
+            ringtoneRef.current.currentTime = 0;
+        }
+    };
 
     const getDevicePreferences = () => {
         const saved = localStorage.getItem("device-preferences");
@@ -102,6 +117,7 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     };
 
     const endCallCleanup = () => {
+        stopRingtone();
         if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
@@ -116,8 +132,41 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         }
         setCallState("idle");
         setRemoteUser(null);
+        setIncomingCall(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
+    };
+
+    const acceptCall = async () => {
+        if (!incomingCall) return;
+        const { from, type } = incomingCall;
+        setIncomingCall(null);
+        stopRingtone();
+        
+        socket?.emit("call:accept", { to: from });
+        
+        setCallType(type);
+        setRemoteUser(from);
+        
+        const stream = await startLocalStream(type === "video");
+        if (!stream) return;
+
+        setCallState("active");
+        
+        const pc = createPeerConnection(from);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket?.emit("webrtc:offer", { offer, target: from });
+        
+        startTimer();
+    };
+
+    const rejectCall = () => {
+        if (incomingCall) {
+            socket?.emit("call:reject", { to: incomingCall.from });
+        }
+        setIncomingCall(null);
+        stopRingtone();
     };
 
     const toggleMute = () => {
@@ -169,25 +218,9 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         if (!socket) return;
 
         socket.on("call:invite", async ({ from, type }) => {
-            console.log("📞 Invited to call by:", from);
-            setCallType(type);
-            setRemoteUser(from);
-            
-            const stream = await startLocalStream(type === "video");
-            if (!stream) return;
-
-            setCallState("active");
-            
-            const pc = createPeerConnection(from);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit("webrtc:offer", { offer, target: from });
-            
-            startTimer();
-        });
-
-        socket.on("call:join", async ({ user: joiner }) => {
-            console.log("📞 User joined call:", joiner);
+            console.log("📞 Invited to call by:", from, "type:", type);
+            setIncomingCall({ from, type });
+            playRingtone();
         });
 
         socket.on("call:leave", ({ user: leaver }) => {
@@ -197,8 +230,20 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             }
         });
 
+        socket.on("call:rejected", ({ from }) => {
+            console.log("📞 Call rejected by:", from);
+            endCallCleanup();
+            stopRingtone();
+        });
+
+        socket.on("call:accepted", ({ from }) => {
+            console.log("📞 Call accepted by:", from);
+            // La conexión ya está establecida, simplemente esperamos el tráfico
+        });
+
         socket.on("webrtc:offer", async ({ offer, from }) => {
             console.log("📞 Received offer from:", from);
+            setRemoteUser(from);
             
             const stream = await startLocalStream(callType === "video");
             if (!stream) return;
@@ -337,6 +382,35 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {incomingCall && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
+                    <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl">
+                        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-pink-400 flex items-center justify-center text-5xl">
+                            👤
+                        </div>
+                        <div className="text-white font-bold text-xl mb-1">{incomingCall.from}</div>
+                        <p className="text-white/50 text-sm mb-6">
+                            {incomingCall.type === "video" ? "📹 Te llama" : "🎤 Te llama"}
+                        </p>
+                        <div className="flex gap-4 justify-center">
+                            <button 
+                                onClick={acceptCall} 
+                                className="bg-green-500 hover:bg-green-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                            >
+                                📞
+                            </button>
+                            <button 
+                                onClick={rejectCall} 
+                                className="bg-red-500 hover:bg-red-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                            >
+                                📴
+                            </button>
+                        </div>
+                    </div>
+                    <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/cell-phone-ringing-01.mp3" loop />
                 </div>
             )}
 

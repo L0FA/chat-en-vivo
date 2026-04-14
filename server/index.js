@@ -423,6 +423,22 @@ async function init() {
             io.emit("call:leave", { user });
         });
 
+        socket.on("call:reject", ({ to }) => {
+            console.log("📞 Reject de", user, "a", to);
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("call:rejected", { from: user });
+            }
+        });
+
+        socket.on("call:accept", ({ to }) => {
+            console.log("📞 Accept de", user, "a", to);
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("call:accepted", { from: user });
+            }
+        });
+
         socket.on("webrtc:offer", ({ offer, target }) => {
             console.log("📞 Offer de", user, "a", target);
             const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === target)?.[0];
