@@ -239,8 +239,14 @@ export default function Chat() {
                 {/* Botones */}
                 <div className="flex items-center gap-1.5">
                     <UsersPanel />
+                    <VideoCall 
+                        socket={socket} 
+                        currentRoom={currentRoom} 
+                        callTrigger={callTrigger}
+                        userAvatar={avatar}
+                    />
                     <button 
-                        onClick={() => setCallTrigger(t => t + 1)} 
+                        onClick={() => setCallTrigger(t => t + 1)}
                         className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
                             scrolled
                                 ? "bg-white/90 border-gray-200"
@@ -263,13 +269,7 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* VideoCall - montado para recibir eventos */}
-            <VideoCall 
-                socket={socket} 
-                currentRoom={currentRoom} 
-                externalTrigger={callTrigger}
-                userAvatar={avatar}
-            />
+            {/* VideoCall - manejando estado desde el navbar */}
 
             {/* Mensajes */}
             <div
