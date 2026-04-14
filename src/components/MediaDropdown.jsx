@@ -27,8 +27,12 @@ export default function MediaDropdown({ socket }) {
 
     // Asignar src al audio preview cuando se muestra
     useEffect(() => {
-        if (showAudioPreview && audioBlob && audioPreviewRef.current) {
-            audioPreviewRef.current.src = URL.createObjectURL(audioBlob);
+        if (showAudioPreview && audioBlob) {
+            setTimeout(() => {
+                if (audioPreviewRef.current) {
+                    audioPreviewRef.current.src = URL.createObjectURL(audioBlob);
+                }
+            }, 100);
         }
     }, [showAudioPreview, audioBlob]);
 
