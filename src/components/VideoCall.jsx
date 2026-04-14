@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useChat } from "../hooks/useChat";
 
@@ -7,12 +7,11 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" }
 ];
 
-export default function VideoCall({ socket, currentRoom = null, callTrigger = 0, userAvatar = null }) {
+export default function VideoCall({ socket, callTrigger = 0 }) {
     const { user, connectedUsers } = useChat();
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
     const [remoteUser, setRemoteUser] = useState(null);
-    const [callParticipants, setCallParticipants] = useState([]);
     const [incomingCall, setIncomingCall] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
@@ -20,10 +19,6 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     const [showCallDropdown, setShowCallDropdown] = useState(false);
     const [remoteHasVideo, setRemoteHasVideo] = useState(false);
     const ringtoneRef = useRef(null);
-    const [speakerVolume, setSpeakerVolume] = useState(() => {
-        const saved = localStorage.getItem("speaker-volume");
-        return saved ? parseInt(saved) : 100;
-    });
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
@@ -43,12 +38,6 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             ringtoneRef.current.pause();
             ringtoneRef.current.currentTime = 0;
         }
-    };
-
-    const getDevicePreferences = () => {
-        const saved = localStorage.getItem("device-preferences");
-        if (saved) return JSON.parse(saved);
-        return { video: true, audio: true, facingMode: "user", audioInputId: null, videoInputId: null };
     };
 
     const startLocalStream = async (video) => {
@@ -136,7 +125,6 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         setIncomingCall(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
-        setCallParticipants([]);
     };
 
     const toggleMute = () => {
@@ -181,11 +169,44 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         endCallCleanup();
     };
 
+    const acceptCall = async () => {
+        if (!incomingCall) return;
+        const { from, type } = incomingCall;
+        setIncomingCall(null);
+        stopRingtone();
+        
+        socket?.emit("call:accept", { to: from });
+        
+        setCallType(type);
+        setRemoteUser(from);
+        
+        startLocalStream(type === "video").then(async stream => {
+            if (!stream) return;
+
+            setCallState("active");
+            
+            const pc = createPeerConnection(from);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket?.emit("webrtc:offer", { offer, target: from });
+            
+            startTimer();
+        });
+    };
+
+    const rejectCall = () => {
+        if (incomingCall) {
+            socket?.emit("call:reject", { to: incomingCall.from });
+        }
+        setIncomingCall(null);
+        stopRingtone();
+    };
+
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
     useEffect(() => {
         if (callTrigger > 0) {
-            setShowCallDropdown(true);
+            setTimeout(() => setShowCallDropdown(true), 0);
         }
     }, [callTrigger]);
 
@@ -203,17 +224,11 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             
             if (leaver === remoteUser) {
                 setRemoteHasVideo(false);
-            }
-            
-            setCallParticipants(prev => {
-                const updated = prev.filter(p => p !== leaver);
-                // Si queda solo 1 persona, terminar la llamada
-                if (updated.length <= 1) {
-                    console.log("📞 Solo queda 1 persona, terminando llamada");
+                if (callState === "active") {
+                    console.log("📞 La otra persona abandonó, terminando llamada");
                     endCallForAll();
                 }
-                return updated;
-            });
+            }
         });
 
         socket.on("call:end", () => {
@@ -229,17 +244,10 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
 
         socket.on("call:accepted", ({ from }) => {
             console.log("📞 Call accepted by:", from);
-            setCallParticipants(prev => [...prev, from]);
         });
 
         socket.on("call:join", ({ user: joiner }) => {
             console.log("📞 User joined call:", joiner);
-            setCallParticipants(prev => {
-                if (!prev.includes(joiner)) {
-                    return [...prev, joiner];
-                }
-                return prev;
-            });
         });
 
         socket.on("webrtc:offer", async ({ offer, from }) => {
@@ -286,14 +294,13 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             socket.off("webrtc:answer");
             socket.off("webrtc:ice");
         };
-    }, [socket, callType, user, remoteUser]);
+    }, [socket, callType, user, remoteUser, createPeerConnection, endCallCleanup, endCallForAll]);
 
     const initiateCall = (targetUser, type) => {
         console.log("📞 Initiating call to:", targetUser, "type:", type);
         setShowCallDropdown(false);
         setCallType(type);
         setCallState("calling");
-        setCallParticipants([user, targetUser]);
         
         startLocalStream(type === "video").then(stream => {
             if (stream) {
@@ -319,15 +326,6 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         const nombre = typeof u === "string" ? u : u?.nombre;
         return nombre !== user;
     });
-
-    const getRemoteUserAvatar = (username) => {
-        const remote = connectedUsers.find(u => {
-            const nombre = typeof u === "string" ? u : u?.nombre;
-            return nombre === username;
-        });
-        if (!remote || typeof remote === "string") return null;
-        return remote.avatar;
-    };
 
     return createPortal(
         <>
