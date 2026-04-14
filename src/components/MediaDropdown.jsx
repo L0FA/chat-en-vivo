@@ -66,7 +66,8 @@ export default function MediaDropdown({ socket }) {
             recorder.start();
             mediaRecorderRef.current = recorder;
             setRecording(true);
-        } catch {
+        } catch (err) {
+            console.error("Error micrófono:", err);
             alert("No se pudo acceder al micrófono");
         }
     }, []);
