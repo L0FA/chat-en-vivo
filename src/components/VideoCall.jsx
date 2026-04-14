@@ -12,6 +12,7 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     const [callState, setCallState] = useState("idle");
     const [callType, setCallType] = useState("audio");
     const [remoteUser, setRemoteUser] = useState(null);
+    const [callParticipants, setCallParticipants] = useState([]);
     const [incomingCall, setIncomingCall] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
@@ -135,38 +136,7 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         setIncomingCall(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
-    };
-
-    const acceptCall = async () => {
-        if (!incomingCall) return;
-        const { from, type } = incomingCall;
-        setIncomingCall(null);
-        stopRingtone();
-        
-        socket?.emit("call:accept", { to: from });
-        
-        setCallType(type);
-        setRemoteUser(from);
-        
-        const stream = await startLocalStream(type === "video");
-        if (!stream) return;
-
-        setCallState("active");
-        
-        const pc = createPeerConnection(from);
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket?.emit("webrtc:offer", { offer, target: from });
-        
-        startTimer();
-    };
-
-    const rejectCall = () => {
-        if (incomingCall) {
-            socket?.emit("call:reject", { to: incomingCall.from });
-        }
-        setIncomingCall(null);
-        stopRingtone();
+        setCallParticipants([]);
     };
 
     const toggleMute = () => {
@@ -206,6 +176,11 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         endCallCleanup();
     };
 
+    const endCallForAll = () => {
+        socket?.emit("call:end", {});
+        endCallCleanup();
+    };
+
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
     useEffect(() => {
@@ -225,9 +200,25 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
 
         socket.on("call:leave", ({ user: leaver }) => {
             console.log("📞 User left call:", leaver);
-            if (leaver !== user) {
+            
+            if (leaver === remoteUser) {
                 setRemoteHasVideo(false);
             }
+            
+            setCallParticipants(prev => {
+                const updated = prev.filter(p => p !== leaver);
+                // Si queda solo 1 persona, terminar la llamada
+                if (updated.length <= 1) {
+                    console.log("📞 Solo queda 1 persona, terminando llamada");
+                    endCallForAll();
+                }
+                return updated;
+            });
+        });
+
+        socket.on("call:end", () => {
+            console.log("📞 Llamada terminada por el servidor");
+            endCallCleanup();
         });
 
         socket.on("call:rejected", ({ from }) => {
@@ -238,7 +229,17 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
 
         socket.on("call:accepted", ({ from }) => {
             console.log("📞 Call accepted by:", from);
-            // La conexión ya está establecida, simplemente esperamos el tráfico
+            setCallParticipants(prev => [...prev, from]);
+        });
+
+        socket.on("call:join", ({ user: joiner }) => {
+            console.log("📞 User joined call:", joiner);
+            setCallParticipants(prev => {
+                if (!prev.includes(joiner)) {
+                    return [...prev, joiner];
+                }
+                return prev;
+            });
         });
 
         socket.on("webrtc:offer", async ({ offer, from }) => {
@@ -278,17 +279,21 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             socket.off("call:invite");
             socket.off("call:join");
             socket.off("call:leave");
+            socket.off("call:end");
+            socket.off("call:rejected");
+            socket.off("call:accepted");
             socket.off("webrtc:offer");
             socket.off("webrtc:answer");
             socket.off("webrtc:ice");
         };
-    }, [socket, callType, user]);
+    }, [socket, callType, user, remoteUser]);
 
     const initiateCall = (targetUser, type) => {
         console.log("📞 Initiating call to:", targetUser, "type:", type);
         setShowCallDropdown(false);
         setCallType(type);
         setCallState("calling");
+        setCallParticipants([user, targetUser]);
         
         startLocalStream(type === "video").then(stream => {
             if (stream) {
