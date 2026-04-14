@@ -29,10 +29,6 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e9 // 1GB
 });
 
-io.on("connection", (socket) => {
-    console.log("🔌 [IO] Nueva conexión recibida, socket.id:", socket.id);
-    console.log("🔌 [IO] Auth:", socket.handshake.auth);
-
 const callState = createCallState(io);
 
 const db = createClient({
@@ -53,15 +49,15 @@ async function init() {
         )
     `);
 
-    // Agregar admins por defecto si no existen
-    const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
-    const APP_START_DATE = new Date("2026-04-01").getTime();
-    for (const admin of ADMINS) {
-        await db.execute({
-            sql: "INSERT OR IGNORE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
-            args: [admin, null, APP_START_DATE]
-        });
-    }
+        // Agregar admins por defecto si no existen
+        const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+        const APP_START_DATE = new Date("2026-04-01").getTime();
+        for (const admin of ADMINS) {
+            await db.execute({
+                sql: "INSERT OR IGNORE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
+                args: [admin, null, APP_START_DATE]
+            });
+        }
 
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Mensajes (
@@ -212,20 +208,20 @@ async function init() {
     
 
     // ---- SOCKET ----
-io.on("connection", async (socket) => {
-    const user = socket.handshake.auth?.NombreUsuario || "Invitado";
-        
-    console.log("🟢 Conectando:", user);
+    io.on("connection", async (socket) => {
+        const user = socket.handshake.auth?.NombreUsuario || "Invitado";
+            
+        console.log("🟢 Conectando:", user);
 
-    // Verificar si el usuario ya está conectado y desconectar la sesión anterior
+        // Verificar si el usuario ya está conectado y desconectar la sesión anterior
         const existingSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === user)?.[0];
-    if (existingSocketId) {
-        console.log("🔄 Desconectando sesión anterior del usuario:", user);
-        const oldSocket = io.sockets.sockets.get(existingSocketId);
-        if (oldSocket) {
-            oldSocket.disconnect(true);
-        }
-        connectedUsers.delete(existingSocketId);
+        if (existingSocketId) {
+            console.log("🔄 Desconectando sesión anterior del usuario:", user);
+            const oldSocket = io.sockets.sockets.get(existingSocketId);
+            if (oldSocket) {
+                oldSocket.disconnect(true);
+            }
+            connectedUsers.delete(existingSocketId);
         callState.unregisterUser(existingSocketId);
     }
     
