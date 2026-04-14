@@ -30,6 +30,7 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
         };
         
         console.log("📝 Enviando mensaje con replyTo:", payload);
+        console.log("📝 Socket exists:", !!socket, "currentRoom:", currentRoom);
 
         socket.emit("Mensaje en Chat", payload);
         setInput("");

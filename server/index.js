@@ -496,6 +496,7 @@ io.on("connection", async (socket) => {
 
         // ---- TEXTO ----
         socket.on("Mensaje en Chat", async (payload, cb) => {
+            console.log("📝 Mensaje recibido del cliente:", payload);
             const id = payload?.id || generateId();
             const content = typeof payload === "string" ? payload : payload?.msg || "";
             const timestamp = payload?.timestamp || Date.now();
