@@ -29,6 +29,10 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e9 // 1GB
 });
 
+io.on("connection", (socket) => {
+    console.log("🔌 [IO] Nueva conexión recibida, socket.id:", socket.id);
+    console.log("🔌 [IO] Auth:", socket.handshake.auth);
+
 const callState = createCallState(io);
 
 const db = createClient({
