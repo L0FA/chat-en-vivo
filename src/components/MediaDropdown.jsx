@@ -72,7 +72,10 @@ export default function MediaDropdown({ socket }) {
             audioChunksRef.current = [];
             recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
             recorder.onstop = () => {
-                const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+                const mimeType = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : 
+                                 MediaRecorder.isTypeSupported("audio/3gpp") ? "audio/3gpp" : "audio/webm";
+                const blob = new Blob(audioChunksRef.current, { type: mimeType });
+                console.log("🎵 Blob creado:", blob.type, blob.size);
                 setAudioBlob(blob);
                 setShowAudioPreview(true);
             };
