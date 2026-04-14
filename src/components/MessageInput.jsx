@@ -30,10 +30,13 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
         };
         
         console.log("📝 Enviando mensaje con replyTo:", payload);
-        console.log("📝 Socket exists:", !!socket, "currentRoom:", currentRoom);
+        console.log("📝 Socket exists:", !!socket, "currentRoom:", currentRoom, "socket.connected:", socket?.connected);
+        
+        if (!socket?.connected) {
+            console.log("📝 [ERROR] Socket no conectado!");    
+        }
         
         socket.emit("Mensaje en Chat", payload);
-        console.log("📝 [CLIENT] Emitido, esperando respuesta...");
         
         setInput("");
         setReplyingTo(null);

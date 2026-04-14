@@ -283,8 +283,8 @@ io.on("connection", async (socket) => {
     // Todos (incluyendo admins) empiezan en sala-global
     // Los admins pueden acceder a sala-admins-global si la eligen
     const userRoom = "sala-global";
-
-        console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
+    socket.join(userRoom);
+    console.log("🟢 Conectado:", user, isAdmin ? "(ADMIN)" : "");
 
         // Cargar avatar del usuario desde DB
         let userAvatar = null;

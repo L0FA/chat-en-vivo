@@ -23,10 +23,16 @@ export function useSocket(nombreUsuario, password = "") {
             withCredentials: true
         });
 
-        setTimeout(() => setSocket(newSocket), 0);
+        setSocket(newSocket);
 
-        newSocket.on("connect", () => setConnected(true));
-        newSocket.on("disconnect", () => setConnected(false));
+        newSocket.on("connect", () => {
+            console.log("🔌 [SOCKET] Conectado!", newSocket.id);
+            setConnected(true);
+        });
+        newSocket.on("disconnect", () => {
+            console.log("🔌 [SOCKET] Desconectado!");
+            setConnected(false);
+        });
         newSocket.on("Error", (data) => {
             console.error("Socket error:", data.message);
             alert(data.message);
