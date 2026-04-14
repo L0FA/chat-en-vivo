@@ -19,7 +19,7 @@ export function useSocket(nombreUsuario, password = "") {
             reconnectionDelay: 500,
             reconnectionDelayMax: 2000,
             timeout: 20000,
-            forceNew: true,
+            forceNew: false,
             withCredentials: true
         });
 

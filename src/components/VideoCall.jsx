@@ -53,13 +53,14 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 audio: true,
                 video: video
             });
+            console.log("🎤 getUserMedia OK, tracks:", stream.getTracks().map(t => t.kind + ":" + t.enabled));
             localStreamRef.current = stream;
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream;
             }
             return stream;
         } catch (err) {
-            console.error("❌ Error getting local stream:", err);
+            console.error("❌ Error getUserMedia:", err);
             return null;
         }
     };
@@ -179,6 +180,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     };
 
     const acceptCall = async () => {
+        console.log("📞 ACEPTANDO LLAMADA...");
         if (!incomingCall) return;
         const { from, type } = incomingCall;
         setIncomingCall(null);
@@ -189,17 +191,20 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
         setCallType(type);
         setRemoteUser(from);
         
+        console.log("📞 Llamando startLocalStream...");
         startLocalStream(type === "video").then(async stream => {
+            console.log("📞 Stream resultado:", stream ? "OK" : "NULL");
             if (!stream) return;
 
-            console.log("🎤 Stream creado, tracks:", stream.getTracks().map(t => t.kind + ":" + t.enabled));
-            
+            console.log("📞 Creando PC...");
             setCallState("active");
             
             const pc = createPeerConnection(from);
-            console.log("🔗 PC creada, enviando offer...");
+            console.log("📞 Creando offer...");
             const offer = await pc.createOffer();
+            console.log("📞 Configurando local description...");
             await pc.setLocalDescription(offer);
+            console.log("📞 Enviando offer...");
             socket?.emit("webrtc:offer", { offer, target: from });
             
             startTimer();
