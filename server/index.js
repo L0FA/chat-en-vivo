@@ -409,6 +409,43 @@ async function init() {
             }
         });
 
+        // ---- LLAMADAS ----
+        socket.on("call:invite", ({ to, type, room }) => {
+            console.log("📞 Invite de", user, "a", to, "tipo:", type);
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("call:invite", { from: user, type });
+            }
+        });
+
+        socket.on("call:leave", () => {
+            console.log("📞 Leave de", user);
+            io.emit("call:leave", { user });
+        });
+
+        socket.on("webrtc:offer", ({ offer, target }) => {
+            console.log("📞 Offer de", user, "a", target);
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === target)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("webrtc:offer", { offer, from: user });
+            }
+        });
+
+        socket.on("webrtc:answer", ({ answer, target }) => {
+            console.log("📞 Answer de", user, "a", target);
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === target)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("webrtc:answer", { answer, from: user });
+            }
+        });
+
+        socket.on("webrtc:ice", ({ candidate, target }) => {
+            const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === target)?.[0];
+            if (targetSocket) {
+                io.to(targetSocket).emit("webrtc:ice", { candidate, from: user });
+            }
+        });
+
         // ---- SALAS ----
         socket.on("Obtener Mis Salas", async (cb) => {
             console.log("📋 Obteniendo salas para:", user);

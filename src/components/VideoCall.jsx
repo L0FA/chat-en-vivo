@@ -36,18 +36,18 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     };
 
     const startLocalStream = async (video) => {
-        const prefs = getDevicePreferences();
         try {
-            const constraints = {
-                audio: prefs.audio !== false,
-                video: video && prefs.video !== false
-            };
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: video
+            });
             localStreamRef.current = stream;
-            if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+            if (localVideoRef.current) {
+                localVideoRef.current.srcObject = stream;
+            }
             return stream;
         } catch (err) {
-            console.error("Error getting local stream:", err);
+            console.error("❌ Error getting local stream:", err);
             return null;
         }
     };
@@ -61,8 +61,14 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
         });
 
         pc.ontrack = (event) => {
+            console.log("📹 ontrack fired!", event.streams[0]?.id);
             const stream = event.streams[0];
+            if (!stream) {
+                console.log("📹 No stream in ontrack");
+                return;
+            }
             const hasVideo = stream.getVideoTracks().length > 0;
+            console.log("📹 Remote has video:", hasVideo);
             setRemoteHasVideo(hasVideo);
             
             if (remoteVideoRef.current) {
@@ -70,13 +76,21 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
             }
             if (remoteAudioRef.current) {
                 remoteAudioRef.current.srcObject = stream;
-                remoteAudioRef.current.play().catch(() => {});
+                remoteAudioRef.current.play().catch(e => console.log("🔇 Audio play error:", e));
             }
         };
 
         pc.onicecandidate = (event) => {
             if (event.candidate && socket) {
                 socket.emit("webrtc:ice", { candidate: event.candidate, target: peerId });
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            console.log("🔗 Connection state:", pc.connectionState);
+            if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+                console.log("🔗 Call ended");
+                endCallCleanup();
             }
         };
 
@@ -226,15 +240,27 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
     }, [socket, callType, user]);
 
     const initiateCall = (targetUser, type) => {
+        console.log("📞 Initiating call to:", targetUser, "type:", type);
         setShowCallDropdown(false);
         setCallType(type);
         setCallState("calling");
-        socket?.emit("call:invite", { to: targetUser, type, room: currentRoom });
         
         startLocalStream(type === "video").then(stream => {
             if (stream) {
+                setRemoteUser(targetUser);
+                
+                // Crear peer connection y enviar oferta
+                const pc = createPeerConnection(targetUser);
+                pc.createOffer().then(offer => {
+                    pc.setLocalDescription(offer);
+                    socket?.emit("webrtc:offer", { offer, target: targetUser });
+                });
+                
                 setCallState("active");
                 startTimer();
+                
+                // Notificar al otro usuario
+                socket?.emit("call:invite", { to: targetUser, type });
             }
         });
     };
@@ -331,10 +357,10 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
                     <div className="bg-[#1e1e1e] border border-white/20 rounded-2xl p-3 shadow-xl">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"/>
-                            <span className="text-white text-sm">{fmt(callDuration)}</span>
+                            <span className="text-white text-sm">{remoteUser} • {fmt(callDuration)}</span>
                         </div>
                         
-                        <div className="w-48 h-36 bg-black rounded-lg overflow-hidden mb-2">
+                        <div className="w-48 h-36 bg-black rounded-lg overflow-hidden mb-2 relative">
                             {remoteHasVideo ? (
                                 <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
                             ) : (
@@ -343,6 +369,13 @@ export default function VideoCall({ socket, currentRoom = null, callTrigger = 0,
                                 </div>
                             )}
                             <audio ref={remoteAudioRef} autoPlay playsInline className="hidden"/>
+                            
+                            {/* Local preview */}
+                            {!isVideoOff && (
+                                <div className="absolute bottom-1 right-1 w-12 h-9 bg-black rounded overflow-hidden">
+                                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover"/>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex gap-2 justify-center">
