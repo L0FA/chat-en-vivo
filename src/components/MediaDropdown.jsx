@@ -52,11 +52,11 @@ export default function MediaDropdown({ socket }) {
     // ---- Voz ----
     const startVoice = useCallback(async () => {
         setOpen(false);
-        console.log("🎤 Iniciando grabación...");
         try {
-            console.log("🎤 Pidiendo permisos de audio...");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("🎤 Permisos obtenidos, stream:", stream.id);
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: true,
+                video: false 
+            });
             streamRef.current = stream;
             const recorder = new MediaRecorder(stream);
             audioChunksRef.current = [];
@@ -71,7 +71,7 @@ export default function MediaDropdown({ socket }) {
             setRecording(true);
         } catch (err) {
             console.error("Error micrófono:", err);
-            alert("No se pudo acceder al micrófono");
+            alert("No se pudo acceder al micrófono: " + (err.message || err.name || "error desconocido"));
         }
     }, []);
 
