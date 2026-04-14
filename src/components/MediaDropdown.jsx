@@ -27,10 +27,16 @@ export default function MediaDropdown({ socket }) {
 
     // Asignar src al audio preview cuando se muestra
     useEffect(() => {
+        console.log("🎵 Audio preview effect:", { showAudioPreview, audioBlob: audioBlob?.type, audioBlobSize: audioBlob?.size });
         if (showAudioPreview && audioBlob) {
             setTimeout(() => {
+                console.log("🎵 Asignando src al audio preview...");
                 if (audioPreviewRef.current) {
-                    audioPreviewRef.current.src = URL.createObjectURL(audioBlob);
+                    const url = URL.createObjectURL(audioBlob);
+                    console.log("🎵 URL creada:", url);
+                    audioPreviewRef.current.src = url;
+                } else {
+                    console.log("🎵 audioPreviewRef.current es null");
                 }
             }, 100);
         }
@@ -236,7 +242,13 @@ export default function MediaDropdown({ socket }) {
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999999 }}>
                     <div style={{ background: "white", borderRadius: "1rem", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem", width: "320px" }}>
                         <h3 style={{ fontWeight: "bold", textAlign: "center", color: "#1f2937" }}>🎙️ Audio grabado</h3>
-                        <audio ref={audioPreviewRef} controls style={{ width: "100%" }}/>
+                        <audio 
+                            ref={audioPreviewRef} 
+                            controls 
+                            style={{ width: "100%" }}
+                            onError={() => console.error("🎵 Error en audio:", audioPreviewRef.current?.error)}
+                            onLoadedMetadata={() => console.log("🎵 Audio loaded")}
+                        />
                         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
                             <button onClick={cancelAudio} style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", borderRadius: "0.75rem", fontWeight: "bold", border: "none", cursor: "pointer" }}>❌ Cancelar</button>
                             <button onClick={sendAudio} style={{ background: "#22c55e", color: "white", padding: "0.5rem 1rem", borderRadius: "0.75rem", fontWeight: "bold", border: "none", cursor: "pointer" }}>✅ Enviar</button>
