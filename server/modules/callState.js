@@ -24,7 +24,7 @@ export default function createCallState(io) {
         return userSockets.get(username);
     }
 
-    function getUsername(socketId) {
+    function _getUsername(socketId) {
         for (const [user, id] of userSockets.entries()) {
             if (id === socketId) return user;
         }

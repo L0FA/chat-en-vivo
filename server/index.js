@@ -214,7 +214,7 @@ io.on("connection", async (socket) => {
     console.log("🟢 Conectando:", user);
 
     // Verificar si el usuario ya está conectado y desconectar la sesión anterior
-        const existingSocketId = [...connectedUsers.entries()].find(([key, u]) => u.nombre === user)?.[0];
+        const existingSocketId = [...connectedUsers.entries()].find(([, u]) => u.nombre === user)?.[0];
     if (existingSocketId) {
         console.log("🔄 Desconectando sesión anterior del usuario:", user);
         const oldSocket = io.sockets.sockets.get(existingSocketId);
@@ -302,7 +302,7 @@ io.on("connection", async (socket) => {
         }
 
         // Lista de admins: admins conectados + el nuevo si es admin
-        let adminsArray = [...connectedUsers.entries()].filter(([key, u]) => u.esAdmin).map(([key, u]) => u.nombre);
+        let adminsArray = [...connectedUsers.entries()].filter(([, u]) => u.esAdmin).map(([, u]) => u.nombre);
         
         // Siempre incluir admins hardcodeados
         adminsArray = [...new Set([...adminsArray, ...ADMIN_LIST])];
@@ -344,7 +344,7 @@ io.on("connection", async (socket) => {
             console.log("🔴 Desconectado:", user);
             connectedUsers.delete(socket.id);
             callState.unregisterUser(socket.id);
-            const remainingAdmins = [...connectedUsers.entries()].filter(([key, u]) => u.esAdmin).map(([key, u]) => u.nombre);
+            const remainingAdmins = [...connectedUsers.entries()].filter(([, u]) => u.esAdmin).map(([, u]) => u.nombre);
             io.emit("Usuarios Conectados", { 
                 users: [...connectedUsers.values()].map(u => ({ nombre: u.nombre, avatar: u.avatar })), 
                 admins: remainingAdmins 
@@ -370,7 +370,7 @@ io.on("connection", async (socket) => {
                 console.log("📸 Después de actualizar - avatar en DB:", verify.rows[0]?.avatar ? "SÍ" : "NO");
                 
                 // Actualizar connectedUsers también
-                connectedUsers.set(socket.id, { nombre: user, esAdmin, avatar });
+                connectedUsers.set(socket.id, { nombre: user, esAdmin: isAdmin, avatar });
                 
                 // Enviar solo usuarios conectados actualizados
                 const connectedUsersWithAvatars = [...connectedUsers.values()].map(u => ({
@@ -451,7 +451,7 @@ io.on("connection", async (socket) => {
             try {
                 const currentAdmins = (process.env.ADMINS || "").split(",").map(s => s.trim());
                 if (!currentAdmins.includes(targetUser)) {
-                    const newAdmins = [...currentAdmins, targetUser].join(",");
+                    const _newAdmins = [...currentAdmins, targetUser].join(",");
                     // No se puede cambiar .env en runtime, así que emitimos evento a todos los admins
                     io.emit("Nuevo Admin", { usuario: targetUser });
                 }
@@ -466,7 +466,7 @@ io.on("connection", async (socket) => {
         socket.on("Banear Usuario", async ({ targetUser }, cb) => {
             if (!isAdmin) { cb?.({ status: "error", error: "No autorizado" }); return; }
             try {
-                const bannedUser = [...connectedUsers.entries()].find(([key, u]) => u.nombre === targetUser);
+                const bannedUser = [...connectedUsers.entries()].find(([, u]) => u.nombre === targetUser);
                 if (bannedUser) {
                     const [socketId] = bannedUser;
                     io.to(socketId).emit("Baneado", { mensaje: "Has sido baneado del chat" });
@@ -840,13 +840,14 @@ io.on("connection", async (socket) => {
 
             try {
                 // Los admins solo cargan más mensajes en la sala de admins
+                let results;
                 if (isAdmin && queryRoom === "sala-admins-global") {
-                    var results = await db.execute({
+                    results = await db.execute({
                         sql: `SELECT * FROM Mensajes WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                         args: [beforeTimestamp]
                     });
                 } else {
-                    var results = await db.execute({
+                    results = await db.execute({
                         sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                         args: [beforeTimestamp, queryRoom]
                     });

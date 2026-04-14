@@ -225,7 +225,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
         startTimer();
     };
 
-    const handleOffer = async (offer, from) => {
+    const handleOfferFunc = async (offer, from) => {
         const stream = await startLocalStream(callType === "video");
         if (!stream) return;
 
@@ -396,12 +396,12 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
     useEffect(() => {
         if (externalTrigger > 0) {
             console.log("📞 Trigger externo recibido, mostrando menú");
-            setShowCallMenu(true);
+            setTimeout(() => setShowCallMenu(true), 0);
         }
     }, [externalTrigger]);
 
     useEffect(() => {
-        setShowCallMenu(false);
+        setTimeout(() => setShowCallMenu(false), 0);
     }, [currentRoom]);
 
     useEffect(() => {
@@ -435,75 +435,83 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
 
     useEffect(() => {
         if (showDeviceSettings) {
-            refreshDevices();
+            setTimeout(() => refreshDevices(), 0);
         }
     }, [showDeviceSettings]);
 
     useEffect(() => {
         if (!socket) return;
 
-        socket.on("llamada:invite", ({ from, type, callId }) => {
+        const handleInvite = ({ from, type, callId }) => {
             console.log("📞 Llamada entrante de:", from, type);
             setIncomingCall({ from, type, callId });
-        });
+        };
 
-        socket.on("llamada:accept", ({ from }) => {
+        const handleAccept = ({ from }) => {
             console.log("📞 Llamada aceptada por:", from);
             startWebRTC(from);
-        });
+        };
 
-        socket.on("llamada:reject", () => {
+        const handleReject = () => {
             console.log("📞 Llamada rechazada");
             setCallState("idle");
             setRemoteUser(null);
-        });
+        };
 
-        socket.on("llamada:offer", async ({ offer, from }) => {
+        const handleOffer = async ({ offer, from }) => {
             console.log("📞 Oferta recibida de:", from);
-            await handleOffer(offer, from);
-        });
+            await handleOfferFunc(offer, from);
+        };
 
-        socket.on("llamada:answer", async ({ answer }) => {
+        const handleAnswer = async ({ answer }) => {
             console.log("📞 Respuesta recibida");
             if (peerConnectionRef.current?.signalingState === "have-local-offer") {
                 await peerConnectionRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
             }
-        });
+        };
 
-        socket.on("llamada:ice", async ({ candidate }) => {
+        const handleIce = async ({ candidate }) => {
             console.log("📞 ICE recibido");
             try {
                 await peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
             } catch (e) {
                 console.error("Error adding ICE:", e);
             }
-        });
+        };
 
-        socket.on("llamada:end", () => {
+        const handleEnd = () => {
             console.log("📞 Llamada terminada");
             endCallCleanup();
-        });
+        };
+
+        socket.on("llamada:invite", handleInvite);
+        socket.on("llamada:accept", handleAccept);
+        socket.on("llamada:reject", handleReject);
+        socket.on("llamada:offer", handleOffer);
+        socket.on("llamada:answer", handleAnswer);
+        socket.on("llamada:ice", handleIce);
+        socket.on("llamada:end", handleEnd);
 
         return () => {
-            socket.off("llamada:invite");
-            socket.off("llamada:accept");
-            socket.off("llamada:reject");
-            socket.off("llamada:offer");
-            socket.off("llamada:answer");
-            socket.off("llamada:ice");
-            socket.off("llamada:end");
+            socket.off("llamada:invite", handleInvite);
+            socket.off("llamada:accept", handleAccept);
+            socket.off("llamada:reject", handleReject);
+            socket.off("llamada:offer", handleOffer);
+            socket.off("llamada:answer", handleAnswer);
+            socket.off("llamada:ice", handleIce);
+            socket.off("llamada:end", handleEnd);
         };
-    }, [socket]);
+    }, [socket, startWebRTC, endCallCleanup]);
 
     return createPortal(
         <>
             {showCallMenu && (
                 <>
                     <div 
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-9998 animate-fade-in"
                         onClick={() => setShowCallMenu(false)}
                     />
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+                    <div className="fixed inset-0 z-9999 flex items-center justify-center pointer-events-none">
                         <div 
                             className="bg-[#1e1e1e] border border-white/20 rounded-2xl shadow-2xl p-6 w-80 max-h-[70vh] overflow-y-auto pointer-events-auto animate-scale-in"
                             onClick={e => e.stopPropagation()}
@@ -746,8 +754,8 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
 
             {incomingCall && (
                 <>
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in" />
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center animate-scale-in">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-9998 animate-fade-in" />
+                    <div className="fixed inset-0 z-9999 flex items-center justify-center animate-scale-in">
                         <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl w-80 mx-4">
                             <div className="relative w-24 h-24 mx-auto mb-4">
                                 <div className="absolute inset-0 rounded-full bg-pink-400 animate-pulse opacity-60" style={{ animationDuration: '1s' }} />
@@ -758,7 +766,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                                     return isImageAvatar ? (
                                         <img src={incomingAvatar} alt="" className="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-pink-400/50" />
                                     ) : (
-                                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg ring-4 ring-pink-400/50">👤</div>
+                                        <div className="w-24 h-24 rounded-full bg-linear-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg ring-4 ring-pink-400/50">👤</div>
                                     );
                                 })()}
                             </div>
@@ -798,7 +806,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
 
             {callState === "active" && (
                 <div 
-                    className={`call-container fixed z-[9997] transition-all duration-300 select-none ${
+                    className={`call-container fixed z-9997 transition-all duration-300 select-none ${
                         showRemoteFull ? "inset-0 bg-black" : ""
                     }`}
                     style={!showRemoteFull ? { 
@@ -822,7 +830,7 @@ export default function VideoCall({ socket, currentRoom = null, externalTrigger 
                         {remoteHasVideo ? (
                             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                            <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-gray-900 to-black">
                                 <div className="text-center">
                                     {(() => {
                                         const remoteAvatar = getRemoteUserAvatar();

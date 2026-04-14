@@ -23,7 +23,7 @@ function highlightMentions(text, currentUser) {
 }
 
 function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar, adminsList = [] }) {
-    const { setReplyingTo, theme, connectedUsers } = useChat();
+    const { setReplyingTo, theme } = useChat();
     const [showPicker, setShowPicker] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState(message.content);
@@ -31,7 +31,6 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
     const [userInfoModal, setUserInfoModal] = useState(null);
-    const [loadingUserInfo, setLoadingUserInfo] = useState(false);
     
     const longPressTimerRef = useRef(null);
 
@@ -40,7 +39,6 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     const displayAvatar = isOwn && userAvatar ? userAvatar : "😀";
     
     const fetchUserInfo = (targetUser) => {
-        setLoadingUserInfo(true);
         socket?.emit("Obtener Info Usuario", { targetUser }, (res) => {
             if (res?.status === "ok" && res.info) {
                 setUserInfoModal({
@@ -55,7 +53,6 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
                     creado: "Fecha desconocida"
                 });
             }
-            setLoadingUserInfo(false);
         });
     };
 
@@ -372,7 +369,7 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
                     )}
 
                     {/* Bubble del mensaje */}
-                    <div className={`px-3 py-2 rounded-2xl break-words max-w-full ${getThemeStyles()}`}>
+                    <div className={`px-3 py-2 rounded-2xl wrap-break-word max-w-full ${getThemeStyles()}`}>
                         {renderBody()}
                     </div>
 

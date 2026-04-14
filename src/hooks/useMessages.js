@@ -4,7 +4,7 @@ import { useChat } from "../hooks/useChat";
 export function useMessages(socket, currentRoom = null) {
     const {
         addMessage, updateMessage, removeMessage,
-        updateReaction, setConnectedUsers, setTypingUsers
+        updateReaction, setTypingUsers
     } = useChat();
 
     const [historialListo, setHistorialListo] = useState(false);
@@ -71,7 +71,7 @@ export function useMessages(socket, currentRoom = null) {
         updateReaction(messageId, emoji, user, action);
     });
 
-    socket.on("Estado Leído", ({ messageId, user: viewer, viewers }) => {
+    socket.on("Estado Leído", ({ messageId, viewers }) => {
         updateMessage(messageId, { read: true, viewers: viewers || [] });
     });
 
@@ -110,7 +110,7 @@ export function useMessages(socket, currentRoom = null) {
                     }
                     oscillator.start(audioCtx.currentTime);
                     oscillator.stop(audioCtx.currentTime + 0.1);
-                } catch (e) {}
+                } catch { /* silence is golden */ }
             }
         }
         setTypingUsers(prev =>

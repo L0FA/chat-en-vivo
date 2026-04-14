@@ -23,7 +23,7 @@ export function useSocket(nombreUsuario, password = "") {
             withCredentials: true
         });
 
-        setSocket(newSocket);
+        setTimeout(() => setSocket(newSocket), 0);
 
         newSocket.on("connect", () => setConnected(true));
         newSocket.on("disconnect", () => setConnected(false));

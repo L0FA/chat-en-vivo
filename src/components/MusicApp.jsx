@@ -464,7 +464,7 @@ const [tab, setTab] = useState("cola");
                 onClick={e => e.stopPropagation()}
             >
                 {/* Fondo con gradiente glass */}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/3 to-black/20 pointer-events-none rounded-3xl" />
+                <div className="absolute inset-0 bg-linear-to-b from-white/5 via-white/3 to-black/20 pointer-events-none rounded-3xl" />
                 
                 {/* Header */}
                 <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">

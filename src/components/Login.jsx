@@ -16,17 +16,39 @@ export default function Login() {
         setIsAdmin(ADMIN_USERS.includes(value.trim()));
     };
 
+    // useEffect 1 - auto login
     useEffect(() => {
-        // Solo ejecutar en desktop
         if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return;
-        
         if (rememberMe && localStorage.getItem("NombreUsuario")) {
             const savedPassword = localStorage.getItem("UserPassword") || "";
             login(localStorage.getItem("NombreUsuario"), savedPassword);
         }
     }, [login, rememberMe]);
 
-    // Si ya está logueado, no mostrar login
+    // useEffect 2 - cleanup on unload
+    useEffect(() => {
+        if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return;
+        const handleBeforeUnload = () => {
+            if (!rememberMe) {
+                localStorage.removeItem("NombreUsuario");
+                localStorage.removeItem("UserPassword");
+                localStorage.removeItem("RememberMe");
+            }
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [rememberMe]);
+
+    // useEffect 3 - clear storage if not remembering
+    useEffect(() => {
+        if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return;
+        if (!rememberMe) {
+            localStorage.removeItem("NombreUsuario");
+            localStorage.removeItem("UserPassword");
+        }
+    }, [rememberMe]);
+
+    // Return early AFTER all hooks
     if (user) return null;
 
     const handleSubmit = (e) => {
@@ -46,33 +68,11 @@ export default function Login() {
         login(nombre, password);
     };
 
-    useEffect(() => {
-        // Solo ejecutar en desktop, no en mobile
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) return;
-        
-        const handleBeforeUnload = () => {
-            if (!rememberMe) {
-                localStorage.removeItem("NombreUsuario");
-                localStorage.removeItem("UserPassword");
-                localStorage.removeItem("RememberMe");
-            }
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [rememberMe]);
-
-    if (user) return null;
-
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" style={{ height: "100dvh" }}>
             <div className="bg-white rounded-2xl p-6 sm:p-8 flex flex-col gap-4 w-full max-w-sm shadow-2xl">
-                <h2 className="text-xl font-bold text-center text-gray-800">
-                    💬 Whatsappn't
-                </h2>
-                <p className="text-sm text-gray-500 text-center">
-                    Ingresá tu nombre para entrar al chat
-                </p>
+                <h2 className="text-xl font-bold text-center text-gray-800">💬 Whatsappn't</h2>
+                <p className="text-sm text-gray-500 text-center">Ingresá tu nombre para entrar al chat</p>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                     <input
                         type="text"
@@ -100,10 +100,7 @@ export default function Login() {
                         />
                         <span className="text-sm text-gray-600">Recordar sesión</span>
                     </label>
-                    <button
-                        type="submit"
-                        className="bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 rounded-xl transition"
-                    >
+                    <button type="submit" className="bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 rounded-xl transition">
                         Entrar →
                     </button>
                 </form>

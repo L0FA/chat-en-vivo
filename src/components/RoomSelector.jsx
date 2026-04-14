@@ -26,7 +26,7 @@ export default function RoomSelector({ scrolled, socket }) {
                 });
             }
         }
-    }, [open, socket]);
+    }, [open, socket, addUserRoom]);
 
     useEffect(() => {
         const handleClickOutside = (e) => {

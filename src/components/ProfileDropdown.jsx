@@ -37,9 +37,11 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
 
     useEffect(() => {
         if (open) {
-            setTimeout(() => setVisible(true), 0);
-            setNewName(user);
-            setNewAvatar(avatar || "😀");
+            setTimeout(() => {
+                setVisible(true);
+                setNewName(user);
+                setNewAvatar(avatar || "😀");
+            }, 0);
         }
     }, [open, user, avatar]);
 

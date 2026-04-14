@@ -15,7 +15,7 @@ import ProfileDropdown from "./ProfileDropdown";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
-    const { socket, connected, isAdmin: userIsAdmin } = useSocket(user, password);
+    const { socket, isAdmin: userIsAdmin } = useSocket(user, password);
     
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
@@ -93,7 +93,7 @@ export default function Chat() {
                     oscillator.start(audioCtx.currentTime);
                     oscillator.stop(audioCtx.currentTime + 0.2);
                 }
-            } catch (e) {}
+            } catch { /* silence is golden */ }
         };
         
         const handleNewMessage = (msg) => {
