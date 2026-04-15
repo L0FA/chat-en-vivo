@@ -1,53 +1,79 @@
+// ============================================
+// 📞 VIDEOCALL - Componente principal de llamadas
+// orquestador de todos los subcomponentes de llamada
+// Archivo: src/components/VideoCall.jsx
+// ============================================
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useChat } from "../hooks/useChat";
+import { useWebRTC } from "../hooks/useWebRTC";
+import { CallDropdown, IncomingCallModal, CallingScreen, ActiveCallPanel } from "./call";
 
-const ICE_SERVERS = [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
-];
-
+/**
+ * Componente principal de videollamada
+ * Maneja el estado de la llamada y coordina subcomponentes
+ * @param {Object} props
+ * @param {Object} props.socket - Socket de conexión
+ * @param {number} props.callTrigger - Trigger para mostrar dropdown
+ */
 export default function VideoCall({ socket, callTrigger = 0 }) {
     const { user, connectedUsers } = useChat();
-    const [callState, setCallState] = useState("idle");
-    const [callType, setCallType] = useState("audio");
+    
+    // Estados de la llamada
+    const [callState, setCallState] = useState("idle"); // idle | calling | active
+    const [callType, setCallType] = useState("audio"); // audio | video
     const [remoteUser, setRemoteUser] = useState(null);
     const [incomingCall, setIncomingCall] = useState(null);
+    
+    // Estados de controles
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [showCallDropdown, setShowCallDropdown] = useState(false);
     const [remoteHasVideo, setRemoteHasVideo] = useState(false);
-    const ringtoneRef = useRef(null);
-
-    const localVideoRef = useRef(null);
-    const remoteVideoRef = useRef(null);
-    const remoteAudioRef = useRef(null);
-    const localStreamRef = useRef(null);
-    const peerConnectionRef = useRef(null);
-    const timerRef = useRef(null);
+    
+    // Estados de UI
     const [callPosition, setCallPosition] = useState({ x: 4, y: 20 });
     const [isDragging, setIsDragging] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
-    const screenStreamRef = useRef(null);
 
-    const playRingtone = () => {
+    // Referencias a elementos del DOM y streams
+    const ringtoneRef = useRef(null);
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+    const remoteAudioRef = useRef(null);
+    const localStreamRef = useRef(null);
+    const screenStreamRef = useRef(null);
+    const timerRef = useRef(null);
+
+    // ============================================
+    // 🔧 HELPERS - Funciones utilitarias
+    // ============================================
+
+    // Formatear duración de llamada
+    const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+    // Reproducir ringtone
+    const playRingtone = useCallback(() => {
         const ringtoneUrl = localStorage.getItem("ringtone-url") || "https://www.soundjay.com/phone/cell-phone-ringing-01.mp3";
         if (ringtoneRef.current) {
             ringtoneRef.current.src = ringtoneUrl;
             ringtoneRef.current.play().catch(() => {});
         }
-    };
+    }, []);
 
-    const stopRingtone = () => {
+    // Detener ringtone
+    const stopRingtone = useCallback(() => {
         if (ringtoneRef.current) {
             ringtoneRef.current.pause();
             ringtoneRef.current.currentTime = 0;
         }
-    };
+    }, []);
 
-    const startLocalStream = async (video) => {
+    // Obtener stream local (cámara/mic)
+    const startLocalStream = useCallback(async (video) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
@@ -63,125 +89,54 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             console.error("❌ Error getUserMedia:", err);
             return null;
         }
-    };
-
-    const createPeerConnection = useCallback((peerId) => {
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-        peerConnectionRef.current = pc;
-
-        localStreamRef.current?.getTracks().forEach(track => {
-            pc.addTrack(track, localStreamRef.current);
-        });
-
-        pc.ontrack = (event) => {
-            console.log("📹 ontrack fired!", event.streams[0]?.id);
-            const stream = event.streams[0];
-            if (!stream) {
-                console.log("📹 No stream in ontrack");
-                return;
-            }
-            const hasVideo = stream.getVideoTracks().length > 0;
-            console.log("📹 Remote has video:", hasVideo);
-            setRemoteHasVideo(hasVideo);
-            
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = stream;
-            }
-            
-            if (remoteAudioRef.current) {
-                remoteAudioRef.current.srcObject = stream;
-                remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
-            }
-        };
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate && socket) {
-                socket.emit("webrtc:ice", { candidate: event.candidate, target: peerId });
-            }
-        };
-
-        pc.onconnectionstatechange = () => {
-            console.log("🔗 Connection state:", pc.connectionState);
-            if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
-                console.log("🔗 Call ended");
-                endCallCleanupRef.current();
-            }
-        };
-
-        return pc;
-    }, [socket]);
-
-    const endCallCleanupRef = useRef(null);
-    useEffect(() => {
-        endCallCleanupRef.current = () => {
-            stopRingtone();
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
-            }
-            if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach(t => t.stop());
-                localStreamRef.current = null;
-            }
-            if (peerConnectionRef.current) {
-                peerConnectionRef.current.close();
-                peerConnectionRef.current = null;
-            }
-            setCallState("idle");
-            setRemoteUser(null);
-            setIncomingCall(null);
-            setCallDuration(0);
-            setRemoteHasVideo(false);
-        };
     }, []);
 
-    const endCallCleanup = endCallCleanupRef.current || (() => {
+    // Limpiar al terminar llamada
+    const endCallCleanup = useCallback(() => {
         stopRingtone();
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-        if (peerConnectionRef.current) peerConnectionRef.current.close();
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => t.stop());
+            localStreamRef.current = null;
+        }
         setCallState("idle");
         setRemoteUser(null);
         setIncomingCall(null);
         setCallDuration(0);
         setRemoteHasVideo(false);
-    });
+    }, [stopRingtone]);
 
-    const endCallForAllRef = useRef(null);
-    useEffect(() => {
-        endCallForAllRef.current = () => {
-            socket?.emit("call:end", {});
-            endCallCleanupRef.current();
-        };
-    }, [socket]);
-
-    const endCallForAll = () => endCallForAllRef.current?.();
-
-    const startTimer = () => {
+    // Timer de duración
+    const startTimer = useCallback(() => {
         timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
-    };
+    }, []);
 
-    const toggleMute = () => {
+    // ============================================
+    // 🎮 CONTROLES DE LLAMADA
+    // ============================================
+
+    // Toggle mute
+    const toggleMute = useCallback(() => {
         const track = localStreamRef.current?.getAudioTracks()[0];
         if (track) {
             track.enabled = !track.enabled;
             setIsMuted(!track.enabled);
             socket?.emit("call:status", { muted: !track.enabled });
         }
-    };
+    }, [socket]);
 
-    const toggleVideo = async () => {
+    // Toggle video
+    const toggleVideo = useCallback(async () => {
         if (isVideoOff) {
             const stream = await startLocalStream(true);
             if (stream) {
                 const videoTrack = stream.getVideoTracks()[0];
-                const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === "video");
-                if (sender && videoTrack) {
-                    sender.replaceTrack(videoTrack);
-                }
-                if (localVideoRef.current) {
-                    localVideoRef.current.srcObject = stream;
-                }
+                const sender = peerConnection.current?.getSenders().find(s => s.track?.kind === "video");
+                if (sender && videoTrack) sender.replaceTrack(videoTrack);
+                if (localVideoRef.current) localVideoRef.current.srcObject = stream;
                 setIsVideoOff(false);
             }
         } else {
@@ -191,54 +146,17 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 setIsVideoOff(true);
             }
         }
-    };
+    }, [isVideoOff, startLocalStream]);
 
-    const endCall = () => {
+    // Terminar llamada
+    const endCall = useCallback(() => {
         socket?.emit("call:leave");
-        endCallCleanupRef.current?.();
-    };
+        endCallCleanup();
+    }, [socket, endCallCleanup]);
 
-    const acceptCall = async () => {
-        console.log("📞 ACEPTANDO LLAMADA...");
-        if (!incomingCall) return;
-        const { from, type } = incomingCall;
-        setIncomingCall(null);
-        stopRingtone();
-        
-        socket?.emit("call:accept", { to: from });
-        
-        setCallType(type);
-        setRemoteUser(from);
-        
-        console.log("📞 Llamando startLocalStream...");
-        startLocalStream(type === "video").then(async stream => {
-            console.log("📞 Stream resultado:", stream ? "OK" : "NULL");
-            if (!stream) return;
-
-            console.log("📞 Creando PC...");
-            setCallState("active");
-            
-            const pc = createPeerConnection(from);
-            console.log("📞 Creando offer...");
-            const offer = await pc.createOffer();
-            console.log("📞 Configurando local description...");
-            await pc.setLocalDescription(offer);
-            console.log("📞 Enviando offer...");
-            socket?.emit("webrtc:offer", { offer, target: from });
-            
-            startTimer();
-        });
-    };
-
-    const rejectCall = () => {
-        if (incomingCall) {
-            socket?.emit("call:reject", { to: incomingCall.from });
-        }
-        setIncomingCall(null);
-        stopRingtone();
-    };
-
-    const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+    // ============================================
+    // 🖥️ UI HELPERS - Drag, fullscreen, screen share
+    // ============================================
 
     const handleDragStart = () => setIsDragging(true);
     
@@ -251,11 +169,9 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     
     const handleDragEnd = () => setIsDragging(false);
 
-    const toggleFullscreen = () => {
-        setIsFullscreen(!isFullscreen);
-    };
+    const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
-    const toggleScreenShare = async () => {
+    const toggleScreenShare = useCallback(async () => {
         if (isScreenSharing) {
             if (screenStreamRef.current) {
                 screenStreamRef.current.getTracks().forEach(t => t.stop());
@@ -267,7 +183,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 screenStreamRef.current = stream;
                 const track = stream.getVideoTracks()[0];
-                const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === "video");
+                const sender = peerConnection.current?.getSenders().find(s => s.track?.kind === "video");
                 if (sender && track) sender.replaceTrack(track);
                 track.onended = () => toggleScreenShare();
                 setIsScreenSharing(true);
@@ -275,64 +191,148 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 console.error("Error screen share:", err);
             }
         }
-    };
+    }, [isScreenSharing]);
 
-    const getRemoteUserAvatar = () => {
-        if (!remoteUser) return null;
-        const remote = connectedUsers.find(u => {
-            const nombre = typeof u === "string" ? u : u?.nombre;
-            return nombre === remoteUser;
-        });
-        if (!remote || typeof remote === "string") return null;
-        return remote.avatar;
-    };
+    // ============================================
+    // 📡 USEWEBRTC HOOK - Lógica de WebRTC
+    // ============================================
 
-    useEffect(() => {
-        if (callTrigger > 0) {
-            setTimeout(() => setShowCallDropdown(true), 0);
+    const { peerConnection, createPeerConnection, addIceCandidate, setRemoteDescription } = useWebRTC({
+        socket,
+        localStream: localStreamRef,
+        onRemoteStream: (stream) => {
+            const hasVideo = stream.getVideoTracks().length > 0;
+            setRemoteHasVideo(hasVideo);
+            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
+            if (remoteAudioRef.current) {
+                remoteAudioRef.current.srcObject = stream;
+                remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
+            }
+        },
+        onConnectionStateChange: (state) => {
+            if (state === "disconnected" || state === "failed" || state === "closed") {
+                console.log("🔗 Call ended");
+                endCallCleanup();
+            }
         }
-    }, [callTrigger]);
+    });
+
+    // ============================================
+    // 📱 INICIAR LLAMADA - Outgoing call
+    // ============================================
+
+    const initiateCall = useCallback((targetUser, type) => {
+        console.log("📞 Initiating call to:", targetUser, "type:", type);
+        setShowCallDropdown(false);
+        setCallType(type);
+        setCallState("calling");
+        
+        startLocalStream(type === "video").then(stream => {
+            if (stream) {
+                console.log("🎤 Stream creado (initiate)");
+                setRemoteUser(targetUser);
+                
+                // Crear peer connection
+                const pc = createPeerConnection(targetUser);
+                
+                // Crear y enviar offer
+                pc.createOffer().then(offer => {
+                    pc.setLocalDescription(offer);
+                    socket?.emit("webrtc:offer", { offer, target: targetUser });
+                });
+                
+                setCallState("active");
+                startTimer();
+                
+                // Notificar al usuario
+                socket?.emit("call:invite", { to: targetUser, type });
+            }
+        });
+    }, [socket, createPeerConnection, startLocalStream, startTimer]);
+
+    // ============================================
+    // ✅ ACEPTAR LLAMADA - Incoming call accept
+    // ============================================
+
+    const acceptCall = useCallback(async () => {
+        console.log("📞 ACEPTANDO LLAMADA...");
+        if (!incomingCall) return;
+        
+        const { from, type } = incomingCall;
+        setIncomingCall(null);
+        stopRingtone();
+        
+        socket?.emit("call:accept", { to: from });
+        setCallType(type);
+        setRemoteUser(from);
+        
+        startLocalStream(type === "video").then(async stream => {
+            if (!stream) return;
+
+            setCallState("active");
+            
+            const pc = createPeerConnection(from);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket?.emit("webrtc:offer", { offer, target: from });
+            
+            startTimer();
+        });
+    }, [incomingCall, socket, createPeerConnection, startLocalStream, startTimer, stopRingtone]);
+
+    // ============================================
+    // ❌ RECHAZAR LLAMADA - Incoming call reject
+    // ============================================
+
+    const rejectCall = useCallback(() => {
+        if (incomingCall) {
+            socket?.emit("call:reject", { to: incomingCall.from });
+        }
+        setIncomingCall(null);
+        stopRingtone();
+    }, [incomingCall, socket, stopRingtone]);
+
+    // ============================================
+    // 📡 SOCKET LISTENERS - Eventos del servidor
+    // ============================================
 
     useEffect(() => {
         if (!socket) return;
 
-        socket.on("call:invite", async ({ from, type }) => {
+        // Llamada entrante
+        socket.on("call:invite", ({ from, type }) => {
             console.log("📞 Invited to call by:", from, "type:", type);
             setIncomingCall({ from, type });
             playRingtone();
         });
 
+        // Usuario abandonó la llamada
         socket.on("call:leave", ({ user: leaver }) => {
             console.log("📞 User left call:", leaver);
-            
             if (leaver === remoteUser) {
                 setRemoteHasVideo(false);
                 if (callState === "active") {
                     console.log("📞 La otra persona abandonó, terminando llamada");
-                    endCallForAll();
+                    socket?.emit("call:end", {});
+                    endCallCleanup();
                 }
             }
         });
 
+        // Llamada terminada por servidor
         socket.on("call:end", () => {
             console.log("📞 Llamada terminada por el servidor");
             endCallCleanup();
         });
 
+        // Llamada rechazada
         socket.on("call:rejected", ({ from }) => {
             console.log("📞 Call rejected by:", from);
             endCallCleanup();
             stopRingtone();
         });
 
-        socket.on("call:accepted", ({ from }) => {
-            console.log("📞 Call accepted by:", from);
-        });
-
-        socket.on("call:join", ({ user: joiner }) => {
-            console.log("📞 User joined call:", joiner);
-        });
-
+        // Offer recibido (respuesta a nuestra oferta o nueva oferta)
         socket.on("webrtc:offer", async ({ offer, from }) => {
             console.log("📞 Received offer from:", from);
             setRemoteUser(from);
@@ -343,7 +343,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             setCallState("active");
             
             const pc = createPeerConnection(from);
-            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await setRemoteDescription(offer);
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             socket.emit("webrtc:answer", { answer, target: from });
@@ -351,267 +351,92 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             startTimer();
         });
 
+        // Answer recibido
         socket.on("webrtc:answer", async ({ answer }) => {
             console.log("📞 Received answer");
-            if (peerConnectionRef.current) {
-                await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-            }
+            await setRemoteDescription(answer);
         });
 
-        socket.on("webrtc:ice", async ({ candidate }) => {
-            try {
-                await peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (e) {
-                console.error("Error adding ICE:", e);
-            }
+        // ICE candidate recibido
+        socket.on("webrtc:ice", ({ candidate }) => {
+            addIceCandidate(candidate);
         });
 
         return () => {
             socket.off("call:invite");
-            socket.off("call:join");
             socket.off("call:leave");
             socket.off("call:end");
             socket.off("call:rejected");
-            socket.off("call:accepted");
             socket.off("webrtc:offer");
             socket.off("webrtc:answer");
             socket.off("webrtc:ice");
         };
-    }, [socket, callType, user, remoteUser, createPeerConnection]);
+    }, [socket, callType, remoteUser, callState, createPeerConnection, setRemoteDescription, addIceCandidate, startLocalStream, startTimer, endCallCleanup, stopRingtone, playRingtone]);
 
-    const initiateCall = (targetUser, type) => {
-        console.log("📞 Initiating call to:", targetUser, "type:", type);
-        setShowCallDropdown(false);
-        setCallType(type);
-        setCallState("calling");
-        
-        startLocalStream(type === "video").then(stream => {
-            if (stream) {
-                console.log("🎤 Stream creado (initiate), tracks:", stream.getTracks().map(t => t.kind + ":" + t.enabled));
-                setRemoteUser(targetUser);
-                
-                // Crear peer connection y enviar oferta
-                const pc = createPeerConnection(targetUser);
-                pc.createOffer().then(offer => {
-                    pc.setLocalDescription(offer);
-                    socket?.emit("webrtc:offer", { offer, target: targetUser });
-                });
-                
-                setCallState("active");
-                startTimer();
-                
-                // Notificar al otro usuario
-                socket?.emit("call:invite", { to: targetUser, type });
-            }
-        });
-    };
+    // Mostrar dropdown al hacer trigger
+    useEffect(() => {
+        if (callTrigger > 0) {
+            setTimeout(() => setShowCallDropdown(true), 0);
+        }
+    }, [callTrigger]);
 
-    const otherUsers = connectedUsers.filter(u => {
-        const nombre = typeof u === "string" ? u : u?.nombre;
-        return nombre !== user;
-    });
+    // ============================================
+    // 🎨 RENDER - Renderizado de componentes
+    // ============================================
 
     return createPortal(
         <>
-            {callState === "idle" && showCallDropdown && (
-                <div className="fixed inset-0 z-9998">
-                    <div 
-                        className="absolute inset-0 bg-black/40" 
-                        onClick={() => setShowCallDropdown(false)}
-                    />
-                    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#1e1e1e] border border-white/20 rounded-2xl p-4 shadow-2xl min-w-72 animate-scale-in">
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-white font-bold">📞 Llamar</span>
-                            <button 
-                                onClick={() => setShowCallDropdown(false)}
-                                className="text-white/50 hover:text-white"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        
-                        {otherUsers.length === 0 ? (
-                            <div className="text-white/30 text-sm text-center py-4">No hay usuarios disponibles</div>
-                        ) : (
-                            <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                                {otherUsers.map(u => {
-                                    const nombre = typeof u === "string" ? u : u?.nombre;
-                                    const avatar = typeof u === "string" ? null : u?.avatar;
-                                    const isImage = avatar && avatar.startsWith("data:image");
-                                    
-                                    return (
-                                        <div key={nombre} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition">
-                                            {isImage ? (
-                                                <img src={avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-pink-400 flex items-center justify-center text-xl">😀</div>
-                                            )}
-                                            <span className="flex-1 text-white font-medium truncate">{nombre}</span>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => initiateCall(nombre, "audio")}
-                                                    className="w-9 h-9 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center text-white"
-                                                    title="Llamada de voz"
-                                                >
-                                                    🎤
-                                                </button>
-                                                <button
-                                                    onClick={() => initiateCall(nombre, "video")}
-                                                    className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white"
-                                                    title="Videollamada"
-                                                >
-                                                    📹
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            {/* Dropdown para seleccionar usuario */}
+            <CallDropdown 
+                show={callState === "idle" && showCallDropdown}
+                onClose={() => setShowCallDropdown(false)}
+                onCall={initiateCall}
+            />
 
-            {incomingCall && (
-                <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70">
-                    <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-scale-in">
-                        {(() => {
-                            const remote = connectedUsers.find(u => {
-                                const nombre = typeof u === "string" ? u : u?.nombre;
-                                return nombre === incomingCall.from;
-                            });
-                            const avatar = remote?.avatar;
-                            const isImage = avatar && avatar.startsWith("data:image");
-                            return isImage ? (
-                                <img src={avatar} alt="" className="w-24 h-24 rounded-full object-cover mx-auto mb-4 shadow-lg" />
-                            ) : (
-                                <div className="w-24 h-24 rounded-full bg-pink-400 flex items-center justify-center text-5xl mx-auto mb-4">👤</div>
-                            );
-                        })()}
-                        <div className="text-white font-bold text-xl mb-1">{incomingCall.from}</div>
-                        <p className="text-white/50 text-sm mb-6">
-                            {incomingCall.type === "video" ? "📹 Te llama" : "🎤 Te llama"}
-                        </p>
-                        <div className="flex gap-4 justify-center">
-                            <button 
-                                onClick={acceptCall} 
-                                className="bg-green-500 hover:bg-green-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl animate-bounce"
-                            >
-                                📞
-                            </button>
-                            <button 
-                                onClick={rejectCall} 
-                                className="bg-red-500 hover:bg-red-600 w-14 h-14 rounded-full flex items-center justify-center text-2xl"
-                            >
-                                📴
-                            </button>
-                        </div>
-                    </div>
-                    <audio ref={ringtoneRef} loop />
-                </div>
-            )}
+            {/* Modal de llamada entrante */}
+            <IncomingCallModal 
+                incomingCall={incomingCall}
+                onAccept={acceptCall}
+                onReject={rejectCall}
+                ringtoneRef={ringtoneRef}
+            />
 
+            {/* Pantalla de conectando */}
             {callState === "calling" && (
-                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="w-20 h-20 rounded-full border-4 border-pink-400 border-t-transparent animate-spin mx-auto mb-4"/>
-                        <p className="text-white text-xl">Conectando...</p>
-                        <button onClick={endCall} className="mt-4 bg-red-500 text-white px-6 py-2 rounded-full">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
+                <CallingScreen 
+                    targetUser={remoteUser}
+                    onCancel={endCall}
+                />
             )}
 
+            {/* Panel de llamada activa */}
             {callState === "active" && (
-                <div 
-                    className={`fixed z-40 transition-all ${isDragging ? 'transition-none' : ''} ${isFullscreen ? 'inset-0' : ''}`}
-                    style={!isFullscreen ? { 
-                        right: `${callPosition.x}%`, 
-                        bottom: `${callPosition.y}%`,
-                        transition: isDragging ? 'none' : 'all 0.3s ease'
-                    } : {}}
-                    onMouseDown={handleDragStart}
-                    onMouseMove={handleDrag}
-                    onMouseUp={handleDragEnd}
-                    onMouseLeave={handleDragEnd}
-                    onTouchStart={handleDragStart}
-                    onTouchMove={handleDrag}
-                    onTouchEnd={handleDragEnd}
-                >
-                    <div className={`bg-[#1e1e1e] border border-white/20 rounded-2xl p-3 shadow-xl ${isFullscreen ? 'h-full flex flex-col' : ''}`}>
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"/>
-                                <span className="text-white text-sm">{remoteUser}</span>
-                                <span className="text-white/50 text-xs">• {fmt(callDuration)}</span>
-                            </div>
-                            {callType === "video" && (
-                                <button
-                                    onClick={toggleScreenShare}
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${isScreenSharing ? "bg-green-500" : "bg-white/10 hover:bg-white/20"}`}
-                                    title={isScreenSharing ? "Dejar de compartir" : "Compartir pantalla"}
-                                >
-                                    🖥️
-                                </button>
-                            )}
-                            <button
-                                onClick={toggleFullscreen}
-                                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs"
-                                title={isFullscreen ? "Minimizar" : "Fullscreen"}
-                            >
-                                {isFullscreen ? "🔲" : "⛶"}
-                            </button>
-                        </div>
-                        
-                        <div className={`bg-black rounded-lg overflow-hidden mb-2 relative ${isFullscreen ? 'flex-1' : 'w-48 h-36'}`}>
-                            {remoteHasVideo ? (
-                                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover"/>
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                                    {(() => {
-                                        const avatar = getRemoteUserAvatar();
-                                        return avatar && avatar.startsWith("data:image") ? (
-                                            <img src={avatar} alt="" className="w-20 h-20 rounded-full object-cover" />
-                                        ) : (
-                                            <div className="text-5xl">👤</div>
-                                        );
-                                    })()}
-                                </div>
-                            )}
-                            <audio ref={remoteAudioRef} autoPlay playsInline className="hidden"/>
-                            
-                            {/* Local preview */}
-                            {!isVideoOff && (
-                                <div className="absolute bottom-1 right-1 w-12 h-9 bg-black rounded overflow-hidden">
-                                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover"/>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="flex gap-2 justify-center">
-                            <button
-                                onClick={toggleMute}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center ${isMuted ? "bg-red-500" : "bg-gray-600"} text-white`}
-                            >
-                                {isMuted ? "🔇" : "🎤"}
-                            </button>
-                            <button
-                                onClick={toggleVideo}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center ${isVideoOff ? "bg-red-500" : "bg-gray-600"} text-white`}
-                            >
-                                {isVideoOff ? "📵" : "📹"}
-                            </button>
-                            <button
-                                onClick={endCall}
-                                className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white"
-                            >
-                                📴
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ActiveCallPanel
+                    remoteUser={remoteUser}
+                    callType={callType}
+                    callDuration={callDuration}
+                    isFullscreen={isFullscreen}
+                    isMuted={isMuted}
+                    isVideoOff={isVideoOff}
+                    isScreenSharing={isScreenSharing}
+                    isDragging={isDragging}
+                    position={callPosition}
+                    remoteVideoRef={remoteVideoRef}
+                    localVideoRef={localVideoRef}
+                    remoteHasVideo={remoteHasVideo}
+                    onToggleMute={toggleMute}
+                    onToggleVideo={toggleVideo}
+                    onEndCall={endCall}
+                    onToggleFullscreen={toggleFullscreen}
+                    onToggleScreenShare={toggleScreenShare}
+                    onDragStart={handleDragStart}
+                    onDrag={handleDrag}
+                    onDragEnd={handleDragEnd}
+                />
             )}
+
+            {/* Audio remoto (hidden) */}
+            <audio ref={remoteAudioRef} autoPlay playsInline className="hidden"/>
         </>,
         document.body
     );

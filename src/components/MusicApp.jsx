@@ -1,33 +1,28 @@
+// ============================================
+// 🎵 MUSIC APP - Componente principal de música
+// Reproduce música de YouTube, archivos locales, URLs
+// Archivo: src/components/MusicApp.jsx
+// ============================================
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { formatTime, extractYouTubeId, getAudioType } from "../utils/musicUtils";
+import { MusicPlayer, MusicQueue, AddSongForm } from "./music";
 
-const YOUTUBE_REGEX = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-const SOUNDCLOUD_REGEX = /(?:soundcloud\.com\/[\w-]+\/[\w-]+)/;
-const SPOTIFY_REGEX = /(?:open\.spotify\.com\/track\/[\w]+)/;
-
-function extractYouTubeId(url) {
-    const match = url.match(YOUTUBE_REGEX);
-    return match ? match[1] : null;
-}
-
-function getAudioType(url) {
-    if (!url) return null;
-    if (YOUTUBE_REGEX.test(url)) return "youtube";
-    if (SOUNDCLOUD_REGEX.test(url)) return "soundcloud";
-    if (SPOTIFY_REGEX.test(url)) return "spotify";
-    if (url.match(/\.(mp3|wav|ogg|m4a|flac|aac)$/i)) return "audio";
-    if (url.startsWith("data:")) return "audio";
-    return "url";
-}
-
-function formatTime(seconds) {
-    if (!seconds || isNaN(seconds)) return "0:00";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
+/**
+ * Componente principal de la aplicación de música
+ * Maneja reproducción de YouTube, archivos de audio y streams
+ * @param {Object} props
+ * @param {Object} props.socket - Socket de conexión
+ * @param {string} props.currentUser - Usuario actual
+ * @param {boolean} props.open - Si el panel está abierto
+ * @param {function} props.onClose - Cerrar panel
+ */
 export default function MusicApp({ socket, currentUser, open, onClose }) {
+    // ============================================
+    // 🔧 ESTADOS
+    // ============================================
+    
     const [canciones, setCanciones] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -37,12 +32,13 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
     const [shuffle, setShuffle] = useState(false);
     const [repeat, setRepeat] = useState(false);
     const [uploading, setUploading] = useState(false);
-const [tab, setTab] = useState("cola");
+    const [tab, setTab] = useState("cola");
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
     const [equilizer, setEquilizer] = useState(false);
     
+    // Estados del formulario
     const [titulo, setTitulo] = useState("");
     const [artista, setArtista] = useState("");
     const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -50,9 +46,13 @@ const [tab, setTab] = useState("cola");
     const [portadaFile, setPortadaFile] = useState(null);
     const [portadaPreview, setPortadaPreview] = useState(null);
     const [urlStream, setUrlStream] = useState("");
-
+    
     const [show, setShow] = useState(false);
 
+    // ============================================
+    // 🔗 REFERENCIAS
+    // ============================================
+    
     const audioRef = useRef(null);
     const ytPlayerRef = useRef(null);
     const ytContainerRef = useRef(null);
@@ -63,7 +63,10 @@ const [tab, setTab] = useState("cola");
 
     const cancionActual = canciones[currentIndex];
 
-    // ---- Socket events ----
+    // ============================================
+    // 📡 SOCKET LISTENERS
+    // ============================================
+
     useEffect(() => {
         if (!socket) return;
 
@@ -120,10 +123,12 @@ const [tab, setTab] = useState("cola");
             socket.off("Canción Eliminada");
             socket.off("Sync Música App");
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [socket]);
+    }, [socket, canciones.length]);
 
-    // ---- YouTube Player ----
+    // ============================================
+    // 🎬 YOUTUBE PLAYER
+    // ============================================
+
     useEffect(() => {
         if (!cancionActual || cancionActual.tipo !== "youtube") return;
         const videoId = extractYouTubeId(cancionActual.contenido);
@@ -139,11 +144,7 @@ const [tab, setTab] = useState("cola");
                 height: "1",
                 width: "1",
                 videoId,
-                playerVars: { 
-                    autoplay: 0,
-                    playsinline: 1,
-                    enablejsapi: 1
-                },
+                playerVars: { autoplay: 0, playsinline: 1, enablejsapi: 1 },
                 events: {
                     onReady: () => {
                         ytPlayerRef.current.setVolume(volume * 100);
@@ -167,10 +168,12 @@ const [tab, setTab] = useState("cola");
         } else {
             window.onYouTubeIframeAPIReady = initYT;
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cancionActual]);
 
-    // ---- Audio tipo URL/Stream ----
+    // ============================================
+    // 🎵 AUDIO STREAMS
+    // ============================================
+
     useEffect(() => {
         if (!cancionActual || (cancionActual.tipo !== "url" && cancionActual.tipo !== "soundcloud" && cancionActual.tipo !== "spotify")) return;
         if (audioRef.current && cancionActual.tipo === "url") {
@@ -179,40 +182,23 @@ const [tab, setTab] = useState("cola");
             audioRef.current.load();
             if (isPlaying) audioRef.current.play().catch(console.error);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cancionActual]);
 
-    // ---- Búsqueda YouTube ----
-    const searchYouTube = async (query) => {
-        if (!query.trim()) return;
-        setSearching(true);
-        try {
-            const apiBase = import.meta.env.VITE_SOCKET_URL || window.location.origin;
-            const res = await fetch(`${apiBase}/api/youtube/search?q=${encodeURIComponent(query)}`);
-            const data = await res.json();
-            setSearchResults(data.items || []);
-        } catch (err) {
-            console.error("Error buscar YouTube:", err);
-        } finally {
-            setSearching(false);
+    // Cargar audio cuando cambia canción
+    useEffect(() => {
+        if (!cancionActual || cancionActual.tipo !== "audio") return;
+        if (audioRef.current) {
+            audioRef.current.src = cancionActual.contenido;
+            audioRef.current.volume = volume;
+            audioRef.current.load();
+            if (isPlaying) audioRef.current.play().catch(console.error);
         }
-    };
+    }, [cancionActual]);
 
-    const addFromSearch = (video) => {
-        const videoId = video.id?.videoId || video.id;
-        const title = video.snippet?.title || "Video";
-        socket?.emit("Subir Canción", {
-            titulo: title,
-            artista: video.snippet?.channelTitle || "YouTube",
-            tipo: "youtube",
-            contenido: `https://www.youtube.com/watch?v=${videoId}`,
-            portada: video.snippet?.thumbnails?.medium?.url
-        }, (response) => {
-            if (response?.status !== "ok") console.error("Error al agregar");
-        });
-    };
+    // ============================================
+    // ⏱️ PROGRESS HANDLERS
+    // ============================================
 
-    // ---- Progreso audio ----
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
@@ -229,10 +215,8 @@ const [tab, setTab] = useState("cola");
             audio.removeEventListener("loadedmetadata", update);
             audio.removeEventListener("ended", onEnded);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ---- Progreso YouTube ----
     useEffect(() => {
         if (!cancionActual || cancionActual.tipo !== "youtube") return;
         const interval = setInterval(() => {
@@ -244,19 +228,10 @@ const [tab, setTab] = useState("cola");
         return () => clearInterval(interval);
     }, [cancionActual]);
 
-    // ---- Cargar audio cuando cambia canción ----
-    useEffect(() => {
-        if (!cancionActual || cancionActual.tipo !== "audio") return;
-        if (audioRef.current) {
-            audioRef.current.src = cancionActual.contenido;
-            audioRef.current.volume = volume;
-            audioRef.current.load();
-            if (isPlaying) audioRef.current.play().catch(console.error);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cancionActual]);
+    // ============================================
+    // 🎮 CONTROL FUNCTIONS
+    // ============================================
 
-    // ---- Controles ----
     const emitSync = useCallback((accion, extra = {}) => {
         if (!socket || isSyncing.current) return;
         socket.emit("Sync Música App", {
@@ -335,8 +310,7 @@ const [tab, setTab] = useState("cola");
         emitSync("seek", { currentTime: time });
     }, [duration, emitSync]);
 
-    const handleVolume = useCallback((e) => {
-        const v = parseFloat(e.target.value);
+    const handleVolumeChange = useCallback((v) => {
         setVolume(v);
         if (audioRef.current) audioRef.current.volume = v;
         if (ytPlayerRef.current) ytPlayerRef.current.setVolume(v * 100);
@@ -359,7 +333,43 @@ const [tab, setTab] = useState("cola");
         socket?.emit("Eliminar Canción", { cancionId });
     }, [socket]);
 
-    // ---- Portada ----
+    // ============================================
+    // 🔍 YOUTUBE SEARCH
+    // ============================================
+
+    const searchYouTube = async (query) => {
+        if (!query.trim()) return;
+        setSearching(true);
+        try {
+            const apiBase = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+            const res = await fetch(`${apiBase}/api/youtube/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setSearchResults(data.items || []);
+        } catch (err) {
+            console.error("Error buscar YouTube:", err);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const addFromSearch = (video) => {
+        const videoId = video.id?.videoId || video.id;
+        const title = video.snippet?.title || "Video";
+        socket?.emit("Subir Canción", {
+            titulo: title,
+            artista: video.snippet?.channelTitle || "YouTube",
+            tipo: "youtube",
+            contenido: `https://www.youtube.com/watch?v=${videoId}`,
+            portada: video.snippet?.thumbnails?.medium?.url
+        }, (response) => {
+            if (response?.status !== "ok") console.error("Error al agregar");
+        });
+    };
+
+    // ============================================
+    // 📤 UPLOAD SONG
+    // ============================================
+
     const handlePortadaChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -369,7 +379,6 @@ const [tab, setTab] = useState("cola");
         setPortadaFile(file);
     };
 
-    // ---- Subir canción ----
     const handleSubir = useCallback(async () => {
         if (!titulo.trim()) { alert("Ingresá un título"); return; }
         if (!audioFile && !youtubeUrl.trim() && !urlStream.trim()) { alert("Subí un archivo, link de YouTube, o URL de audio"); return; }
@@ -437,7 +446,10 @@ const [tab, setTab] = useState("cola");
         }
     }, [titulo, artista, youtubeUrl, urlStream, audioFile, portadaFile, socket]);
 
-    // Animación de fade
+    // ============================================
+    // 🎬 ANIMATION
+    // ============================================
+
     useEffect(() => {
         if (open) {
             setShow(true);
@@ -451,19 +463,24 @@ const [tab, setTab] = useState("cola");
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+    // ============================================
+    // 🎨 RENDER
+    // ============================================
+
     return createPortal(
         <>
-            <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} style={{ zIndex: 9998 }} onClick={onClose} />
+            <div 
+                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} 
+                style={{ zIndex: 9998 }} 
+                onClick={onClose} 
+            />
             <div
                 style={{ zIndex: 9999 }}
                 className={`fixed bottom-20 right-4 w-80 rounded-3xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl border border-white/10 transition-all duration-300 ${
-                    open 
-                        ? "opacity-100 translate-y-0 scale-100" 
-                        : "opacity-0 translate-y-4 scale-95"
+                    open ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
                 }`}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Fondo con gradiente glass */}
                 <div className="absolute inset-0 bg-linear-to-b from-white/5 via-white/3 to-black/20 pointer-events-none rounded-3xl" />
                 
                 {/* Header */}
@@ -540,7 +557,7 @@ const [tab, setTab] = useState("cola");
                     <span className="text-white/40 text-xs">🔈</span>
                     <input
                         type="range" min="0" max="1" step="0.01"
-                        value={volume} onChange={handleVolume}
+                        value={volume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                         className="flex-1 accent-pink-400 cursor-pointer"
                     />
                     <span className="text-white/40 text-xs">🔊</span>
@@ -567,43 +584,12 @@ const [tab, setTab] = useState("cola");
 
                 {/* Tab Cola */}
                 {tab === "cola" && (
-                    <div className="max-h-48 overflow-y-auto">
-                        {canciones.length === 0 && (
-                            <p className="text-white/30 text-xs text-center py-6">No hay canciones aún</p>
-                        )}
-                        {canciones.map((c, i) => (
-                            <div
-                                key={c.id}
-                                className={`flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition cursor-pointer ${i === currentIndex ? "bg-white/10" : ""}`}
-                                onClick={() => playCancion(i)}
-                            >
-                                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center shrink-0">
-                                    {c.portada ? (
-                                        <img src={c.portada} className="w-full h-full object-cover" alt=""/>
-                                    ) : c.tipo === "youtube" ? (
-                                        <img src={`https://img.youtube.com/vi/${extractYouTubeId(c.contenido)}/default.jpg`} className="w-full h-full object-cover" alt=""/>
-                                    ) : (
-                                        <span className="text-sm">🎵</span>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-xs font-bold truncate ${i === currentIndex ? "text-pink-400" : "text-white"}`}>
-                                        {c.titulo}
-                                    </p>
-                                    <p className="text-white/40 text-xs truncate">{c.artista}</p>
-                                </div>
-                                {c.usuario === currentUser && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleEliminar(c.id); }}
-                                        className="text-white/20 hover:text-red-400 transition text-xs cursor-pointer"
-                                    >🗑️</button>
-                                )}
-                                {i === currentIndex && isPlaying && (
-                                    <span className="text-pink-400 text-xs animate-pulse">▶</span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                    <MusicQueue 
+                        canciones={canciones}
+                        currentIndex={currentIndex}
+                        onSelect={playCancion}
+                        onRemove={handleEliminar}
+                    />
                 )}
 
                 {/* Tab Subir */}
@@ -718,44 +704,18 @@ const [tab, setTab] = useState("cola");
                         {equilizer && (
                             <>
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-white/50 text-xs w-8">Bass</span>
-                                        <input 
-                                            type="range" min="0" max="100" defaultValue="50"
-                                            className="flex-1 accent-pink-400 h-1.5"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-white/50 text-xs w-8">Mid</span>
-                                        <input 
-                                            type="range" min="0" max="100" defaultValue="50"
-                                            className="flex-1 accent-pink-400 h-1.5"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-white/50 text-xs w-8">Treble</span>
-                                        <input 
-                                            type="range" min="0" max="100" defaultValue="50"
-                                            className="flex-1 accent-pink-400 h-1.5"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-white/50 text-xs w-8">Reverb</span>
-                                        <input 
-                                            type="range" min="0" max="100" defaultValue="30"
-                                            className="flex-1 accent-pink-400 h-1.5"
-                                        />
-                                    </div>
+                                    {["Bass", "Mid", "Treble", "Reverb"].map(band => (
+                                        <div key={band} className="flex items-center gap-2">
+                                            <span className="text-white/50 text-xs w-8">{band}</span>
+                                            <input type="range" min="0" max="100" defaultValue="50" className="flex-1 accent-pink-400 h-1.5" />
+                                        </div>
+                                    ))}
                                 </div>
-                                
                                 <div className="text-center">
                                     <span className="text-white/40 text-xs">Presets</span>
                                     <div className="flex gap-2 mt-2 flex-wrap justify-center">
-                                        {["Flat", "Rock", "Pop", "Jazz", "Classical", "Hip-Hop"].map(preset => (
-                                            <button
-                                                key={preset}
-                                                className="text-xs bg-white/10 hover:bg-pink-400/30 text-white/70 px-3 py-1.5 rounded-full transition"
-                                            >
+                                        {["Flat", "Rock", "Pop", "Jazz"].map(preset => (
+                                            <button key={preset} className="text-xs bg-white/10 hover:bg-pink-400/30 text-white/70 px-3 py-1.5 rounded-full transition">
                                                 {preset}
                                             </button>
                                         ))}
