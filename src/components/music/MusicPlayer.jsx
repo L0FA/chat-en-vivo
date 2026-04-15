@@ -36,7 +36,7 @@ export default function MusicPlayer({
         <div className="bg-[#1a1a1a] p-4 rounded-t-xl border-t border-x border-white/10">
             {/* Info de canción */}
             <div className="flex items-center gap-3 mb-3">
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-2xl">
+                <div className="w-14 h-14 rounded-lg bg-linear-to-br from-pink-500 to-purple-600 flex items-center justify-center text-2xl">
                     🎵
                 </div>
                 <div className="flex-1 min-w-0">

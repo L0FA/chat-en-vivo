@@ -23,7 +23,7 @@ export default function MusicApp({ socket, open, onClose }) {
     // 🔧 ESTADOS
     // ============================================
     
-    const [canciones, setCanciones] = useState([]);
+    const [canciones] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -57,7 +57,6 @@ export default function MusicApp({ socket, open, onClose }) {
     const ytPlayerRef = useRef(null);
     const ytContainerRef = useRef(null);
     const progressRef = useRef(null);
-    const isSyncing = useRef(false);
     const fileInputRef = useRef(null);
     const portadaInputRef = useRef(null);
 
@@ -87,7 +86,8 @@ const cancionActual = canciones[currentIndex];
         }
     }, [repeat, shuffle, canciones.length, cancionActual]);
 
-    const emitSync = useCallback((accion, extra = {}) => {
+    // eslint-disable-next-line no-unused-vars
+    const emitSync = useCallback((accion) => {
         const videoId = extractYouTubeId(cancionActual.contenido);
         if (!videoId) return;
 
@@ -125,7 +125,7 @@ const cancionActual = canciones[currentIndex];
         } else {
             window.onYouTubeIframeAPIReady = initYT;
         }
-    }, [cancionActual]);
+    }, [cancionActual]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ============================================
     // 🎵 AUDIO STREAMS
@@ -174,7 +174,7 @@ const cancionActual = canciones[currentIndex];
             audio.removeEventListener("loadedmetadata", update);
             audio.removeEventListener("ended", onEnded);
         };
-    }, []);
+    }, [handleEnded]);
 
     useEffect(() => {
         if (!cancionActual || cancionActual.tipo !== "youtube") return;

@@ -1,17 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 export function useSocket(nombreUsuario, password = "") {
-    const [socket, setSocket] = useState(null);
-    const [connected, setConnected] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    useEffect(() => {
-        if (!nombreUsuario) return;
-
-        const newSocket = io(SOCKET_URL, {
+    const socket = useMemo(() => {
+        if (!nombreUsuario) return null;
+        return io(SOCKET_URL, {
             auth: { NombreUsuario: nombreUsuario, password },
             transports: ["websocket"],
             reconnection: true,
@@ -22,39 +17,43 @@ export function useSocket(nombreUsuario, password = "") {
             forceNew: false,
             withCredentials: true
         });
+    }, [nombreUsuario, password]);
 
-        setSocket(newSocket);
+    const [connected, setConnected] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
-        newSocket.on("connect", () => {
-            console.log("🔌 [SOCKET] Conectado!", newSocket.id);
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("connect", () => {
+            console.log("🔌 [SOCKET] Conectado!", socket.id);
             setConnected(true);
         });
-        newSocket.on("disconnect", () => {
+        socket.on("disconnect", () => {
             console.log("🔌 [SOCKET] Desconectado!");
             setConnected(false);
         });
-        newSocket.on("Error", (data) => {
+        socket.on("Error", (data) => {
             console.error("Socket error:", data.message);
             alert(data.message);
         });
-        newSocket.on("Admin Password Required", (data) => {
+        socket.on("Admin Password Required", (data) => {
             alert(data.message);
         });
-        newSocket.on("Logged In", (data) => {
+        socket.on("Logged In", (data) => {
             setIsAdmin(data.isAdmin || false);
         });
 
         return () => {
-            newSocket.off("connect");
-            newSocket.off("disconnect");
-            newSocket.off("Error");
-            newSocket.off("Admin Password Required");
-            newSocket.off("Logged In");
-            newSocket.disconnect();
-            setSocket(null);
+            socket.off("connect");
+            socket.off("disconnect");
+            socket.off("Error");
+            socket.off("Admin Password Required");
+            socket.off("Logged In");
+            socket.disconnect();
             setConnected(false);
         };
-    }, [nombreUsuario, password]);
+    }, [socket]);
 
     return { socket, connected, isAdmin };
 }

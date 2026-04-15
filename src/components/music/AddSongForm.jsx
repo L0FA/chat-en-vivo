@@ -65,7 +65,6 @@ export default function AddSongForm({ onSubmit, uploading }) {
         setArtista("");
         setYoutubeUrl("");
         setAudioFile(null);
-        setPortadaFile(null);
         setPortadaPreview(null);
         setUrlStream("");
     };
