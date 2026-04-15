@@ -5,10 +5,9 @@
 
 /**
  * Pantalla mostrada mientras se intenta conectar una llamada
- * @param {string} targetUser - Usuario al que estamos llamando
  * @param {function} onCancel - Cancelar la llamada
  */
-export default function CallingScreen({ targetUser, onCancel }) {
+export default function CallingScreen({ onCancel }) {
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
             <div className="text-center">

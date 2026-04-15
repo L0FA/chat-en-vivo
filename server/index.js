@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 const port = process.env.PORT ?? 3000;
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 20; // Optimizado: 20 mensajes por fetch (más rápido) + botón para cargar más
 
 const generateId = () =>
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -410,7 +410,7 @@ async function init() {
         });
 
         // ---- LLAMADAS ----
-        socket.on("call:invite", ({ to, type, room }) => {
+        socket.on("call:invite", ({ to, type }) => {
             console.log("📞 Invite de", user, "a", to, "tipo:", type);
             const targetSocket = [...connectedUsers.entries()].find(([, u]) => u.nombre === to)?.[0];
             if (targetSocket) {

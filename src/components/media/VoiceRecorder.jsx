@@ -4,7 +4,7 @@
 // Archivo: src/components/media/VoiceRecorder.jsx
 // ============================================
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -13,7 +13,6 @@ import { createPortal } from "react-dom";
  * @param {function} onCancel - Callback para cancelar
  */
 export default function VoiceRecorder({ onSend, onCancel }) {
-    const [recording, setRecording] = useState(true);
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioLevels, setAudioLevels] = useState([]);
     const [audioBlob, setAudioBlob] = useState(null);
@@ -25,85 +24,24 @@ export default function VoiceRecorder({ onSend, onCancel }) {
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
 
-    // Iniciar grabación
-    useEffect(() => {
-        startRecording();
-        return () => cleanup();
-    }, []);
-
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-            
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            audioContextRef.current = audioContext;
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            analyserRef.current = analyser;
-            
-            const source = audioContext.createMediaStreamSource(stream);
-            source.connect(analyser);
-            
-            const updateLevels = () => {
-                if (!streamRef.current) return;
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(dataArray);
-                const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
-                setAudioLevels(prev => [...prev.slice(-30), avg]);
-                if (streamRef.current) {
-                    recordingTimerRef.current = requestAnimationFrame(updateLevels);
-                }
-            };
-            
-            const recorder = new MediaRecorder(stream);
-            audioChunksRef.current = [];
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunksRef.current.push(e.data);
-            };
-            recorder.onstop = () => {
-                cancelAnimationFrame(recordingTimerRef.current);
-                audioContext.close();
-                const mimeType = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : 
-                                MediaRecorder.isTypeSupported("audio/3gpp") ? "audio/3gpp" : "audio/webm";
-                const blob = new Blob(audioChunksRef.current, { type: mimeType });
-                setAudioBlob(blob);
-            };
-            recorder.start(100);
-            mediaRecorderRef.current = recorder;
-            
-            const timer = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
-            }, 1000);
-            recordingTimerRef.current = timer;
-            
-            updateLevels();
-        } catch (err) {
-            console.error("Error micrófono:", err);
-            onCancel();
-        }
-    };
-
-    const cleanup = () => {
+    // Funciones definidas antes del useEffect que las usa
+    const cleanup = useCallback(() => {
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
         if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
         if (audioContextRef.current) audioContextRef.current.close();
-    };
+}, []);
+
+    // Iniciar grabación al montar
+    useEffect(() => {
+        startRecording();
+        return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const stopRecording = () => {
         cleanup();
         setRecording(false);
-    };
-
-    const handleSend = () => {
-        if (audioBlob) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                onSend(e.target.result);
-            };
-            reader.readAsDataURL(audioBlob);
-        }
     };
 
     const handleCancel = () => {

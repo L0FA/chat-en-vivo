@@ -219,7 +219,7 @@ export default function MediaDropdown({ socket }) {
 // 🎤 VOICE RECORDER WRAPPER - Wrapper que maneja el blob
 // ============================================
 
-function VoiceRecorderWrapper({ onSend, onCancel, onAudioReady }) {
+function VoiceRecorderWrapper({ onSend, onCancel }) {
     const handleSend = (dataUrl) => {
         onSend(dataUrl);
     };

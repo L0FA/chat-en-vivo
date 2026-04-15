@@ -6,7 +6,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useChat } from "../hooks/useChat";
 import { useWebRTC } from "../hooks/useWebRTC";
 import { CallDropdown, IncomingCallModal, CallingScreen, ActiveCallPanel } from "./call";
 
@@ -18,7 +17,9 @@ import { CallDropdown, IncomingCallModal, CallingScreen, ActiveCallPanel } from 
  * @param {number} props.callTrigger - Trigger para mostrar dropdown
  */
 export default function VideoCall({ socket, callTrigger = 0 }) {
-    const { user, connectedUsers } = useChat();
+    // El hook useChat ya no se usa directamente, los datos vienen por props
+    // TODO: eliminar useChat si no se usa en otros lugares
+    // const { user, connectedUsers } = useChat();
     
     // Estados de la llamada
     const [callState, setCallState] = useState("idle"); // idle | calling | active
@@ -49,11 +50,32 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     const timerRef = useRef(null);
 
     // ============================================
-    // 🔧 HELPERS - Funciones utilitarias
+    // 📡 USEWEBRTC HOOK - Lógica de WebRTC (declarada primero)
     // ============================================
 
-    // Formatear duración de llamada
-    const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+    const { peerConnection, createPeerConnection, addIceCandidate, setRemoteDescription } = useWebRTC({
+        socket,
+        localStream: localStreamRef,
+        onRemoteStream: (stream) => {
+            const hasVideo = stream.getVideoTracks().length > 0;
+            setRemoteHasVideo(hasVideo);
+            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
+            if (remoteAudioRef.current) {
+                remoteAudioRef.current.srcObject = stream;
+                remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
+            }
+        },
+        onConnectionStateChange: (state) => {
+            if (state === "disconnected" || state === "failed" || state === "closed") {
+                console.log("🔗 Call ended");
+                endCallCleanup();
+            }
+        }
+    });
+
+    // ============================================
+    // 🔧 HELPERS - Funciones utilitarias
+    // ============================================
 
     // Reproducir ringtone
     const playRingtone = useCallback(() => {
@@ -126,7 +148,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             setIsMuted(!track.enabled);
             socket?.emit("call:status", { muted: !track.enabled });
         }
-    }, [socket]);
+}, [socket]);
 
     // Toggle video
     const toggleVideo = useCallback(async () => {
@@ -146,13 +168,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 setIsVideoOff(true);
             }
         }
-    }, [isVideoOff, startLocalStream]);
-
-    // Terminar llamada
-    const endCall = useCallback(() => {
-        socket?.emit("call:leave");
-        endCallCleanup();
-    }, [socket, endCallCleanup]);
+    }, [isVideoOff, startLocalStream, peerConnection]);
 
     // ============================================
     // 🖥️ UI HELPERS - Drag, fullscreen, screen share
@@ -171,6 +187,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
 
     const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
+    // Toggle screen share - necesita peerConnection que ya está definido
     const toggleScreenShare = useCallback(async () => {
         if (isScreenSharing) {
             if (screenStreamRef.current) {
@@ -191,31 +208,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 console.error("Error screen share:", err);
             }
         }
-    }, [isScreenSharing]);
-
-    // ============================================
-    // 📡 USEWEBRTC HOOK - Lógica de WebRTC
-    // ============================================
-
-    const { peerConnection, createPeerConnection, addIceCandidate, setRemoteDescription } = useWebRTC({
-        socket,
-        localStream: localStreamRef,
-        onRemoteStream: (stream) => {
-            const hasVideo = stream.getVideoTracks().length > 0;
-            setRemoteHasVideo(hasVideo);
-            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
-            if (remoteAudioRef.current) {
-                remoteAudioRef.current.srcObject = stream;
-                remoteAudioRef.current.play().then(() => console.log("🔊 Audio playing")).catch(e => console.log("🔇 Audio error:", e));
-            }
-        },
-        onConnectionStateChange: (state) => {
-            if (state === "disconnected" || state === "failed" || state === "closed") {
-                console.log("🔗 Call ended");
-                endCallCleanup();
-            }
-        }
-    });
+    }, [isScreenSharing, peerConnection]);
 
     // ============================================
     // 📱 INICIAR LLAMADA - Outgoing call
@@ -404,7 +397,6 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
             {/* Pantalla de conectando */}
             {callState === "calling" && (
                 <CallingScreen 
-                    targetUser={remoteUser}
                     onCancel={endCall}
                 />
             )}

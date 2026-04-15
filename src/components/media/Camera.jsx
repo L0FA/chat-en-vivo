@@ -14,20 +14,21 @@ import { createPortal } from "react-dom";
  */
 export default function Camera({ onCapture, onClose }) {
     const [videoRecording, setVideoRecording] = useState(false);
-    const [mediaPreview, setMediaPreview] = useState(null);
     
     const streamRef = useRef(null);
     const videoRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const videoChunksRef = useRef([]);
 
-    // Iniciar cámara al montar
-    useEffect(() => {
-        startCamera();
-        return () => cleanup();
+    // Funciones definidas antes del useEffect que las usa
+    const cleanup = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
     }, []);
 
-    const startCamera = async () => {
+    const startCamera = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: "user" },
@@ -42,14 +43,14 @@ export default function Camera({ onCapture, onClose }) {
             alert("No se pudo acceder a la cámara.");
             onClose();
         }
-    };
+    }, [onClose]);
 
-    const cleanup = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
-        }
-    };
+    // Iniciar cámara al montar
+    useEffect(() => {
+        startCamera();
+        return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const takePhoto = useCallback(() => {
         const video = videoRef.current;

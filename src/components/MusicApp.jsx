@@ -18,7 +18,7 @@ import { MusicPlayer, MusicQueue, AddSongForm } from "./music";
  * @param {boolean} props.open - Si el panel está abierto
  * @param {function} props.onClose - Cerrar panel
  */
-export default function MusicApp({ socket, currentUser, open, onClose }) {
+export default function MusicApp({ socket, open, onClose }) {
     // ============================================
     // 🔧 ESTADOS
     // ============================================
@@ -61,76 +61,33 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
     const fileInputRef = useRef(null);
     const portadaInputRef = useRef(null);
 
-    const cancionActual = canciones[currentIndex];
+const cancionActual = canciones[currentIndex];
 
     // ============================================
-    // 📡 SOCKET LISTENERS
+    // 🎮 CONTROL FUNCTIONS - Definidas antes de los useEffects que las usan
     // ============================================
 
-    useEffect(() => {
-        if (!socket) return;
-
-        socket.on("Canción Agregada", (cancion) => {
-            setCanciones(prev => {
-                if (prev.find(c => c.id === cancion.id)) return prev;
-                return [...prev, cancion];
-            });
-        });
-
-        socket.on("Canción Eliminada", ({ cancionId }) => {
-            setCanciones(prev => prev.filter(c => c.id !== cancionId));
-        });
-
-        socket.on("Sync Música App", ({ accion, cancionId, currentTime: ct }) => {
-            if (isSyncing.current) return;
-            isSyncing.current = true;
-
-            if (accion === "play") {
-                setCanciones(prev => {
-                    const idx = prev.findIndex(c => c.id === cancionId);
-                    if (idx !== -1) setCurrentIndex(idx);
-                    return prev;
-                });
-                setIsPlaying(true);
-                if (audioRef.current) {
-                    if (ct) audioRef.current.currentTime = ct;
-                    audioRef.current.play();
-                }
-                if (ytPlayerRef.current) {
-                    if (ct) ytPlayerRef.current.seekTo(ct, true);
-                    ytPlayerRef.current.playVideo();
-                }
-            } else if (accion === "pause") {
-                setIsPlaying(false);
-                audioRef.current?.pause();
-                ytPlayerRef.current?.pauseVideo();
-            } else if (accion === "seek") {
-                if (audioRef.current) audioRef.current.currentTime = ct;
-                if (ytPlayerRef.current) ytPlayerRef.current.seekTo(ct, true);
-            } else if (accion === "next") {
-                setCurrentIndex(prev => (prev + 1) % canciones.length);
-                setIsPlaying(true);
-            } else if (accion === "prev") {
-                setCurrentIndex(prev => prev === 0 ? canciones.length - 1 : prev - 1);
-                setIsPlaying(true);
+    const handleEnded = useCallback(() => {
+        if (repeat) {
+            if (cancionActual?.tipo === "audio" && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play();
+            } else {
+                ytPlayerRef.current?.seekTo(0, true);
+                ytPlayerRef.current?.playVideo();
             }
+        } else {
+            setCurrentIndex(prev => {
+                const next = shuffle
+                    ? Math.floor(Math.random() * canciones.length)
+                    : (prev + 1) % canciones.length;
+                return next;
+            });
+            setIsPlaying(true);
+        }
+    }, [repeat, shuffle, canciones.length, cancionActual]);
 
-            setTimeout(() => { isSyncing.current = false; }, 500);
-        });
-
-        return () => {
-            socket.off("Canción Agregada");
-            socket.off("Canción Eliminada");
-            socket.off("Sync Música App");
-        };
-    }, [socket, canciones.length]);
-
-    // ============================================
-    // 🎬 YOUTUBE PLAYER
-    // ============================================
-
-    useEffect(() => {
-        if (!cancionActual || cancionActual.tipo !== "youtube") return;
+    const emitSync = useCallback((accion, extra = {}) => {
         const videoId = extractYouTubeId(cancionActual.contenido);
         if (!videoId) return;
 
@@ -175,13 +132,14 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
     // ============================================
 
     useEffect(() => {
-        if (!cancionActual || (cancionActual.tipo !== "url" && cancionActual.tipo !== "soundcloud" && cancionActual.tipo !== "spotify")) return;
-        if (audioRef.current && cancionActual.tipo === "url") {
+        if (!cancionActual || cancionActual.tipo !== "url") return;
+        if (audioRef.current) {
             audioRef.current.src = cancionActual.contenido;
             audioRef.current.volume = volume;
             audioRef.current.load();
             if (isPlaying) audioRef.current.play().catch(console.error);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cancionActual]);
 
     // Cargar audio cuando cambia canción
@@ -193,6 +151,7 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
             audioRef.current.load();
             if (isPlaying) audioRef.current.play().catch(console.error);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cancionActual]);
 
     // ============================================
@@ -232,16 +191,6 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
     // 🎮 CONTROL FUNCTIONS
     // ============================================
 
-    const emitSync = useCallback((accion, extra = {}) => {
-        if (!socket || isSyncing.current) return;
-        socket.emit("Sync Música App", {
-            accion,
-            cancionId: cancionActual?.id,
-            currentTime: audioRef.current?.currentTime || ytPlayerRef.current?.getCurrentTime?.() || 0,
-            ...extra
-        });
-    }, [socket, cancionActual]);
-
     const play = useCallback(() => {
         if (!cancionActual) return;
         if (cancionActual.tipo === "audio") {
@@ -259,26 +208,6 @@ export default function MusicApp({ socket, currentUser, open, onClose }) {
         setIsPlaying(false);
         emitSync("pause");
     }, [emitSync]);
-
-    const handleEnded = useCallback(() => {
-        if (repeat) {
-            if (cancionActual?.tipo === "audio" && audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play();
-            } else {
-                ytPlayerRef.current?.seekTo(0, true);
-                ytPlayerRef.current?.playVideo();
-            }
-        } else {
-            setCurrentIndex(prev => {
-                const next = shuffle
-                    ? Math.floor(Math.random() * canciones.length)
-                    : (prev + 1) % canciones.length;
-                return next;
-            });
-            setIsPlaying(true);
-        }
-    }, [repeat, shuffle, canciones.length, cancionActual]);
 
     const playNext = useCallback(() => {
         if (!canciones.length) return;

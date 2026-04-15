@@ -19,7 +19,6 @@ export default function AddSongForm({ onSubmit, uploading }) {
     const [artista, setArtista] = useState("");
     const [youtubeUrl, setYoutubeUrl] = useState("");
     const [audioFile, setAudioFile] = useState(null);
-    const [portadaFile, setPortadaFile] = useState(null);
     const [portadaPreview, setPortadaPreview] = useState(null);
     const [urlStream, setUrlStream] = useState("");
 

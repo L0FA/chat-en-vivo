@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useChat } from "../hooks/useChat";
 
 export default function RoomSelector({ scrolled, socket }) {
@@ -28,6 +28,12 @@ export default function RoomSelector({ scrolled, socket }) {
         }
     }, [open, socket, addUserRoom]);
 
+    // Función de cierre declarada antes del useEffect que la usa
+    const handleClose = useCallback(() => {
+        setVisible(false);
+        setTimeout(() => { setOpen(false); setShowCreate(false); setInviteMode(false); }, 200);
+    }, []);
+
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -36,12 +42,7 @@ export default function RoomSelector({ scrolled, socket }) {
         };
         if (open) document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [open]);
-
-    const handleClose = () => {
-        setVisible(false);
-        setTimeout(() => { setOpen(false); setShowCreate(false); setInviteMode(false); }, 200);
-    };
+    }, [open, handleClose]);
 
     const handleCreateRoom = () => {
         if (!newRoomName.trim() || !socket) return;

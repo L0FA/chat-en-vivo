@@ -378,7 +378,7 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
                         <span className="text-[10px] text-gray-400">{hora}</span>
                         {hasReactions && (
                             <div className="flex gap-0.5 text-xs bg-black/20 px-1.5 py-0.5 rounded-full">
-                                {Object.entries(reactions).filter(([_, users]) => users.length > 0).map(([emoji, users]) => (
+                                {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
                                     <span key={emoji}>{emoji} {users.length}</span>
                                 ))}
                             </div>
