@@ -126,6 +126,7 @@ const handleChange = (e) => {
                     {showEmojiPanel && (
                         <EmojiStickerPanel
                             socket={socket}
+                            currentRoom={currentRoom}
                             onEmojiSelect={(emoji) => setInput(prev => prev + emoji)}
                             onClose={() => setShowEmojiPanel(false)}
                         />
@@ -163,7 +164,7 @@ const handleChange = (e) => {
                 </div>
 
                 {/* Media dropdown */}
-                <MediaDropdown socket={socket} />
+                <MediaDropdown socket={socket} currentRoom={currentRoom} />
 
             </div>
         </div>

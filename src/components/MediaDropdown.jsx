@@ -11,8 +11,9 @@ import { VoiceRecorder, AudioPreview, Camera, MediaPreview } from "./media";
  * Componente dropdown para seleccionar tipo de media
  * @param {Object} props
  * @param {Object} props.socket - Socket de conexión
+ * @param {string} props.currentRoom - Sala actual
  */
-export default function MediaDropdown({ socket }) {
+export default function MediaDropdown({ socket, currentRoom }) {
     // Estados del dropdown
     const [open, setOpen] = useState(false);
     
@@ -39,7 +40,8 @@ export default function MediaDropdown({ socket }) {
         reader.onload = (ev) => {
             socket.emit(type === "image" ? "Imagen en Chat" : "Video en Chat", {
                 data: ev.target.result,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                room: currentRoom
             });
         };
         reader.readAsDataURL(file);
@@ -104,14 +106,14 @@ export default function MediaDropdown({ socket }) {
         if (media.type === "video" && media.blob) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                socket.emit("Video en Chat", { data: e.target.result, timestamp: Date.now() });
+                socket.emit("Video en Chat", { data: e.target.result, timestamp: Date.now(), room: currentRoom });
             };
             reader.readAsDataURL(media.blob);
         } else {
-            socket.emit("Imagen en Chat", { data: media.src, timestamp: Date.now() });
+            socket.emit("Imagen en Chat", { data: media.src, timestamp: Date.now(), room: currentRoom });
         }
         setMediaPreview(null);
-    }, [socket]);
+    }, [socket, currentRoom]);
 
     const cancelMedia = useCallback(() => {
         setMediaPreview(null);
@@ -184,7 +186,7 @@ export default function MediaDropdown({ socket }) {
                 <AudioPreview 
                     audioBlob={audioBlob}
                     onSend={(dataUrl) => {
-                        socket?.emit("Audio en Chat", { data: dataUrl, timestamp: Date.now() });
+        socket?.emit("Audio en Chat", { data: dataUrl, timestamp: Date.now(), room: currentRoom });
                         setShowAudioPreview(false);
                         setAudioBlob(null);
                     }}

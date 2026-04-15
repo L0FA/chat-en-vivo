@@ -53,7 +53,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = userRoom || "general";
+        const room = payload.room || userRoom || "general";
 
         try {
             await db.execute({
@@ -75,7 +75,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = userRoom || "general";
+        const room = payload.room || userRoom || "general";
 
         try {
             await db.execute({
@@ -97,7 +97,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = userRoom || "general";
+        const room = payload.room || userRoom || "general";
 
         try {
             await db.execute({
@@ -119,7 +119,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = userRoom || "general";
+        const room = payload.room || userRoom || "general";
 
         try {
             await db.execute({
@@ -141,7 +141,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = userRoom || "general";
+        const room = payload.room || userRoom || "general";
 
         try {
             await db.execute({

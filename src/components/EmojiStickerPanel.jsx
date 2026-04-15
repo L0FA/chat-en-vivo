@@ -6,7 +6,7 @@ const DEFAULT_STICKERS = [
     "🔥","✨","💯","🎉","👀","😤","🥴","😎","🤡","👑"
 ];
 
-export default function EmojiStickerPanel({ socket, onEmojiSelect, onClose }) {
+export default function EmojiStickerPanel({ socket, currentRoom, onEmojiSelect, onClose }) {
     const [tab, setTab] = useState("emojis");
     const [customStickers, setCustomStickers] = useState(() =>
         JSON.parse(localStorage.getItem("customStickers") || "[]")
@@ -27,7 +27,7 @@ export default function EmojiStickerPanel({ socket, onEmojiSelect, onClose }) {
     }, [onEmojiSelect, onClose]);
 
 const sendSticker = useCallback((data, tipo) => {
-    socket?.emit("Sticker en Chat", { data, tipo, timestamp: Date.now() });
+    socket?.emit("Sticker en Chat", { data, tipo, timestamp: Date.now(), room: currentRoom });
     onClose();
 }, [socket, onClose]);
 
@@ -174,7 +174,7 @@ function GifTab({ socket, onClose }) {
     };
 
     const sendGif = (url) => {
-        socket?.emit("GIF en Chat", { url, timestamp: Date.now() });
+        socket?.emit("GIF en Chat", { url, timestamp: Date.now(), room: currentRoom });
         onClose();
     };
 
