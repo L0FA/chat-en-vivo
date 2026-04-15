@@ -23,7 +23,7 @@ export default function CallDropdown({ show, onClose, onCall }) {
     });
 
     return (
-        <div className="fixed inset-0 z-[9998]">
+        <div className="fixed inset-0 z-9998">
             <div 
                 className="absolute inset-0 bg-black/40" 
                 onClick={onClose}

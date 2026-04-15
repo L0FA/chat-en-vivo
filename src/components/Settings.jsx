@@ -73,7 +73,7 @@ export default function Settings({ open, onClose }) {
     if (!open) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70" onClick={onClose}>
+        <div className="fixed inset-0 z-10000 flex items-center justify-center bg-black/70" onClick={onClose}>
             <div 
                 className="bg-[#1e1e1e] border border-white/20 rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}

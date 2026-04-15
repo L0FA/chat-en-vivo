@@ -27,7 +27,7 @@ export default function IncomingCallModal({ incomingCall, onAccept, onReject, ri
     const isImage = avatar && avatar.startsWith("data:image");
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70">
             <div className="bg-[#1e1e1e] border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-scale-in">
                 {isImage ? (
                     <img src={avatar} alt="" className="w-24 h-24 rounded-full object-cover mx-auto mb-4 shadow-lg" />

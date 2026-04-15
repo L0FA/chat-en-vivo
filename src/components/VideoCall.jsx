@@ -131,6 +131,12 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
         setRemoteHasVideo(false);
     }, [stopRingtone]);
 
+    // Alias público
+    const endCall = useCallback(() => {
+        socket?.emit("llamada:end", { to: remoteUser });
+        endCallCleanup();
+    }, [socket, remoteUser, endCallCleanup]);
+
     // Timer de duración
     const startTimer = useCallback(() => {
         timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
@@ -188,6 +194,7 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
     const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
     // Toggle screen share - necesita peerConnection que ya está definido
+    const toggleScreenShareRef = useRef(null);
     const toggleScreenShare = useCallback(async () => {
         if (isScreenSharing) {
             if (screenStreamRef.current) {
@@ -202,13 +209,17 @@ export default function VideoCall({ socket, callTrigger = 0 }) {
                 const track = stream.getVideoTracks()[0];
                 const sender = peerConnection.current?.getSenders().find(s => s.track?.kind === "video");
                 if (sender && track) sender.replaceTrack(track);
-                track.onended = () => toggleScreenShare();
+                track.onended = () => toggleScreenShareRef.current?.();
                 setIsScreenSharing(true);
             } catch (err) {
                 console.error("Error screen share:", err);
             }
         }
     }, [isScreenSharing, peerConnection]);
+
+    useEffect(() => {
+        toggleScreenShareRef.current = toggleScreenShare;
+    }, [toggleScreenShare]);
 
     // ============================================
     // 📱 INICIAR LLAMADA - Outgoing call
