@@ -5,8 +5,51 @@
 
 import { db } from "./database.js";
 
-export function setupAuth(io, socket, connectedUsers) {
-    // ---- LOGIN ----
+export async function setupAuth(io, socket, connectedUsers) {
+    const auth = socket.handshake.auth;
+    const nombre = auth?.NombreUsuario || auth?.nombre || auth?.name;
+    const avatar = auth?.avatar;
+    
+    if (nombre?.trim()) {
+        const user = nombre.trim();
+        const existingUser = await db.execute({
+            sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+            args: [user]
+        });
+        
+        let storedAvatar = null;
+        if (existingUser.rows.length > 0) {
+            storedAvatar = existingUser.rows[0].avatar;
+        } else {
+            await db.execute({
+                sql: "INSERT INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
+                args: [user, avatar || null, Date.now()]
+            });
+        }
+
+        const finalAvatar = storedAvatar || avatar || null;
+        connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: "general" });
+        
+        socket.join("general");
+        socket.emit("Login Exitoso", { 
+            user, 
+            avatar: finalAvatar,
+            isAdmin: ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user)
+        });
+        
+        const users = await Promise.all([...connectedUsers.values()].map(async u => {
+            const result = await db.execute({
+                sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                args: [u.nombre]
+            });
+            return { ...u, avatar: result.rows[0]?.avatar || u.avatar };
+        }));
+        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        socket.emit("Users Actualizados", { users, admins });
+        io.emit("Users Actualizados", { users, admins });
+    }
+
+    // ---- LOGIN EVENT (explicit) ----
     socket.on("Login", async ({ nombre, avatar }, cb) => {
         if (!nombre?.trim()) {
             cb?.({ status: "error", message: "Nombre requerido" });

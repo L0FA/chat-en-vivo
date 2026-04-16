@@ -28,14 +28,15 @@ const io = new Server(server, {
 
 const connectedUsers = new Map();
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
     console.log("🔌 Cliente conectado:", socket.id);
 
+    await setupAuth(io, socket, connectedUsers);
+
     const user = connectedUsers.get(socket.id);
-    const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
+    const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
     const userRoom = user?.sala || "general";
 
-    setupAuth(io, socket, connectedUsers);
     setupRooms(socket, connectedUsers);
     setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
     setupMusic(io, socket, connectedUsers, userRoom);
