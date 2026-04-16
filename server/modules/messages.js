@@ -42,10 +42,13 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
     socket.on("Mensaje en Chat", async (payload, cb) => {
         const currentUser = connectedUsers.get(socket.id);
         if (!currentUser) {
+            console.log("❌ MENSAJE: Usuario no logueado, socket.id:", socket.id);
             cb?.({ status: "error", message: "No logueado" });
             return;
         }
 
+        console.log("✅ MENSAJE: Usuario:", currentUser.nombre, "payload:", payload);
+        
         const { content, msg, replyToId, replyToUser, replyToContent, destructSeconds } = payload;
         const id = generateId();
         const timestamp = Date.now();
