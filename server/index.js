@@ -37,8 +37,9 @@ io.on("connection", async (socket) => {
     const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
     const userRoom = user?.sala || null;
 
+    // Cargar todos los módulos en paralelo para velocidad
     setupRooms(socket, connectedUsers);
-    await setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
+    setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
     await setupMusic(io, socket, connectedUsers);
     await setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
     setupCalls(io, socket, connectedUsers);
