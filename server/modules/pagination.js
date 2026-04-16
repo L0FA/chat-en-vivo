@@ -31,17 +31,11 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
 
         try {
             let results;
-            if (isAdmin && queryRoom === "sala-admins-global") {
-                results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp]
-                });
-            } else {
-                results = await db.execute({
-                    sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [beforeTimestamp, queryRoom]
-                });
-            }
+            // Cargar mensajes filtrados por sala
+            results = await db.execute({
+                sql: `SELECT * FROM Mensajes WHERE timestamp < ? AND room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                args: [beforeTimestamp, queryRoom]
+            });
             
             const rows = [...results.rows].reverse();
             
@@ -71,35 +65,23 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
                 edited: Number(row.edited) === 1,
                 destructSeconds: row.destructSeconds || 0,
                 room: row.room || null
-                };
             }));
 
             let hasMore = false;
             if (rows.length > 0) {
-                let older;
-                if (isAdmin && queryRoom === "sala-admins-global") {
-                    older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
-                        args: [rows[0].timestamp]
-                    });
-                    const countResult = await db.execute({ sql: "SELECT COUNT(*) as count FROM Mensajes", args: [] });
-                    const totalMessages = countResult.rows[0]?.count || 0;
-                    hasMore = older.rows.length > 0 && totalMessages > rows.length;
-                } else {
-                    older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
-                        args: [rows[0].timestamp, queryRoom]
-                    });
-                    const countResult = await db.execute({
-                        sql: "SELECT COUNT(*) as count FROM Mensajes WHERE room = ?",
-                        args: [queryRoom]
-                    });
-                    const totalMessages = countResult.rows[0]?.count || 0;
-                    hasMore = older.rows.length > 0 && totalMessages > rows.length;
-                }
+                const older = await db.execute({
+                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
+                    args: [rows[0].timestamp, queryRoom]
+                });
+                const countResult = await db.execute({
+                    sql: "SELECT COUNT(*) as count FROM Mensajes WHERE room = ?",
+                    args: [queryRoom]
+                });
+                const totalMessages = countResult.rows[0]?.count || 0;
+                hasMore = older.rows.length > 0 && totalMessages > rows.length;
             }
 
-            cb?.({ status: "ok", messages: rows, hasMore });
+            cb?.({ status: "ok", messages: messagePayloads, hasMore });
         } catch (e) {
             console.error("❌ ERROR PAGINACIÓN:", e);
             cb?.({ status: "error" });
@@ -116,7 +98,7 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
             }
             
             let results;
-            if (isAdmin && room === "sala-admins-global") {
+            if (room === "sala-admins-global" && isAdmin) {
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: []
