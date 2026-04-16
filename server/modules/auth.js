@@ -5,6 +5,8 @@
 
 import { db } from "./database.js";
 
+const ADMIN_USERS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+
 export async function setupAuth(io, socket, connectedUsers) {
     const auth = socket.handshake.auth;
     const nombre = auth?.NombreUsuario || auth?.nombre || auth?.name;
@@ -34,9 +36,10 @@ export async function setupAuth(io, socket, connectedUsers) {
         socket.emit("Login Exitoso", { 
             user, 
             avatar: finalAvatar,
-            isAdmin: ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user)
+            isAdmin: ADMIN_USERS.includes(user)
         });
         
+        // Obtener todos los usuarios de DB para avatares
         const users = await Promise.all([...connectedUsers.values()].map(async u => {
             const result = await db.execute({
                 sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
@@ -44,7 +47,9 @@ export async function setupAuth(io, socket, connectedUsers) {
             });
             return { ...u, avatar: result.rows[0]?.avatar || u.avatar };
         }));
-        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        
+        // Admins siempre fijo (no depender de conectados)
+        const admins = ADMIN_USERS;
         socket.emit("Users Actualizados", { users, admins });
         io.emit("Users Actualizados", { users, admins });
     }
@@ -79,7 +84,7 @@ export async function setupAuth(io, socket, connectedUsers) {
         socket.emit("Login Exitoso", { 
             user, 
             avatar: finalAvatar,
-            isAdmin: ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user)
+            isAdmin: ADMIN_USERS.includes(user)
         });
         
         const users = await Promise.all([...connectedUsers.values()].map(async u => {
@@ -89,7 +94,8 @@ export async function setupAuth(io, socket, connectedUsers) {
             });
             return { ...u, avatar: result.rows[0]?.avatar || u.avatar };
         }));
-        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        
+        const admins = ADMIN_USERS;
         socket.emit("Users Actualizados", { users, admins });
         socket.broadcast.emit("Users Actualizados", { users, admins });
 
@@ -107,7 +113,7 @@ export async function setupAuth(io, socket, connectedUsers) {
             });
             return { ...u, avatar: result.rows[0]?.avatar || u.avatar };
         }));
-        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        const admins = ADMIN_USERS;
         io.emit("Users Actualizados", { users, admins });
     });
 
