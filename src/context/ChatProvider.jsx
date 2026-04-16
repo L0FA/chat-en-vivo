@@ -102,9 +102,9 @@ export function ChatProvider({ children }) {
         setUser(nombre);
         setPassword(password);
         setAvatar(savedAvatar);
-        // Establecer sala global por defecto
-        setCurrentRoom("sala-global");
-        localStorage.setItem("currentRoom", "sala-global");
+        // NO cargar sala automáticamente - esperar a que el usuario elija
+        setCurrentRoom(null);
+        localStorage.setItem("currentRoom", "");
     }, []);
 
     const updateProfile = useCallback((nombre, nuevoAvatar) => {

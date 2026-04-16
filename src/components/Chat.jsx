@@ -292,8 +292,16 @@ export default function Chat() {
                 className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1"
                 style={{ overscrollBehavior: "contain" }}
             >
+                {/* Seleccionar sala */}
+                {!currentRoom && (
+                    <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <p className="text-white/70 text-lg">💬 Elegí una sala para empezar</p>
+                        <p className="text-white/40 text-sm">Usá el selector de salas ↑</p>
+                    </div>
+                )}
+
                 {/* Cargando mensajes */}
-                {!historialListo && messages.length === 0 && (
+                {currentRoom && !historialListo && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-10 gap-3">
                         <div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"/>
                         <p className="text-white/50 text-sm">Cargando mensajes...</p>
