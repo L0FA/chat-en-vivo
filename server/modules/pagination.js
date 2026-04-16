@@ -145,20 +145,11 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
 
             let hasMore = false;
             if (rows.length > 0) {
-                let older;
-                if (isAdmin && room === "sala-admins-global") {
-                    older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? LIMIT 1",
-                        args: [rows[0].timestamp]
-                    });
-                    hasMore = older.rows.length > 0;
-                } else {
-                    older = await db.execute({
-                        sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
-                        args: [rows[0].timestamp, room]
-                    });
-                    hasMore = older.rows.length > 0;
-                }
+                const older = await db.execute({
+                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
+                    args: [rows[0].timestamp, room]
+                });
+                hasMore = older.rows.length > 0;
             }
 
             socket.emit("historial cargado", { hasMore, pageSize: PAGE_SIZE });

@@ -50,28 +50,25 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
             socket.join(room);
         }
 
-        try {
-            await db.execute({
-                sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
-            });
+        // Emitir INMEDIATO al cliente (más rápido)
+        const messagePayload = {
+            id, content: messageContent, timestamp, user: currentUser.nombre,
+            senderAvatar: currentUser.avatar,
+            replyToId: replyToId || null,
+            replyToUser: replyToUser || null,
+            replyToContent: replyToContent || null,
+            edited: false, destructSeconds: destructSeconds || 0, room
+        };
 
-            const messagePayload = {
-                id, content: messageContent, timestamp, user: currentUser.nombre,
-                senderAvatar: currentUser.avatar,
-                replyToId: replyToId || null,
-                replyToUser: replyToUser || null,
-                replyToContent: replyToContent || null,
-                edited: false, destructSeconds: destructSeconds || 0, room
-            };
+        emitMessage(io, socket, room, messagePayload);
+        cb?.({ status: "ok", id });
 
-            emitMessage(io, socket, room, messagePayload);
-            cb?.({ status: "ok", id });
-        } catch (e) {
-            console.error("❌ Error guardando mensaje:", e);
-            cb?.({ status: "error" });
-        }
+        // Guardar en DB en background (fire & forget)
+        db.execute({
+            sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
+        }).catch(e => console.error("❌ Error guardando mensaje:", e));
     });
 
     // ---- IMAGEN EN CHAT ----
