@@ -131,8 +131,8 @@ export default function Chat() {
             setAdminsList(admins);
         };
         
-        socket.on("Usuarios Conectados", handleUsers);
-        return () => socket.off("Usuarios Conectados", handleUsers);
+        socket.on("Users Actualizados", handleUsers);
+        return () => socket.off("Users Actualizados", handleUsers);
     }, [socket, setConnectedUsers]);
 
     // Scroll al fondo cuando llega un mensaje nuevo

@@ -29,7 +29,7 @@ export default function EmojiStickerPanel({ socket, currentRoom, onEmojiSelect, 
 const sendSticker = useCallback((data, tipo) => {
     socket?.emit("Sticker en Chat", { data, tipo, timestamp: Date.now(), room: currentRoom });
     onClose();
-}, [socket, onClose]);
+}, [socket, onClose, currentRoom]);
 
     const handleUpload = (e) => {
         const file = e.target.files?.[0];
@@ -132,13 +132,13 @@ const sendSticker = useCallback((data, tipo) => {
 
             {/* Tab GIFs */}
             {tab === "gifs" && (
-                <GifTab socket={socket} onClose={onClose} />
+                <GifTab socket={socket} onClose={onClose} currentRoom={currentRoom} />
             )}
         </div>
     );
 }
 
-function GifTab({ socket, onClose }) {
+function GifTab({ socket, onClose, currentRoom }) {
     const [query, setQuery] = useState("");
     const [gifs, setGifs] = useState([]);
     const [loading, setLoading] = useState(false);

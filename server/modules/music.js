@@ -26,7 +26,7 @@ export function setupMusic(io, socket, connectedUsers) {
             const cancion = { id, titulo, artista, tipo, contenido, portada, usuario: user.nombre, timestamp };
             io.emit("Canción Agregada", cancion);
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -41,7 +41,7 @@ export function setupMusic(io, socket, connectedUsers) {
 
             io.emit("Canción Eliminada", { cancionId });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });

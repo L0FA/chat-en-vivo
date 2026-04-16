@@ -73,7 +73,8 @@ export function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
     });
 
     // ---- CARGAR MENSAJES POR SALA ----
-    socket.on("Cargar Mensajes Sala", async ({ room }, cb) => {
+    // eslint-disable-next-line no-unused-vars
+    socket.on("Cargar Mensajes Sala", async ({ room }, _cb) => {
         try {
             let results;
             if (isAdmin && room === "sala-admins-global") {

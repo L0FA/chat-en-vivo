@@ -5,7 +5,7 @@
 
 import { db } from "./database.js";
 
-export function setupAuth(socket, connectedUsers) {
+export function setupAuth(io, socket, connectedUsers) {
     // ---- LOGIN ----
     socket.on("Login", async ({ nombre, avatar }, cb) => {
         if (!nombre?.trim()) {
@@ -36,8 +36,9 @@ export function setupAuth(socket, connectedUsers) {
         });
         
         const users = [...connectedUsers.values()];
-        socket.emit("Users Actualizados", users);
-        socket.broadcast.emit("Users Actualizados", users);
+        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        socket.emit("Users Actualizados", { users, admins });
+        socket.broadcast.emit("Users Actualizados", { users, admins });
 
         cb?.({ status: "ok", user, avatar: avatar || null });
     });
@@ -47,7 +48,8 @@ export function setupAuth(socket, connectedUsers) {
         connectedUsers.delete(socket.id);
         
         const users = [...connectedUsers.values()];
-        socket.broadcast.emit("Users Actualizados", users);
+        const admins = users.filter(u => ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(u.nombre)).map(u => u.nombre);
+        io.emit("Users Actualizados", { users, admins });
     });
 
     // ---- ACTUALIZAR AVATAR ----

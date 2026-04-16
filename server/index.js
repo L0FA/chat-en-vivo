@@ -35,8 +35,8 @@ io.on("connection", (socket) => {
     const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
     const userRoom = user?.sala || "general";
 
-    setupAuth(socket, connectedUsers);
-    setupRooms(socket, connectedUsers, isAdmin);
+    setupAuth(io, socket, connectedUsers);
+    setupRooms(socket, connectedUsers);
     setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
     setupMusic(io, socket, connectedUsers, userRoom);
     setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
@@ -70,12 +70,12 @@ io.on("connection", (socket) => {
         cb?.({ status: "ok" });
     });
 
-    socket.on("Hacer Admin", async ({ targetUser }, cb) => {
+    socket.on("Hacer Admin", async (_payload, cb) => {
         if (!isAdmin) { cb?.({ status: "error" }); return; }
         cb?.({ status: "ok" });
     });
 
-    socket.on("Banear Usuario", async ({ targetUser }, cb) => {
+    socket.on("Banear Usuario", async (_payload, cb) => {
         if (!isAdmin) { cb?.({ status: "error" }); return; }
         cb?.({ status: "ok" });
     });
@@ -83,6 +83,32 @@ io.on("connection", (socket) => {
 
 app.get("/", (_, res) => res.send("☁️ WhatsAppn't Server"));
 app.get("/health", (_, res) => res.json({ status: "ok", users: connectedUsers.size }));
+
+const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
+const GIPHY_BASE = "https://api.giphy.com/v1/gifs";
+
+app.get("/api/giphy/trending", async (_, res) => {
+    try {
+        const fetch = await import("node:fetch");
+        const response = await fetch.default(`${GIPHY_BASE}/trending?api_key=${GIPHY_API_KEY}&limit=20`);
+        const data = await response.json();
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get("/api/giphy/search", async (req, res) => {
+    try {
+        const q = req.query.q || "";
+        const fetch = await import("node:fetch");
+        const response = await fetch.default(`${GIPHY_BASE}/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(q)}&limit=20`);
+        const data = await response.json();
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.use(logger("dev"));
 app.use((req, res, next) => {

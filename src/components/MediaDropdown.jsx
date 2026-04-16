@@ -47,7 +47,7 @@ export default function MediaDropdown({ socket, currentRoom }) {
         reader.readAsDataURL(file);
         e.target.value = "";
         setOpen(false);
-    }, [socket]);
+    }, [socket, currentRoom]);
 
     // ============================================
     // 🎤 VOICE RECORDER
@@ -62,8 +62,8 @@ export default function MediaDropdown({ socket, currentRoom }) {
         setShowVoiceRecorder(false);
         setShowAudioPreview(false);
         setAudioBlob(null);
-        socket?.emit("Audio en Chat", { data: dataUrl, timestamp: Date.now() });
-    }, [socket]);
+        socket?.emit("Audio en Chat", { data: dataUrl, timestamp: Date.now(), room: currentRoom });
+    }, [socket, currentRoom]);
 
     const handleVoiceCancel = useCallback(() => {
         setShowVoiceRecorder(false);
@@ -101,7 +101,7 @@ export default function MediaDropdown({ socket, currentRoom }) {
     // ============================================
 
     const sendMedia = useCallback((media) => {
-        if (!socket) return;
+        if (!socket || !currentRoom) return;
         
         if (media.type === "video" && media.blob) {
             const reader = new FileReader();

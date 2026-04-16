@@ -7,9 +7,8 @@ import { db } from "./database.js";
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-export function setupRooms(socket, connectedUsers, isAdmin) {
+export function setupRooms(socket, connectedUsers) {
     const user = connectedUsers.get(socket.id);
-    const userRoom = user?.sala || "general";
 
     // ---- OBTENER MIS SALAS ----
     socket.on("Obtener Mis Salas", async (cb) => {
@@ -22,7 +21,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
                 args: [user.nombre]
             });
             cb?.({ status: "ok", salas: result.rows });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -44,7 +43,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
             });
             
             cb?.({ status: "ok", sala: { id: salaId, nombre, descripcion } });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -71,7 +70,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
             } else {
                 cb?.({ status: "error" });
             }
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -89,7 +88,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
             socket.leave(salaId);
             user.sala = "general";
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -105,7 +104,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
             });
             
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -123,7 +122,7 @@ export function setupRooms(socket, connectedUsers, isAdmin) {
             } else {
                 cb?.({ status: "error" });
             }
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });

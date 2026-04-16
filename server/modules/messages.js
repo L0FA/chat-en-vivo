@@ -41,7 +41,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, messagePayload);
             cb?.({ status: "ok", id });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -63,7 +63,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, { id, type: "image", content: payload.data, timestamp, user: user.nombre, room });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -85,7 +85,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, { id, type: "video", content: payload.data, timestamp, user: user.nombre, room });
             cb?.({ status: "ok" });
-        } catch (_) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -107,7 +107,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, { id, type: "audio", content: payload.data, timestamp, user: user.nombre, room });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -129,7 +129,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, { id, type: "sticker", content: payload.content, timestamp, user: user.nombre, room });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -151,7 +151,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, { id, type: "gif", content: payload.url, timestamp, user: user.nombre, room });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -169,7 +169,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             io.to(userRoom).emit("Mensaje Editado", { messageId, newContent });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -187,7 +187,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             io.to(userRoom).emit("Mensaje Eliminado", { messageId });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
@@ -224,7 +224,7 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             io.to(userRoom).emit("Reacción Actualizada", { messageId, emoji, user: user.nombre, action, reactions });
             cb?.({ status: "ok" });
-        } catch (e) {
+        } catch {
             cb?.({ status: "error" });
         }
     });
