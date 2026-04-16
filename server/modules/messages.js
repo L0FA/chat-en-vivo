@@ -9,6 +9,7 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 
 // Helper para emitir mensaje a la sala
 function emitMessage(io, socket, room, payload) {
+    console.log("📤 emitMessage a sala:", room, "payload:", payload);
     io.to(room).emit("Mensaje en Chat", payload);
     socket.broadcast.to(room).emit("Mensaje en Chat", payload);
 }
