@@ -19,7 +19,7 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
                     args: [nombre]
                 });
                 const avatar = result.rows[0]?.avatar || null;
-                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
+                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "sala-global" });
             } catch { /* ignore */ }
         }
     }

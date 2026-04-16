@@ -86,7 +86,7 @@ export function setupRooms(socket, connectedUsers) {
             });
             
             socket.leave(salaId);
-            user.sala = "general";
+            user.sala = "sala-global";
             cb?.({ status: "ok" });
         } catch {
             cb?.({ status: "error" });

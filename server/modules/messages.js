@@ -25,8 +25,8 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
                     args: [nombre]
                 });
                 const avatar = result.rows[0]?.avatar || null;
-                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
-                socket.join("general");
+                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "sala-global" });
+                socket.join("sala-global");
             } catch { /* ignore */ }
         }
     }
@@ -42,7 +42,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         const { content, msg, replyToId, replyToUser, replyToContent, destructSeconds, room: payloadRoom } = payload;
         const id = generateId();
         const timestamp = Date.now();
-        const room = payloadRoom || userRoom || "general";
+        const room = payloadRoom || userRoom || "sala-global";
         const messageContent = content || msg || "";
 
         // Unir socket a la sala si no está
@@ -81,7 +81,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = payload.room || userRoom || "general";
+        const room = payload.room || userRoom || "sala-global";
 
         try {
             await db.execute({
@@ -103,7 +103,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = payload.room || userRoom || "general";
+        const room = payload.room || userRoom || "sala-global";
 
         try {
             await db.execute({
@@ -125,7 +125,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = payload.room || userRoom || "general";
+        const room = payload.room || userRoom || "sala-global";
 
         try {
             await db.execute({
@@ -147,7 +147,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = payload.room || userRoom || "general";
+        const room = payload.room || userRoom || "sala-global";
 
         try {
             await db.execute({
@@ -169,7 +169,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
         const id = generateId();
         const timestamp = Date.now();
-        const room = payload.room || userRoom || "general";
+        const room = payload.room || userRoom || "sala-global";
 
         try {
             await db.execute({

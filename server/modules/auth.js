@@ -30,9 +30,9 @@ export async function setupAuth(io, socket, connectedUsers) {
         }
 
         const finalAvatar = storedAvatar || avatar || null;
-        connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: "general" });
+        connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: "sala-global" });
         
-        socket.join("general");
+        socket.join("sala-global");
         socket.emit("Login Exitoso", { 
             user, 
             avatar: finalAvatar,
@@ -78,9 +78,9 @@ export async function setupAuth(io, socket, connectedUsers) {
         }
 
         const finalAvatar = storedAvatar || avatar || null;
-        connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: "general" });
+        connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: "sala-global" });
         
-        socket.join("general");
+        socket.join("sala-global");
         socket.emit("Login Exitoso", { 
             user, 
             avatar: finalAvatar,
