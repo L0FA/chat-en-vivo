@@ -9,7 +9,7 @@ export default function App() {
     useTheme();
 
     return (
-        <div className="min-h-screen w-full flex flex-col">
+        <div className="w-full flex flex-col" style={{ height: "100dvh" }}>
             <ThemeBackground />
             {!user ? <Login /> : <Chat />}
         </div>

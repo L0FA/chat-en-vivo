@@ -33,6 +33,16 @@ export default function ThemeSelector({ scrolled }) {
     }
 }, [open]);
 
+    useEffect(() => {
+        const handleResize = () => {
+            document.documentElement.style.setProperty('--app-width', `${window.innerWidth}px`);
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const handleClose = () => {
         setVisible(false);
         setTimeout(() => { setOpen(false); setShowCustom(false); }, 200);

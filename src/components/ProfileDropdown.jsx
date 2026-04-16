@@ -130,7 +130,7 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
                                     onClick={handleLogout}
                                     className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold bg-red-500/80 text-white hover:bg-red-600 transition cursor-pointer"
                                 >
-                                    🚪
+                                    🚪<span className="hidden sm:inline"> Cerrar Sesión</span>
                                 </button>
                             </div>
                         </div>

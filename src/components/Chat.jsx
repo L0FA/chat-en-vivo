@@ -3,6 +3,7 @@ import { useChat } from "../hooks/useChat";
 import { useSocket } from "../hooks/useSocket";
 import { useMessages } from "../hooks/useMessages";
 import { useTyping } from "../hooks/useTyping";
+import { useTheme } from "../hooks/useTheme";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import ThemeSelector from "./ThemeSelector";
@@ -17,6 +18,7 @@ import Settings from "./Settings";
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
     const { socket, isAdmin: userIsAdmin } = useSocket(user, password);
+    const { theme } = useTheme();
     
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
     const { onType, stopTyping } = useTyping(socket);
@@ -40,6 +42,20 @@ export default function Chat() {
             document.title = "💬 L0FAChat";
         }
     }, [unreadCount]);
+
+    // Función para obtener colores de contraste según el tema
+    const getNavbarButtonStyle = () => {
+        if (scrolled) {
+            return "bg-white/90 border-gray-200 text-gray-800";
+        }
+        // Temas claros necesitan botones oscuros
+        const lightThemes = ["rosa", "minimal", "retro", "ocean", "forest"];
+        if (lightThemes.includes(theme)) {
+            return "bg-black/50 border-white/30 text-white backdrop-blur-sm";
+        }
+        // Temas oscuros necesitan botones claros
+        return "bg-white/20 border-white/30 text-white backdrop-blur-sm";
+    };
 
     // Efecto para contar mensajes no leídos
     useEffect(() => {
@@ -175,8 +191,20 @@ export default function Chat() {
         setHeight();
         window.addEventListener("resize", setHeight);
         window.addEventListener("orientationchange", () => setTimeout(setHeight, 100));
+        
+        // Manejar teclado virtual en móviles
+        const handleVisualViewportResize = () => {
+            setHeight();
+        };
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", handleVisualViewportResize);
+        }
+        
         return () => {
             window.removeEventListener("resize", setHeight);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener("resize", handleVisualViewportResize);
+            }
         };
     }, []);
 
@@ -251,31 +279,19 @@ export default function Chat() {
                     />
                     <button 
                         onClick={() => setCallTrigger(t => t + 1)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
-                            scrolled
-                                ? "bg-white/90 border-gray-200"
-                                : "bg-white/20 border-white/30 backdrop-blur-sm"
-                        }`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${getNavbarButtonStyle()}`}
                     >
                         📞
                     </button>
                     <button
                         onClick={() => setShowMusicApp(p => !p)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
-                            scrolled
-                                ? "bg-white/90 border-gray-200"
-                                : "bg-white/20 border-white/30 backdrop-blur-sm"
-                        }`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${getNavbarButtonStyle()}`}
                     >
                         🎵
                     </button>
                     <button
                         onClick={() => setShowSettings(p => !p)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${
-                            scrolled
-                                ? "bg-white/90 border-gray-200"
-                                : "bg-white/20 border-white/30 backdrop-blur-sm"
-                        }`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full text-sm hover:scale-105 transition cursor-pointer border ${getNavbarButtonStyle()}`}
                     >
                         ⚙️
                     </button>

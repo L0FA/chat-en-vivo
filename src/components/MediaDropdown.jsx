@@ -130,9 +130,9 @@ export default function MediaDropdown({ socket, currentRoom }) {
                 <button
                     type="button"
                     onClick={() => setOpen(o => !o)}
-                    className="w-9 h-9 rounded-full bg-blue-400 flex items-center justify-center text-lg hover:scale-110 transition shrink-0 text-white cursor-pointer"
+                    className="w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-lg hover:scale-110 transition shrink-0 text-white cursor-pointer shadow-lg"
                 >
-                    📎
+                    📷
                 </button>
 
                 {/* Dropdown */}

@@ -3,6 +3,10 @@
 // ============================================
 
 export function createMatrixAnimation(ctx, canvas) {
+    // Evitar conflicto con otros temas usando z-index alto
+    ctx.canvas.style.position = "fixed";
+    ctx.canvas.style.zIndex = "-3";
+    
     const fontSize = 16;
     const columns = Math.floor(canvas.width / fontSize);
     const chars = "アイウエオカキクケコ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";

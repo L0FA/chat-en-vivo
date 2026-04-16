@@ -59,6 +59,14 @@ export default function ThemeBackground() {
 
         const ctx = canvas.getContext("2d");
 
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        
+        resize();
+        window.addEventListener("resize", resize);
+
         // Configurar tamaño del canvas
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -81,6 +89,7 @@ export default function ThemeBackground() {
         return () => {
             cancelAnimationFrame(animFrameRef.current);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            window.removeEventListener("resize", resize);
         };
     }, [theme]);
 

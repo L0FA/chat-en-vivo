@@ -87,28 +87,67 @@ app.get("/", (_, res) => res.send("☁️ WhatsAppn't Server"));
 app.get("/health", (_, res) => res.json({ status: "ok", users: connectedUsers.size }));
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
+const TENOR_API_KEY = process.env.TENOR_API_KEY || "AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ";
 const GIPHY_BASE = "https://api.giphy.com/v1/gifs";
+const TENOR_BASE = "https://tenor.googleapis.com/v2";
+
+async function fetchWithTimeout(url, timeout = 5000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        return res;
+    } catch (e) {
+        clearTimeout(id);
+        throw e;
+    }
+}
 
 app.get("/api/giphy/trending", async (_, res) => {
     try {
-        const fetch = await import("node:fetch");
-        const response = await fetch.default(`${GIPHY_BASE}/trending?api_key=${GIPHY_API_KEY}&limit=20`);
+        if (GIPHY_API_KEY) {
+            const response = await fetchWithTimeout(`${GIPHY_BASE}/trending?api_key=${GIPHY_API_KEY}&limit=20`);
+            const data = await response.json();
+            return res.json(data);
+        }
+        // Fallback a Tenor
+        const response = await fetchWithTimeout(`${TENOR_BASE}/featured?key=${TENOR_API_KEY}&limit=20`);
         const data = await response.json();
-        res.json(data);
+        const formatted = { data: (data.results || []).map(g => ({
+            id: g.id,
+            images: {
+                fixed_height: { url: g.media_formats.gif.url },
+                fixed_height_small: { url: g.media_formats.tinygif.url }
+            }
+        }))};
+        res.json(formatted);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: e.message, data: [] });
     }
 });
 
 app.get("/api/giphy/search", async (req, res) => {
     try {
         const q = req.query.q || "";
-        const fetch = await import("node:fetch");
-        const response = await fetch.default(`${GIPHY_BASE}/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(q)}&limit=20`);
+        if (GIPHY_API_KEY) {
+            const response = await fetchWithTimeout(`${GIPHY_BASE}/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(q)}&limit=20`);
+            const data = await response.json();
+            return res.json(data);
+        }
+        // Fallback a Tenor
+        const response = await fetchWithTimeout(`${TENOR_BASE}/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(q)}&limit=20`);
         const data = await response.json();
-        res.json(data);
+        const formatted = { data: (data.results || []).map(g => ({
+            id: g.id,
+            images: {
+                fixed_height: { url: g.media_formats.gif.url },
+                fixed_height_small: { url: g.media_formats.tinygif.url }
+            }
+        }))};
+        res.json(formatted);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: e.message, data: [] });
     }
 });
 

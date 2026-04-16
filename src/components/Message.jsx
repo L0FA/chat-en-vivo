@@ -48,10 +48,22 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     const fetchUserInfo = (targetUser) => {
         socket?.emit("Obtener Info Usuario", { targetUser }, (res) => {
             if (res?.status === "ok" && res.info) {
+                // Formatear fecha de creación
+                let fechaCreado = "Fecha desconocida";
+                if (res.info.creado) {
+                    try {
+                        const date = new Date(res.info.creado * 1000);
+                        fechaCreado = date.toLocaleDateString("es-AR", { 
+                            day: "numeric", 
+                            month: "short", 
+                            year: "numeric" 
+                        });
+                    } catch { /* keep default */ }
+                }
                 setUserInfoModal({
                     nombre: res.info.nombre,
                     avatar: res.info.avatar || "😀",
-                    creado: res.info.creado
+                    creado: fechaCreado
                 });
             } else {
                 setUserInfoModal({
@@ -248,7 +260,26 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     // ---- Click derecho ----
     const handleContextMenu = (e) => {
         e.preventDefault();
-        setContextMenuPos({ x: e.clientX, y: e.clientY });
+        
+        // Calcular posición adaptativa
+        const menuWidth = 160;
+        const menuHeight = 180;
+        let x = e.clientX;
+        let y = e.clientY;
+        
+        // Ajustar si está muy a la derecha
+        if (x + menuWidth > window.innerWidth) {
+            x = x - menuWidth;
+        }
+        // Ajustar si está muy abajo
+        if (y + menuHeight > window.innerHeight) {
+            y = y - menuHeight;
+        }
+        // Asegurar que no salga por izquierda
+        if (x < 0) x = 10;
+        if (y < 0) y = 10;
+        
+        setContextMenuPos({ x, y });
         setShowContextMenu(true);
     };
     
