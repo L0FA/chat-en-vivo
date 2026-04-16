@@ -15,10 +15,13 @@ function emitMessage(io, socket, room, payload) {
 }
 
 export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
+    console.log("🔧 setupMessages llamado, socket.id:", socket.id, "connectedUsers size:", connectedUsers.size);
+    
     // Si el usuario no está logueado, hacer auto-login
     if (!connectedUsers.get(socket.id)) {
         const auth = socket.handshake.auth;
         const nombre = auth?.NombreUsuario || auth?.nombre;
+        console.log("🔧 Auto-login attempt, nombre:", nombre);
         if (nombre?.trim()) {
             try {
                 const result = await db.execute({
@@ -28,19 +31,23 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
                 const avatar = result.rows[0]?.avatar || null;
                 connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
                 socket.join("general");
-            } catch { /* ignore */ }
+                console.log("🔧 Auto-login exitoso, usuario:", nombre);
+            } catch (e) { 
+                console.log("🔧 Auto-login error:", e);
+            }
         }
     }
 
     const user = connectedUsers.get(socket.id);
+    console.log("🔧 Usuario en setupMessages:", user);
     if (!user) {
         console.log("❌ Usuario no encontrado en connectedUsers para socket:", socket.id);
-        cb?.({ status: "error", message: "No logueado" });
-        return;
+        // No retorn early - dejar que continúe para ver si el handler se ejecuta
     }
 
     // ---- MENSAJE EN CHAT ----
     socket.on("Mensaje en Chat", async (payload, cb) => {
+        console.log("📥 MENSJE EN CHAT recibido! payload:", payload);
         const currentUser = connectedUsers.get(socket.id);
         if (!currentUser) {
             console.log("❌ MENSAJE: Usuario no logueado, socket.id:", socket.id);
