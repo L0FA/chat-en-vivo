@@ -43,27 +43,34 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
                 });
             }
             
-            const rows = await Promise.all([...results.rows].reverse().map(async row => {
-                let senderAvatar = null;
-                try {
-                    const avatarResult = await db.execute({
-                        sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
-                        args: [row.user]
-                    });
-                    senderAvatar = avatarResult.rows[0]?.avatar || null;
-                } catch { /* ignore */ }
-                return {
-                    id: row.id,
-                    type: row.type || "text",
-                    content: row.content,
-                    timestamp: row.timestamp,
-                    user: row.user || "Invitado",
-                    senderAvatar,
-                    replyToId: row.replyToId || null,
-                    replyToUser: row.replyToUser || null,
-                    edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0,
-                    room: row.room || null
+            const rows = [...results.rows].reverse();
+            
+            // Batch query para avatares
+            const uniqueUsers = [...new Set(rows.map(r => r.user).filter(Boolean))];
+            let avatarMap = {};
+            if (uniqueUsers.length > 0) {
+                const placeholders = uniqueUsers.map(() => "?").join(",");
+                const avatarResults = await db.execute({
+                    sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
+                    args: uniqueUsers
+                });
+                for (const row of avatarResults.rows) {
+                    avatarMap[row.nombre] = row.avatar;
+                }
+            }
+            
+            const messagePayloads = rows.map(row => ({
+                id: row.id,
+                type: row.type || "text",
+                content: row.content,
+                timestamp: row.timestamp,
+                user: row.user || "Invitado",
+                senderAvatar: avatarMap[row.user] || null,
+                replyToId: row.replyToId || null,
+                replyToUser: row.replyToUser || null,
+                edited: Number(row.edited) === 1,
+                destructSeconds: row.destructSeconds || 0,
+                room: row.room || null
                 };
             }));
 
@@ -122,24 +129,29 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
             }
             
             const rows = [...results.rows].reverse();
+            
+            // Batch query para avatares
+            const uniqueUsers = [...new Set(rows.map(r => r.user).filter(Boolean))];
+            let avatarMap = {};
+            if (uniqueUsers.length > 0) {
+                const placeholders = uniqueUsers.map(() => "?").join(",");
+                const avatarResults = await db.execute({
+                    sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
+                    args: uniqueUsers
+                });
+                for (const row of avatarResults.rows) {
+                    avatarMap[row.nombre] = row.avatar;
+                }
+            }
+            
             for (const row of rows) {
-                //获取发送者头像
-                let senderAvatar = null;
-                try {
-                    const avatarResult = await db.execute({
-                        sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
-                        args: [row.user]
-                    });
-                    senderAvatar = avatarResult.rows[0]?.avatar || null;
-                } catch { /* ignore */ }
-                
                 socket.emit("Mensaje en Chat", {
                     id: row.id,
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
                     user: row.user || "Invitado",
-                    senderAvatar,
+                    senderAvatar: avatarMap[row.user] || null,
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     replyToContent: row.replyToContent || null,

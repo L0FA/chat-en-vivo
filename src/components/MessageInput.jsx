@@ -7,6 +7,7 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
     const { replyingTo, setReplyingTo } = useChat();
     const [input, setInput] = useState("");
     const [showEmojiPanel, setShowEmojiPanel] = useState(false);
+    const [sendingId, setSendingId] = useState(null);
     const inputRef = useRef(null);
     const bubbleContainerRef = useRef(null);
     const typingCountRef = useRef(0);
@@ -14,9 +15,11 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
 
     const handleSubmit = (e) => {
         if (e?.preventDefault) e.preventDefault();
-        if (!input.trim() || !socket || !currentRoom) return;
+        if (!input.trim() || !socket || !currentRoom || sendingId) return;
 
         const localId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        setSendingId(localId);
+        
         const payload = {
             id: localId,
             msg: input,
@@ -29,21 +32,18 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
             })
         };
         
-        console.log("📝 Enviando mensaje con replyTo:", payload);
-        console.log("📝 Socket exists:", !!socket, "currentRoom:", currentRoom, "socket.connected:", socket?.connected);
-        
-        if (!socket?.connected) {
-            console.log("📝 [ERROR] Socket no conectado!");    
-        }
-        
         socket.emit("Mensaje en Chat", payload, (response) => {
-            console.log("📝 [CLIENT] Respuesta del servidor:", response);
+            setSendingId(null);
+            setInput("");
+            setReplyingTo(null);
+            stopTyping();
+            inputRef.current?.focus();
         });
         
-        setInput("");
-        setReplyingTo(null);
-        stopTyping();
-        inputRef.current?.focus();
+        // Timeout por si nunca responde el servidor
+        setTimeout(() => {
+            setSendingId(null);
+        }, 5000);
     };
 
 const handleChange = (e) => {
@@ -156,10 +156,10 @@ const handleChange = (e) => {
                     <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={!input.trim()}
+                        disabled={!input.trim() || sendingId}
                         className="text-pink-400 hover:text-pink-600 transition disabled:opacity-30 cursor-pointer"
                     >
-                        ➤
+                        {sendingId ? "⏳" : "➤"}
                     </button>
                 </div>
 
