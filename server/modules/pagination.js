@@ -90,13 +90,24 @@ export function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
             }
             
             const rows = [...results.rows].reverse();
-            rows.forEach(row => {
+            for (const row of rows) {
+                //获取发送者头像
+                let senderAvatar = null;
+                try {
+                    const avatarResult = await db.execute({
+                        sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                        args: [row.user]
+                    });
+                    senderAvatar = avatarResult.rows[0]?.avatar || null;
+                } catch { /* ignore */ }
+                
                 socket.emit("Mensaje en Chat", {
                     id: row.id,
                     type: row.type || "text",
                     content: row.content,
                     timestamp: row.timestamp,
                     user: row.user || "Invitado",
+                    senderAvatar,
                     replyToId: row.replyToId || null,
                     replyToUser: row.replyToUser || null,
                     replyToContent: row.replyToContent || null,
@@ -104,7 +115,7 @@ export function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
                     destructSeconds: row.destructSeconds || 0,
                     room: row.room || null
                 });
-            });
+            }
 
             let hasMore = false;
             if (rows.length > 0) {

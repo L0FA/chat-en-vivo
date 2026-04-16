@@ -35,8 +35,8 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     const longPressTimerRef = useRef(null);
 
     const isOwn = message.user === currentUser;
-    const isImageAvatar = userAvatar && userAvatar.startsWith("data:image");
-    const displayAvatar = isOwn && userAvatar ? userAvatar : "😀";
+    const isImageAvatar = (message.senderAvatar || userAvatar) && (message.senderAvatar || userAvatar).startsWith("data:image");
+    const displayAvatar = message.senderAvatar || userAvatar || "😀";
     
     const fetchUserInfo = (targetUser) => {
         socket?.emit("Obtener Info Usuario", { targetUser }, (res) => {

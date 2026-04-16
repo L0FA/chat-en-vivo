@@ -61,6 +61,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
 
             const messagePayload = {
                 id, content: messageContent, timestamp, user: currentUser.nombre,
+                senderAvatar: currentUser.avatar,
                 replyToId: replyToId || null,
                 replyToUser: replyToUser || null,
                 replyToContent: replyToContent || null,

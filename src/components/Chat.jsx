@@ -315,10 +315,7 @@ export default function Chat() {
 
                 {/* Lista de mensajes */}
                 {messages.map(msg => {
-                    // Obtener avatar del usuario que envió el mensaje
-                    const senderUser = connectedUsers.find(u => u.nombre === msg.user);
-                    const senderAvatar = senderUser?.avatar || null;
-                    
+                    // El avatar ya viene en el mensaje del servidor
                     return (
                     <Message
                         key={msg.id}
@@ -327,7 +324,7 @@ export default function Chat() {
                         socket={socket}
                         onImageClick={setLightboxSrc}
                         onPlayMusic={() => {}}
-                        userAvatar={msg.user === user ? avatar : senderAvatar}
+                        userAvatar={msg.user === user ? avatar : (msg.senderAvatar || null)}
                         adminsList={adminsList}
                     />
                 );})}
