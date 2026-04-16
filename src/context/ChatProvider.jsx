@@ -15,7 +15,8 @@ export function ChatProvider({ children }) {
         const saved = localStorage.getItem("user-rooms");
         return saved ? JSON.parse(saved) : [];
     });
-    const [currentRoom, setCurrentRoom] = useState(() => localStorage.getItem("currentRoom") || null);
+    // Siempre iniciar sin sala seleccionada
+const [currentRoom, setCurrentRoom] = useState(null);
 
     const addMessage = useCallback((msg) => {
         setMessages(prev => {
