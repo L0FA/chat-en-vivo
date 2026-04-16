@@ -18,6 +18,10 @@ export default function RoomSelector({ scrolled, socket }) {
     useEffect(() => {
         if (open) {
             setTimeout(() => setVisible(true), 0);
+            // Asegurar que sala-global siempre esté disponible
+            if (!userRooms.find(r => r.id === "sala-global")) {
+                addUserRoom({ id: "sala-global", nombre: "Chat Global", descripcion: "Sala principal" });
+            }
             if (socket) {
                 socket.emit("Obtener Mis Salas", (res) => {
                     if (res.status === "ok") {
@@ -26,7 +30,7 @@ export default function RoomSelector({ scrolled, socket }) {
                 });
             }
         }
-    }, [open, socket, addUserRoom]);
+    }, [open, socket, addUserRoom, userRooms]);
 
     // Función de cierre declarada antes del useEffect que la usa
     const handleClose = useCallback(() => {

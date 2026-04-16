@@ -5,6 +5,13 @@ import { MusicCard } from "./MusicPanel";
 
 const QUICK_EMOJIS = ["❤️", "😂", "🥰", "😍", "🔥", "👍", "👎", "😢", "😮", "😡", "🎉", "💯", "🙏", "😭", "😊", "🤔", "🥺", "💀", "👀", "🤷"];
 
+// Función para convertir enlaces en clickable links
+function linkify(text) {
+    if (!text) return "";
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">$1</a>');
+}
+
 function getUserColor(username) {
     let hash = 0;
     for (let i = 0; i < username.length; i++) {
@@ -229,7 +236,7 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
         return (
 <p
     className="text-sm leading-relaxed wrap-break-word"
-    dangerouslySetInnerHTML={{ __html: highlightMentions(message.content, currentUser) }}
+    dangerouslySetInnerHTML={{ __html: linkify(highlightMentions(message.content, currentUser)) }}
 />
         );
     };
