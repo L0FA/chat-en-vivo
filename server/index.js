@@ -35,7 +35,7 @@ io.on("connection", async (socket) => {
 
     const user = connectedUsers.get(socket.id);
     const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
-    const userRoom = user?.sala || "sala-global";
+    const userRoom = user?.sala || null;
 
     setupRooms(socket, connectedUsers);
     await setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
