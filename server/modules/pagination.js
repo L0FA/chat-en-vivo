@@ -7,7 +7,23 @@ import { db } from "./database.js";
 
 const PAGE_SIZE = 20;
 
-export function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
+export async function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
+    // Auto-login si no está en connectedUsers
+    if (!connectedUsers.get(socket.id)) {
+        const auth = socket.handshake.auth;
+        const nombre = auth?.NombreUsuario || auth?.nombre;
+        if (nombre?.trim()) {
+            try {
+                const result = await db.execute({
+                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                    args: [nombre]
+                });
+                const avatar = result.rows[0]?.avatar || null;
+                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
+            } catch { /* ignore */ }
+        }
+    }
+
     // ---- CARGAR MENSAJES ANTERIORES ----
     socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
         if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
@@ -26,18 +42,29 @@ export function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
                     args: [beforeTimestamp, queryRoom]
                 });
             }
-
-            const rows = [...results.rows].reverse().map(row => ({
-                id: row.id,
-                type: row.type || "text",
-                content: row.content,
-                timestamp: row.timestamp,
-                user: row.user || "Invitado",
-                replyToId: row.replyToId || null,
-                replyToUser: row.replyToUser || null,
-                edited: Number(row.edited) === 1,
-                destructSeconds: row.destructSeconds || 0,
-                room: row.room || null
+            
+            const rows = await Promise.all([...results.rows].reverse().map(async row => {
+                let senderAvatar = null;
+                try {
+                    const avatarResult = await db.execute({
+                        sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                        args: [row.user]
+                    });
+                    senderAvatar = avatarResult.rows[0]?.avatar || null;
+                } catch { /* ignore */ }
+                return {
+                    id: row.id,
+                    type: row.type || "text",
+                    content: row.content,
+                    timestamp: row.timestamp,
+                    user: row.user || "Invitado",
+                    senderAvatar,
+                    replyToId: row.replyToId || null,
+                    replyToUser: row.replyToUser || null,
+                    edited: Number(row.edited) === 1,
+                    destructSeconds: row.destructSeconds || 0,
+                    room: row.room || null
+                };
             }));
 
             let hasMore = false;

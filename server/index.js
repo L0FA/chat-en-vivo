@@ -39,8 +39,8 @@ io.on("connection", async (socket) => {
 
     setupRooms(socket, connectedUsers);
     await setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
-    setupMusic(io, socket, connectedUsers, userRoom);
-    setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
+    await setupMusic(io, socket, connectedUsers);
+    await setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
     setupCalls(io, socket, connectedUsers);
 
     socket.on("Escribiendo", ({ typing }) => {

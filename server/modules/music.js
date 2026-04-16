@@ -7,7 +7,23 @@ import { db } from "./database.js";
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-export function setupMusic(io, socket, connectedUsers) {
+export async function setupMusic(io, socket, connectedUsers) {
+    // Auto-login si no está en connectedUsers
+    if (!connectedUsers.get(socket.id)) {
+        const auth = socket.handshake.auth;
+        const nombre = auth?.NombreUsuario || auth?.nombre;
+        if (nombre?.trim()) {
+            try {
+                const result = await db.execute({
+                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                    args: [nombre]
+                });
+                const avatar = result.rows[0]?.avatar || null;
+                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
+            } catch { /* ignore */ }
+        }
+    }
+
     // ---- SUBIR CANCIÓN ----
     socket.on("Subir Canción", async (payload, cb) => {
         const user = connectedUsers.get(socket.id);
