@@ -38,7 +38,7 @@ io.on("connection", async (socket) => {
     const userRoom = user?.sala || "general";
 
     setupRooms(socket, connectedUsers);
-    setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
+    await setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
     setupMusic(io, socket, connectedUsers, userRoom);
     setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
     setupCalls(io, socket, connectedUsers);

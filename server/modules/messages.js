@@ -13,11 +13,38 @@ function emitMessage(io, socket, room, payload) {
     socket.broadcast.to(room).emit("Mensaje en Chat", payload);
 }
 
-export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
+export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
+    // Si el usuario no está logueado, hacer auto-login
+    if (!connectedUsers.get(socket.id)) {
+        const auth = socket.handshake.auth;
+        const nombre = auth?.NombreUsuario || auth?.nombre;
+        if (nombre?.trim()) {
+            try {
+                const result = await db.execute({
+                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                    args: [nombre]
+                });
+                const avatar = result.rows[0]?.avatar || null;
+                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: "general" });
+                socket.join("general");
+            } catch { /* ignore */ }
+        }
+    }
+
+    const user = connectedUsers.get(socket.id);
+    if (!user) {
+        console.log("❌ Usuario no encontrado en connectedUsers para socket:", socket.id);
+        cb?.({ status: "error", message: "No logueado" });
+        return;
+    }
+
     // ---- MENSAJE EN CHAT ----
     socket.on("Mensaje en Chat", async (payload, cb) => {
-        const user = connectedUsers.get(socket.id);
-        if (!user) return;
+        const currentUser = connectedUsers.get(socket.id);
+        if (!currentUser) {
+            cb?.({ status: "error", message: "No logueado" });
+            return;
+        }
 
         const { content, msg, replyToId, replyToUser, replyToContent, destructSeconds } = payload;
         const id = generateId();
@@ -29,11 +56,11 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
             await db.execute({
                 sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                args: [id, messageContent, user.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
+                args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
             });
 
             const messagePayload = {
-                id, content: messageContent, timestamp, user: user.nombre,
+                id, content: messageContent, timestamp, user: currentUser.nombre,
                 replyToId: replyToId || null,
                 replyToUser: replyToUser || null,
                 replyToContent: replyToContent || null,
@@ -42,7 +69,8 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
 
             emitMessage(io, socket, room, messagePayload);
             cb?.({ status: "ok", id });
-        } catch {
+        } catch (e) {
+            console.error("❌ Error guardando mensaje:", e);
             cb?.({ status: "error" });
         }
     });
