@@ -117,8 +117,11 @@ export default function Chat() {
     useEffect(() => {
         if (!socket) return;
         
-        const handleUsers = ({ users, admins = [] }) => {
+        const handleUsers = (data) => {
+            const users = data.users || data;
+            const admins = data.admins || [];
             console.log("📋 RAW usuarios recibidos:", JSON.stringify(users).slice(0, 200));
+            console.log("📋 Admins recibidos:", admins);
             
             // Normalizar usuarios - puede ser array de strings o de objetos
             const normalizedUsers = users.map(u => {
@@ -129,6 +132,7 @@ export default function Chat() {
             console.log("📋 Normalizado:", normalizedUsers.map(u => `${u.nombre.substring(0,10)}: avatar=${u.avatar ? "SÍ" : "NO"}`));
             setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
+            console.log("📋 AdminBadge - adminsList actualizado:", admins);
         };
         
         socket.on("Users Actualizados", handleUsers);
