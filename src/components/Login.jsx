@@ -71,7 +71,7 @@ export default function Login() {
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" style={{ height: "100dvh" }}>
             <div className="bg-white rounded-2xl p-6 sm:p-8 flex flex-col gap-4 w-full max-w-sm shadow-2xl">
-                <h2 className="text-xl font-bold text-center text-gray-800">💬 Whatsappn't</h2>
+                <h2 className="text-xl font-bold text-center text-gray-800">💬 L0FAChat</h2>
                 <p className="text-sm text-gray-500 text-center">Ingresá tu nombre para entrar al chat</p>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                     <input

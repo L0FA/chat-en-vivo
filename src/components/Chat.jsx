@@ -35,9 +35,9 @@ export default function Chat() {
     // Efecto para actualizar título con notificaciones
     useEffect(() => {
         if (unreadCount > 0) {
-            document.title = `💬 (${unreadCount}) WhatsAppn't`;
+            document.title = `💬 (${unreadCount}) L0FAChat`;
         } else {
-            document.title = "💬 WhatsAppn't";
+            document.title = "💬 L0FAChat";
         }
     }, [unreadCount]);
 
