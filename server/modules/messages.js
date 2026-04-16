@@ -19,20 +19,21 @@ export function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
         const user = connectedUsers.get(socket.id);
         if (!user) return;
 
-        const { content, replyToId, replyToUser, replyToContent, destructSeconds } = payload;
+        const { content, msg, replyToId, replyToUser, replyToContent, destructSeconds } = payload;
         const id = generateId();
         const timestamp = Date.now();
         const room = userRoom || "general";
+        const messageContent = content || msg || "";
 
         try {
             await db.execute({
                 sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                args: [id, content, user.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
+                args: [id, messageContent, user.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
             });
 
             const messagePayload = {
-                id, content, timestamp, user: user.nombre,
+                id, content: messageContent, timestamp, user: user.nombre,
                 replyToId: replyToId || null,
                 replyToUser: replyToUser || null,
                 replyToContent: replyToContent || null,
