@@ -39,16 +39,27 @@ export async function setupAuth(io, socket, connectedUsers) {
             isAdmin: ADMIN_USERS.includes(user)
         });
         
-        // Obtener todos los usuarios de DB para avatares
-        const users = await Promise.all([...connectedUsers.values()].map(async u => {
-            const result = await db.execute({
-                sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
-                args: [u.nombre]
+        // Obtener todos los usuarios de DB para avatares (batch query)
+        const nombres = [...connectedUsers.values()].map(u => u.nombre);
+        let results = { rows: [] };
+        if (nombres.length > 0) {
+            const placeholders = nombres.map(() => "?").join(",");
+            results = await db.execute({
+                sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
+                args: nombres
             });
-            return { ...u, avatar: result.rows[0]?.avatar || u.avatar };
+        }
+        
+        const avatarMap = {};
+        for (const row of results.rows) {
+            avatarMap[row.nombre] = row.avatar;
+        }
+        
+        const users = [...connectedUsers.values()].map(u => ({
+            ...u,
+            avatar: avatarMap[u.nombre] || u.avatar
         }));
         
-        // Admins siempre fijo (no depender de conectados)
         const admins = ADMIN_USERS;
         socket.emit("Users Actualizados", { users, admins });
         io.emit("Users Actualizados", { users, admins });
