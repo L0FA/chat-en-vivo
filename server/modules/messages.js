@@ -45,6 +45,11 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         const room = payloadRoom || userRoom || "general";
         const messageContent = content || msg || "";
 
+        // Unir socket a la sala si no está
+        if (!socket.rooms.has(room)) {
+            socket.join(room);
+        }
+
         try {
             await db.execute({
                 sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)

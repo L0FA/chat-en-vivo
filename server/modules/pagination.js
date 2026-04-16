@@ -103,6 +103,11 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
     // eslint-disable-next-line no-unused-vars
     socket.on("Cargar Mensajes Sala", async ({ room }, _cb) => {
         try {
+            // Unir socket a la sala
+            if (room && !socket.rooms.has(room)) {
+                socket.join(room);
+            }
+            
             let results;
             if (isAdmin && room === "sala-admins-global") {
                 results = await db.execute({
