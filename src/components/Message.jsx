@@ -402,7 +402,7 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
                 >
                     <button onClick={handleReply} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">↩️ Responder</button>
                     <button onClick={() => setShowPicker(true)} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">😀 Reaccionar</button>
-                    {isOwn && (
+                    {(isOwn || adminsList.includes(message.user)) && (
                         <>
                             <button onClick={() => { setEditing(true); setShowContextMenu(false); }} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">✏️ Editar</button>
                             <button onClick={() => setShowDeleteConfirm(true)} className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10 text-sm">🗑️ Eliminar</button>

@@ -204,11 +204,21 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         const user = connectedUsers.get(socket.id);
         if (!user) return;
 
+        const isAdmin = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
+
         try {
-            await db.execute({
-                sql: "DELETE FROM Mensajes WHERE id = ? AND user = ?",
-                args: [messageId, user.nombre]
-            });
+            // Admins pueden eliminar cualquier mensaje
+            if (isAdmin) {
+                await db.execute({
+                    sql: "DELETE FROM Mensajes WHERE id = ?",
+                    args: [messageId]
+                });
+            } else {
+                await db.execute({
+                    sql: "DELETE FROM Mensajes WHERE id = ? AND user = ?",
+                    args: [messageId, user.nombre]
+                });
+            }
 
             io.to(userRoom).emit("Mensaje Eliminado", { messageId });
             cb?.({ status: "ok" });
