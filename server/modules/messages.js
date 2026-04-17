@@ -14,26 +14,27 @@ function emitMessage(io, socket, room, payload) {
 }
 
 export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
-    // Auto-login si no está en connectedUsers
-    if (!connectedUsers.get(socket.id)) {
-        const auth = socket.handshake.auth;
-        const nombre = auth?.NombreUsuario || auth?.nombre;
-        if (nombre?.trim()) {
-            try {
-                const result = await db.execute({
-                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
-                    args: [nombre]
-                });
-                const avatar = result.rows[0]?.avatar || null;
-                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: null });
-                
-            } catch { /* ignore */ }
-        }
-    }
-
     // ---- MENSAJE EN CHAT ----
     socket.on("Mensaje en Chat", async (payload, cb) => {
-        const currentUser = connectedUsers.get(socket.id);
+        let currentUser = connectedUsers.get(socket.id);
+        
+        // Auto-login fallback si no está en connectedUsers (más robusto)
+        if (!currentUser) {
+            const auth = socket.handshake.auth;
+            const nombre = auth?.NombreUsuario || auth?.nombre;
+            if (nombre?.trim()) {
+                try {
+                    const result = await db.execute({
+                        sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
+                        args: [nombre]
+                    });
+                    const avatar = result.rows[0]?.avatar || null;
+                    currentUser = { nombre: nombre.trim(), avatar, sala: null };
+                    connectedUsers.set(socket.id, currentUser);
+                } catch { /* ignore */ }
+            }
+        }
+
         if (!currentUser) {
             cb?.({ status: "error", message: "No logueado" });
             return;

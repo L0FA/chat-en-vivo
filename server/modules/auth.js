@@ -61,8 +61,13 @@ export async function setupAuth(io, socket, connectedUsers) {
         }));
         
         const admins = ADMIN_USERS;
-        socket.emit("Users Actualizados", { users, admins });
-        io.emit("Users Actualizados", { users, admins });
+        
+        // Pequeño retraso para asegurar que el frontend esté montado y escuchando
+        setTimeout(() => {
+            console.log("📢 [AUTH] Emitiendo Users Actualizados inicial para:", user);
+            socket.emit("Users Actualizados", { users, admins });
+            io.emit("Users Actualizados", { users, admins });
+        }, 500);
     }
 
     // ---- LOGIN EVENT (explicit) ----

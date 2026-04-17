@@ -8,11 +8,13 @@ import { db } from "./database.js";
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export function setupRooms(socket, connectedUsers) {
-    const user = connectedUsers.get(socket.id);
-
     // ---- OBTENER MIS SALAS ----
     socket.on("Obtener Mis Salas", async (cb) => {
-        if (!user) return;
+        const user = connectedUsers.get(socket.id);
+        if (!user) {
+            console.log("⚠️ [ROOMS] Intento de Obtener Mis Salas sin user en map para:", socket.id);
+            return cb?.({ status: "error", message: "No autenticado" });
+        }
         try {
             const result = await db.execute({
                 sql: `SELECT s.* FROM Salas s 
@@ -28,6 +30,7 @@ export function setupRooms(socket, connectedUsers) {
 
     // ---- CREAR SALA ----
     socket.on("Crear Sala", async ({ nombre, descripcion }, cb) => {
+        const user = connectedUsers.get(socket.id);
         if (!user) return;
         const salaId = generateId();
         
@@ -50,6 +53,7 @@ export function setupRooms(socket, connectedUsers) {
 
     // ---- UNIRSE A SALA ----
     socket.on("Unirse Sala", async ({ salaId }, cb) => {
+        const user = connectedUsers.get(socket.id);
         if (!user) return;
         
         try {
@@ -77,6 +81,7 @@ export function setupRooms(socket, connectedUsers) {
 
     // ---- SALIR DE SALA ----
     socket.on("Salir Sala", async ({ salaId }, cb) => {
+        const user = connectedUsers.get(socket.id);
         if (!user) return;
         
         try {
@@ -95,6 +100,7 @@ export function setupRooms(socket, connectedUsers) {
 
     // ---- INVITAR A SALA ----
     socket.on("Invitar a Sala", async ({ salaId, usuario }, cb) => {
+        const user = connectedUsers.get(socket.id);
         if (!user) return;
         
         try {

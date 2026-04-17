@@ -15,8 +15,8 @@ export function ChatProvider({ children }) {
         const saved = localStorage.getItem("user-rooms");
         return saved ? JSON.parse(saved) : [];
     });
-    // Iniciar con sala-global por defecto o la guardada
-    const [currentRoom, setCurrentRoom] = useState(() => localStorage.getItem("currentRoom") || "sala-global");
+    // Siempre iniciar sin sala seleccionada para mostrar el placeholder
+    const [currentRoom, setCurrentRoom] = useState(null);
 
     const addMessage = useCallback((msg) => {
         setMessages(prev => {
@@ -103,11 +103,9 @@ export function ChatProvider({ children }) {
         setUser(nombre);
         setPassword(password);
         setAvatar(savedAvatar);
-        
-        // Cargar sala global por defecto si no hay una activa
-        const defaultRoom = "sala-global";
-        setCurrentRoom(defaultRoom);
-        localStorage.setItem("currentRoom", defaultRoom);
+        // NO cargar sala automáticamente - esperar a que el usuario elija
+        setCurrentRoom(null);
+        localStorage.setItem("currentRoom", "");
     }, []);
 
     const updateProfile = useCallback((nombre, nuevoAvatar) => {

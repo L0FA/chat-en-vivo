@@ -8,22 +8,6 @@ import { db } from "./database.js";
 const PAGE_SIZE = 20;
 
 export async function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
-    // Auto-login si no está en connectedUsers
-    if (!connectedUsers.get(socket.id)) {
-        const auth = socket.handshake.auth;
-        const nombre = auth?.NombreUsuario || auth?.nombre;
-        if (nombre?.trim()) {
-            try {
-                const result = await db.execute({
-                    sql: "SELECT avatar FROM Usuarios WHERE nombre = ?",
-                    args: [nombre]
-                });
-                const avatar = result.rows[0]?.avatar || null;
-                connectedUsers.set(socket.id, { nombre: nombre.trim(), avatar, sala: null });
-            } catch { /* ignore */ }
-        }
-    }
-
     // ---- CARGAR MENSAJES ANTERIORES ----
     socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
         if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
