@@ -1,5 +1,5 @@
 // ============================================
-// 🌲 TEMA FOREST - Bosques procedurales con luciérnagas
+// 🌲 TEMA FOREST - Bosque nocturno profundo (Sin opacidad blanca)
 // ============================================
 
 export function createForestAnimation(ctx, canvas) {
@@ -8,55 +8,50 @@ export function createForestAnimation(ctx, canvas) {
     let wind = 0;
     let time = 0;
 
+    // Capas de árboles con siluetas oscuras
     const forestLayers = [
-        { depth: 0.2, count: 10, color: "rgba(8,18,8,0.12)" },
-        { depth: 0.5, count: 14, color: "rgba(15,35,15,0.2)" },
-        { depth: 1, count: 18, color: "rgba(25,55,25,0.3)" }
+        { depth: 0.3, count: 8, color: ["#0a1a0a", "#1a2a1a", "#2a3a2a"] },
+        { depth: 0.6, count: 12, color: ["#051005", "#0f1f0f", "#1a2a1a"] },
+        { depth: 1, count: 16, color: ["#020802", "#081208", "#101810"] }
     ];
 
     const trees = forestLayers.flatMap(layer =>
         Array.from({ length: layer.count }, () => ({
             x: Math.random() * canvas.width,
             depth: layer.depth,
-            height: canvas.height * (0.3 + Math.random() * 0.55),
+            height: canvas.height * (0.35 + Math.random() * 0.5),
             swayOffset: Math.random() * Math.PI,
-            layer
+            colors: layer.color
         }))
     );
 
-    const fireflies = Array.from({ length: 30 }, () => ({
+    // Luciérnagas brillantes
+    const fireflies = Array.from({ length: 25 }, () => ({
         x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.25,
-        pulse: Math.random() * Math.PI * 2
-    }));
-
-    const leaves = Array.from({ length: 35 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: 5 + Math.random() * 10,
-        speed: 0.15 + Math.random() * 0.9,
-        wobble: Math.random() * Math.PI * 2,
-        depth: Math.random()
+        y: Math.random() * canvas.height * 0.7,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.15,
+        pulse: Math.random() * Math.PI * 2,
+        size: 1 + Math.random() * 2
     }));
 
     const drawTree = (t, sway) => {
         const x = t.x + sway;
         const baseY = canvas.height;
-        const trunkWidth = 4 + t.depth * 12;
+        const trunkWidth = 3 + t.depth * 10;
         const trunkHeight = t.height;
         const baseX = x + trunkWidth / 2;
 
-        ctx.fillStyle = `rgba(12,22,12,${0.15 + t.depth * 0.5})`;
+        // Tronco oscuro
+        ctx.fillStyle = t.colors[0];
         ctx.fillRect(x, baseY - trunkHeight, trunkWidth, trunkHeight);
 
-        const layers = 3 + Math.floor(t.depth * 3);
+        // Capas del árbol (triángulos)
+        const layers = 3 + Math.floor(t.depth * 2);
         for (let i = 0; i < layers; i++) {
-            const variation = 0.85 + Math.sin(t.swayOffset + i) * 0.1;
-            const width = (55 + t.depth * 110) * (1 - i * 0.28) * variation;
-            const height = 20 + t.depth * 12;
-            const yOffset = i * (height * 0.65);
+            const width = (50 + t.depth * 80) * (1 - i * 0.25);
+            const height = 18 + t.depth * 10;
+            const yOffset = i * (height * 0.55);
 
             ctx.beginPath();
             ctx.moveTo(baseX, baseY - trunkHeight - yOffset - height);
@@ -64,79 +59,84 @@ export function createForestAnimation(ctx, canvas) {
             ctx.lineTo(baseX + width / 2, baseY - trunkHeight - yOffset);
             ctx.closePath();
 
-            const shade = 22 + t.depth * 42 - i * 6;
-            ctx.fillStyle = `rgba(18, ${shade}, 18, ${0.15 + t.depth * 0.45})`;
+            ctx.fillStyle = t.colors[i % t.colors.length];
             ctx.fill();
         }
     };
 
     const animate = () => {
         if (stopped) return;
-        wind += 0.005 + Math.sin(time * 0.25) * 0.002;
-        time += 0.008;
+        wind += 0.004 + Math.sin(time * 0.2) * 0.0015;
+        time += 0.006;
 
-        ctx.fillStyle = "rgba(4,10,4,0.15)";
+        // Fondo degradido oscuro - sin opacidad blanca
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bgGradient.addColorStop(0, "#0a1410");
+        bgGradient.addColorStop(0.4, "#051008");
+        bgGradient.addColorStop(1, "#020804");
+        ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Niebla por capas (oscura, no blanca)
         forestLayers.forEach((layer, i) => {
-            const fogY = canvas.height * (0.45 + i * 0.18);
+            const fogY = canvas.height * (0.5 + i * 0.15);
             const fog = ctx.createLinearGradient(0, fogY, 0, canvas.height);
-            fog.addColorStop(0, "rgba(180,255,180,0)");
-            fog.addColorStop(1, layer.color);
+            fog.addColorStop(0, "transparent");
+            fog.addColorStop(1, `rgba(5, 15, 8, ${0.15 + i * 0.1})`);
             ctx.fillStyle = fog;
             ctx.fillRect(0, fogY, canvas.width, canvas.height);
         });
 
-        const topFog = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        topFog.addColorStop(0, "rgba(180,255,180,0.015)");
-        topFog.addColorStop(0.5, "rgba(0,0,0,0)");
-        topFog.addColorStop(1, "rgba(0,0,0,0.2)");
-        ctx.fillStyle = topFog;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+        // Árboles por capas de profundidad
         trees.forEach(t => {
-            const windFactor = Math.sin(wind + t.swayOffset) * (2.5 + t.depth * 7);
+            const windFactor = Math.sin(wind + t.swayOffset) * (2 + t.depth * 5);
             drawTree(t, windFactor);
         });
 
+        // Luciérnagas
         fireflies.forEach(f => {
-            f.x += f.vx + Math.sin(time + f.y * 0.008) * 0.12;
-            f.y += f.vy;
-            f.pulse += 0.04;
+            f.x += f.vx + Math.sin(time * 0.5 + f.y * 0.01) * 0.08;
+            f.y += f.vy + Math.sin(time * 0.3 + f.x * 0.01) * 0.05;
+            f.pulse += 0.035;
             const glow = (Math.sin(f.pulse) + 1) / 2;
 
+            // Wrap around
             if (f.x < 0) f.x = canvas.width;
             if (f.x > canvas.width) f.x = 0;
-            if (f.y < 0) f.y = canvas.height;
-            if (f.y > canvas.height) f.y = 0;
+            if (f.y < 0) f.y = canvas.height * 0.7;
+            if (f.y > canvas.height * 0.7) f.y = 0;
 
+            // Glow exterior
+            const outerGlow = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.size * 4);
+            outerGlow.addColorStop(0, `rgba(120, 255, 80, ${0.15 + glow * 0.3})`);
+            outerGlow.addColorStop(1, "transparent");
+            ctx.fillStyle = outerGlow;
             ctx.beginPath();
-            ctx.arc(f.x, f.y, 1.2 + glow * 2, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(160,255,100,${0.2 + glow * 0.65})`;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "rgba(160,255,100,0.6)";
+            ctx.arc(f.x, f.y, f.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Núcleo brillante
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, f.size * (0.8 + glow * 0.4), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(180, 255, 120, ${0.5 + glow * 0.5})`;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "rgba(150, 255, 100, 0.8)";
             ctx.fill();
             ctx.shadowBlur = 0;
         });
 
-        leaves.forEach(l => {
-            l.y += l.speed * (0.35 + l.depth);
-            l.wobble += 0.012;
-            l.x += Math.sin(l.wobble + wind) * (0.6 + l.depth * 1.8);
-
-            if (l.y > canvas.height) {
-                l.y = -18;
-                l.x = Math.random() * canvas.width;
-            }
-
-            ctx.globalAlpha = 0.2 + l.depth * 0.5;
+        // Hojas cayendo (sutiles)
+        for (let i = 0; i < 15; i++) {
+            const leafX = (Math.sin(time * 0.2 + i) * 0.3 + 0.5) * canvas.width;
+            const leafY = ((time * 0.15 + i * 0.3) % 1) * canvas.height;
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = "#1a3a1a";
             ctx.beginPath();
-            ctx.arc(l.x, l.y, l.size * 0.22, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(130,190,130,0.75)";
+            ctx.arc(leafX, leafY, 3, 0, Math.PI * 2);
             ctx.fill();
-        });
-
+        }
         ctx.globalAlpha = 1;
+
         if (!stopped) animId = requestAnimationFrame(animate);
     };
 

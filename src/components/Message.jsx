@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import { useChat } from "../hooks/useChat";
 import { MusicCard } from "./MusicPanel";
 
-
-const QUICK_EMOJIS = ["❤️", "😂", "🥰", "😍", "🔥", "👍", "👎", "😢", "😮", "😡", "🎉", "💯", "🙏", "😭", "😊", "🤔", "🥺", "💀", "👀", "🤷"];
-
-// Función para convertir enlaces en clickable links
 function linkify(text) {
     if (!text) return "";
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">$1</a>');
+    return text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:text-indigo-300 underline transition-colors">$1</a>');
 }
 
 function getUserColor(username) {
@@ -18,451 +14,107 @@ function getUserColor(username) {
         hash = username.charCodeAt(i) + ((hash << 5) - hash);
     }
     const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 65%, 55%)`;
+    return `hsl(${h}, 70%, 60%)`;
 }
 
 function highlightMentions(text, currentUser) {
     if (!text) return "";
     return text.replace(/@(\w+)/g, (match, u) => {
         const isMe = u === currentUser;
-        return `<span class="${isMe ? "text-pink-500 font-bold bg-pink-100 rounded px-0.5" : "text-blue-500 font-bold"}">${match}</span>`;
+        return `<span class="${isMe ? "text-pink-400 font-bold bg-pink-500/10 rounded px-1" : "text-indigo-400 font-bold"}">${match}</span>`;
     });
 }
 
-function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic, userAvatar, adminsList = [] }) {
-    const { setReplyingTo, theme } = useChat();
-    const [showPicker, setShowPicker] = useState(false);
-    const [editing, setEditing] = useState(false);
-    const [editValue, setEditValue] = useState(message.content);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showContextMenu, setShowContextMenu] = useState(false);
-    const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
-    const [userInfoModal, setUserInfoModal] = useState(null);
-    
-    const longPressTimerRef = useRef(null);
+function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsList = [] }) {
+    const { setReplyingTo } = useChat();
+    const isMe = message.user === currentUser;
+    const isAdmin = adminsList.includes(message.user);
+    const userColor = getUserColor(message.user);
 
-    const isOwn = message.user === currentUser;
-    const isImageAvatar = (message.senderAvatar || userAvatar) && (message.senderAvatar || userAvatar).startsWith("data:image");
-    const displayAvatar = message.senderAvatar || userAvatar || "😀";
-    
-    const fetchUserInfo = (targetUser) => {
-        socket?.emit("Obtener Info Usuario", { targetUser }, (res) => {
-            if (res?.status === "ok" && res.info) {
-                // Formatear fecha de creación
-                let fechaCreado = "Fecha desconocida";
-                if (res.info.creado) {
-                    try {
-                        const date = new Date(res.info.creado * 1000);
-                        fechaCreado = date.toLocaleDateString("es-AR", { 
-                            day: "numeric", 
-                            month: "short", 
-                            year: "numeric" 
-                        });
-                    } catch { /* keep default */ }
-                }
-                setUserInfoModal({
-                    nombre: res.info.nombre,
-                    avatar: res.info.avatar || "😀",
-                    creado: fechaCreado
-                });
-            } else {
-                setUserInfoModal({
-                    nombre: targetUser,
-                    avatar: "😀",
-                    creado: "Fecha desconocida"
-                });
-            }
-        });
-    };
-
-    const getUserInfo = (targetUser) => {
-        fetchUserInfo(targetUser);
-    };
-    
-    const getThemeStyles = () => {
-    switch (theme) {
-
-        case "rosa":
-    return isOwn
-        ? "bg-pink-300/70 text-pink-900 backdrop-blur shadow-[0_0_10px_rgba(255,182,193,0.6)] animate-petalFloat"
-        : "bg-pink-100/70 text-pink-800 backdrop-blur";
-
-        case "neon":
-            return isOwn
-                ? "bg-black text-green-400 border border-green-400 shadow-[0_0_10px_#00ff88] animate-neonPulse"
-                : "bg-black text-green-300 border border-green-400/50";
-
-    case "cyberpunk":
-        return isOwn
-            ? "bg-black text-pink-400 border border-pink-500 shadow-[0_0_10px_#ff0080] glitch"
-            : "bg-black text-pink-300 border border-pink-500/50 glitch-soft";
-
-
-        case "ocean":
-            return isOwn
-                ? "bg-blue-900/40 text-blue-100 backdrop-blur animate-float"
-                : "bg-blue-800/30 text-blue-100 backdrop-blur";
-
-        case "galaxy":
-            return isOwn
-                ? "bg-purple-900/40 text-purple-100 backdrop-blur shadow-[0_0_15px_rgba(180,100,255,0.5)] animate-galaxyPulse"
-                : "bg-purple-800/30 text-purple-100 backdrop-blur";
-
-        case "vaporwave":
-            return isOwn
-                ? "bg-pink-500/30 text-white backdrop-blur shadow-[0_0_10px_#ff71ce]"
-                : "bg-cyan-400/20 text-white backdrop-blur";
-
-        case "fire":
-            return isOwn
-                ? "bg-black text-orange-400 border border-orange-500 shadow-[0_0_12px_rgba(255,100,0,0.7)]"
-                : "bg-black text-orange-300 border border-orange-500/50";
-
-
-        case "forest":
-            return isOwn
-                ? "bg-green-700/40 text-green-100"
-                : "bg-green-600/30 text-green-100";
-
-        case "retro":
-            return isOwn
-                ? "bg-yellow-400 text-black animate-retroPulse"
-                : "bg-orange-300 text-black";
-
-        case "minimal":
-            return isOwn
-                ? "bg-gray-200 text-black"
-                : "bg-white text-gray-800";
-
-        default:
-            return isOwn
-                ? "bg-pink-400 text-white"
-                : "bg-white text-gray-800";
-    }
-};
-
-    const color = getUserColor(message.user);
-    const date = new Date(Number(message.timestamp));
-    const hora = !isNaN(date.getTime())
-        ? date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-        : "";
-
-    // ---- Acciones ----
-    const handleReaction = (emoji) => {
-        socket?.emit("Reacción", { messageId: message.id, emoji });
-        setShowPicker(false);
-    };
-
-    const handleReply = () => {
-        setReplyingTo({ id: message.id, user: message.user, content: message.content });
-    };
-
-    const handleEdit = () => {
-        if (!editValue.trim() || editValue === message.content) {
-            setEditing(false);
-            return;
-        }
-        socket?.emit("Editar Mensaje", { messageId: message.id, newContent: editValue });
-        setEditing(false);
-    };
-
-    const handleDelete = () => {
-        socket?.emit("Eliminar Mensaje", { messageId: message.id, room: message.room });
-        setShowDeleteConfirm(false);
-    };
-
-    // ---- Contenido del mensaje ----
-    const renderBody = () => {
-        if (message.type === "music") {
-            return (
-                <MusicCard
-                    message={message}
-                    onPlayHere={(videoId, title) => {
-                        if (typeof onPlayMusic === "function") onPlayMusic(videoId, title);
-                    }}
-                />
-            );
-        }
-        if (message.deleted) {
-            return <p className="text-sm text-gray-400 italic">🚫 Mensaje eliminado</p>;
-        }
-        if (editing) {
-            return (
-                <div className="flex flex-col gap-2 w-full">
-                    <textarea
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); }
-                            if (e.key === "Escape") setEditing(false);
-                        }}
-                        autoFocus
-                        className="w-full text-sm border border-blue-400 rounded-lg p-2 resize-none focus:outline-none bg-white/80"
-                        rows={2}
-                    />
-                    <div className="flex gap-2">
-                        <button onClick={handleEdit} className="text-xs bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition">✅ Guardar</button>
-                        <button onClick={() => setEditing(false)} className="text-xs bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition">❌ Cancelar</button>
-                    </div>
-                </div>
-            );
-        }
+    const renderContent = () => {
         if (message.type === "image") {
             return (
-                <img
-                    src={message.content}
-                    className="max-w-50 max-h-50 rounded-xl cursor-pointer hover:scale-105 transition object-cover"
-                    onClick={() => onImageClick(message.content)}
-                    alt="imagen"
-                />
-            );
-        }
-        if (message.type === "gif") {
-            return (
-                <img
-                    src={message.content}
-                    className="max-w-50 rounded-xl cursor-pointer hover:scale-105 transition"
-                    onClick={() => onImageClick(message.content)}
-                    alt="gif"
-                />
+                <div className="mt-1 overflow-hidden rounded-xl border border-white/10 shadow-inner">
+                    <img 
+                        src={message.content} 
+                        alt="Imagen enviada" 
+                        className="max-w-full h-auto cursor-zoom-in hover:scale-[1.02] transition-transform duration-300"
+                        onClick={() => onImageClick(message.content)}
+                    />
+                </div>
             );
         }
         if (message.type === "video") {
-            return <video src={message.content} controls className="max-w-50 max-h-50 rounded-xl"/>;
-        }
-        if (message.type === "audio") {
-            return <audio src={message.content} controls className="max-w-50"/>;
-        }
-        if (message.type === "sticker-emoji") {
-            return <span className="text-5xl leading-none">{message.content}</span>;
-        }
-        if (message.type === "sticker-image") {
             return (
-                <div className="relative inline-block group">
-                    <img src={message.content} className="max-w-30 max-h-30 object-contain" alt="sticker"/>
+                <div className="mt-1 overflow-hidden rounded-xl border border-white/10 shadow-inner bg-black/20">
+                    <video src={message.content} controls className="max-w-full h-auto" />
                 </div>
-
-                
             );
         }
+        if (message.type === "audio") {
+            return (
+                <div className="mt-2 px-1">
+                    <audio src={message.content} controls className="w-full h-8 opacity-90" />
+                </div>
+            );
+        }
+        if (message.type === "sticker") {
+            return (
+                <div className="mt-1">
+                    <img src={message.content} alt="Sticker" className="w-32 h-32 object-contain drop-shadow-lg" />
+                </div>
+            );
+        }
+        if (message.type === "music") {
+            return <MusicCard song={message.content} onPlay={onPlayMusic} />;
+        }
+        
+        const htmlContent = highlightMentions(linkify(message.content), currentUser);
         return (
-<p
-    className="text-sm leading-relaxed wrap-break-word"
-    dangerouslySetInnerHTML={{ __html: linkify(highlightMentions(message.content, currentUser)) }}
-/>
+            <p 
+                className="text-[0.95rem] leading-relaxed break-words whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
+            />
         );
     };
 
-    // ---- Reacciones ----
-    const reactions = message.reactions || {};
-    const hasReactions = Object.values(reactions).some(users => users.length > 0);
-
-    // ---- Click derecho ----
-    const handleContextMenu = (e) => {
-        e.preventDefault();
-        
-        // Calcular posición adaptativa
-        const menuWidth = 160;
-        const menuHeight = 180;
-        let x = e.clientX;
-        let y = e.clientY;
-        
-        // Ajustar si está muy a la derecha
-        if (x + menuWidth > window.innerWidth) {
-            x = x - menuWidth;
-        }
-        // Ajustar si está muy abajo
-        if (y + menuHeight > window.innerHeight) {
-            y = y - menuHeight;
-        }
-        // Asegurar que no salga por izquierda
-        if (x < 0) x = 10;
-        if (y < 0) y = 10;
-        
-        setContextMenuPos({ x, y });
-        setShowContextMenu(true);
-    };
-    
-    // Debug: ver propiedades del mensaje
-    if (message.replyToId) {
-        console.log("🔍 Mensaje con reply:", { replyToId: message.replyToId, replyToUser: message.replyToUser, replyToContent: message.replyToContent });
-    }
-
-    useEffect(() => {
-        const handleClick = () => setShowContextMenu(false);
-        if (showContextMenu) {
-            document.addEventListener("click", handleClick);
-            return () => document.removeEventListener("click", handleClick);
-        }
-    }, [showContextMenu]);
-
     return (
-        <div 
-            className={`flex flex-col ${isOwn ? "items-end" : "items-start"} group mb-0.5 w-full select-none`}
-            onContextMenu={handleContextMenu}
-            onTouchStart={(e) => {
-                longPressTimerRef.current = setTimeout(() => {
-                    const touch = e.touches[0];
-                    setContextMenuPos({ x: touch.clientX, y: touch.clientY });
-                    setShowContextMenu(true);
-                }, 500);
-            }}
-            onTouchEnd={() => {
-                if (longPressTimerRef.current) {
-                    clearTimeout(longPressTimerRef.current);
-                }
-            }}
-            onTouchMove={() => {
-                if (longPressTimerRef.current) {
-                    clearTimeout(longPressTimerRef.current);
-                }
-            }}
-            id={`msg-${message.id}`}
-        >
-            {/* Reply reference */}
-            {message.replyToId && (
-                <div 
-                    className="w-full border-l-2 border-blue-400 pl-2 mb-1 cursor-pointer hover:bg-white/10 rounded"
-                    onClick={() => {
-                        const originalMsg = document.getElementById(`msg-${message.replyToId}`);
-                        if (originalMsg) {
-                            originalMsg.scrollIntoView({ behavior: "smooth", block: "center" });
-                            originalMsg.classList.add("animate-highlight");
-                            setTimeout(() => originalMsg.classList.remove("animate-highlight"), 2000);
-                        }
-                    }}
-                >
-                    <p className="text-xs text-blue-400 font-medium">↩️ Respondiendo a {message.replyToUser}</p>
-                    <p className="text-xs text-white/60 truncate">{message.replyToContent}</p>
-                </div>
+        <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} group animate-fade-in`}>
+            {!isMe && (
+                <span className="text-[0.7rem] font-bold mb-1 ml-2 flex items-center gap-1.5" style={{ color: userColor }}>
+                    {message.user}
+                    {isAdmin && <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-md text-[0.6rem] uppercase tracking-wider">Admin</span>}
+                </span>
             )}
             
-            {/* User Info Modal */}
-            {userInfoModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setUserInfoModal(null)}>
-                    <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex flex-col items-center gap-3">
-                            {userInfoModal.avatar && userInfoModal.avatar.startsWith("data:image") ? (
-                                <img src={userInfoModal.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
-                            ) : (
-                                <div className="w-20 h-20 rounded-full bg-pink-400 flex items-center justify-center text-4xl">
-                                    {userInfoModal.avatar || "😀"}
-                                </div>
-                            )}
-                            <div className="text-center">
-                                <p className="text-white font-bold text-xl">{userInfoModal.nombre}</p>
-                                {adminsList.includes(userInfoModal.nombre) && <span className="text-yellow-400 text-sm">👑 Admin</span>}
-                            </div>
-                            <div className="text-white/60 text-sm text-center mt-2">
-                                <p>Usuario desde:</p>
-                                <p className="font-bold">{userInfoModal.creado}</p>
-                            </div>
-                            <button 
-                                onClick={() => setUserInfoModal(null)}
-                                className="mt-4 bg-pink-400 hover:bg-pink-500 text-white px-6 py-2 rounded-full"
-                            >
-                                Cerrar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Mensaje real */}
-            <div className={`flex ${isOwn ? "flex-row-reverse" : "flex-row"} items-end gap-1.5 max-w-[85%] ${isOwn ? "self-end" : "self-start"}`}>
-                {/* Avatar */}
-                {isImageAvatar ? (
-                    <img 
-                        src={userAvatar}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover shrink-0 cursor-pointer"
-                        onClick={() => getUserInfo(message.user)}
-                    />
-                ) : (
-                    <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 cursor-pointer"
-                        style={{ backgroundColor: color }}
-                        onClick={() => getUserInfo(message.user)}
-                    >
-                        {displayAvatar}
+            <div className={`message-bubble ${isMe ? "message-mine" : "message-other"}`}>
+                {message.replyToUser && (
+                    <div className="mb-2 p-2 rounded-lg bg-black/10 border-l-4 border-indigo-500/50 text-[0.8rem] opacity-80 italic truncate">
+                        <span className="font-bold not-italic block mb-0.5">@{message.replyToUser}</span>
+                        {message.replyToText || "Mensaje"}
                     </div>
                 )}
-
-                {/* Contenido del mensaje */}
-                <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} min-w-0`}>
-                    {/* Username + Admin badge */}
-                    {!isOwn && (
-                        <div className="flex items-center gap-1 mb-0.5">
-                            <span 
-                                className="text-xs font-semibold cursor-pointer hover:underline"
-                                style={{ color }}
-                                onClick={() => getUserInfo(message.user)}
-                            >
-                                {message.user}
-                            </span>
-                            {adminsList.includes(message.user) && (
-                                <span className="text-[10px]" title="Admin">👑</span>
-                            )}
-                        </div>
+                
+                {renderContent()}
+                
+                <div className="flex items-center justify-end gap-2 mt-1.5 opacity-60 text-[0.65rem]">
+                    <span>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isMe && (
+                        <span className="text-indigo-400 font-bold">✓✓</span>
                     )}
+                </div>
 
-                    {/* Bubble del mensaje */}
-                    <div className={`px-3 py-2 rounded-2xl wrap-break-word max-w-full ${getThemeStyles()}`}>
-                        {renderBody()}
-                    </div>
-
-                    {/* Hora + reacciones */}
-                    <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
-                        <span className="text-[10px] text-gray-400">{hora}</span>
-                        {hasReactions && (
-                            <div className="flex gap-0.5 text-xs bg-black/20 px-1.5 py-0.5 rounded-full">
-                                {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                    <span key={emoji}>{emoji} {users.length}</span>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                {/* Acciones rápidas al hover */}
+                <div className={`absolute top-0 ${isMe ? "-left-10" : "-right-10"} opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col gap-1`}>
+                    <button 
+                        onClick={() => setReplyingTo({ id: message.id, user: message.user, text: message.content })}
+                        className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 transition-colors"
+                        title="Responder"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+                    </button>
                 </div>
             </div>
-
-            {/* Context Menu */}
-            {showContextMenu && (
-                <div 
-                    className="fixed bg-gray-900/95 backdrop-blur border border-white/20 rounded-xl py-2 z-50 shadow-2xl"
-                    style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-                >
-                    <button onClick={handleReply} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">↩️ Responder</button>
-                    <button onClick={() => setShowPicker(true)} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">😀 Reaccionar</button>
-                    {(isOwn || adminsList.includes(message.user)) && (
-                        <>
-                            <button onClick={() => { setEditing(true); setShowContextMenu(false); }} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 text-sm">✏️ Editar</button>
-                            <button onClick={() => setShowDeleteConfirm(true)} className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10 text-sm">🗑️ Eliminar</button>
-                        </>
-                    )}
-                </div>
-            )}
-
-            {/* Emoji Picker */}
-            {showPicker && (
-                <div className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 z-50 shadow-lg grid grid-cols-5 gap-1">
-                    {QUICK_EMOJIS.map(emoji => (
-                        <button key={emoji} onClick={() => handleReaction(emoji)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-lg">{emoji}</button>
-                    ))}
-                </div>
-            )}
-
-            {/* Delete Confirmation */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="bg-gray-900 border border-white/20 rounded-2xl p-6" onClick={e => e.stopPropagation()}>
-                        <p className="text-white text-center mb-4">¿Eliminar este mensaje?</p>
-                        <div className="flex gap-2 justify-center">
-                            <button onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded-lg">Eliminar</button>
-                            <button onClick={() => setShowDeleteConfirm(false)} className="bg-gray-600 text-white px-4 py-2 rounded-lg">Cancelar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

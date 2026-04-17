@@ -1,585 +1,95 @@
 @import "tailwindcss";
 
-html {
-    font-size: 14px;
-    height: 100%;
-    width: 100%;
+:root {
+    --app-height: 100dvh;
+    --bg-primary: #0f172a;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: 12px;
+    --radius-msg: 18px;
 }
 
 html, body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-}
-
-@media (min-width: 768px) {
-    html {
-        font-size: 16px;
-    }
-}
-
-:root {
-    --app-height: 100dvh;
-    --bg-color: #000;
-    --text-color: #fff;
-}
-
-/* BASE GLOBAL */
-body {
     height: 100dvh;
     width: 100%;
-    overflow-x: hidden;
-    position: relative;
-
-    background: var(--bg-color);
-    color: var(--text-color);
-
-    transition: background 0.3s ease, color 0.3s ease;
-}
-
-/* ===================== THEMES ===================== */
-/* Los fondos de temas se manejan en ThemeBackground.jsx (canvas) */
-/* Solo se mantienen efectos especiales que no tienen equivalente en canvas */
-
-/* 🌑 DARK */
-.theme-dark {
-    --bg-color: #121212;
-    --text-color: #ffffff;
-}
-
-/* ⚡ NEON */
-.theme-neon {
-    --bg-color: #000;
-    --text-color: #00ff88;
-}
-
-html.theme-neon body {
-    animation: neonPulse 2s infinite;
-}
-
-/* 🌆 CYBERPUNK */
-.theme-cyberpunk {
-    --bg-color: #000;
-    --text-color: #ff0080;
-}
-
-html.theme-cyberpunk body {
-    animation: cyberShift 4s infinite;
-}
-
-@keyframes glitch {
-    0% { transform: translate(0); }
-    20% { transform: translate(-1px, 1px); }
-    40% { transform: translate(-1px, -1px); }
-    60% { transform: translate(1px, 1px); }
-    80% { transform: translate(1px, -1px); }
-    100% { transform: translate(0); }
-}
-
-.glitch {
-    animation: glitch 0.3s infinite;
-}
-
-.glitch-soft {
-    animation: glitch 1.2s infinite;
-}
-
-@keyframes cyberFlicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.95; }
-    52% { opacity: 0.7; }
-    54% { opacity: 1; }
-}
-
-html.theme-cyberpunk body {
-    animation: cyberFlicker 3s infinite;
-}
-
-
-/* 🟢 MATRIX */
-.theme-matrix {
-    --bg-color: #000;
-    --text-color: #00ff00;
-}
-
-html.theme-matrix body {
-    font-family: "Courier New", monospace;
-}
-
-/* 🧡 RETRO */
-.theme-retro {
-    --bg-color: #000;
-    --text-color: #ff6b35;
-}
-
-html.theme-retro body {
-    animation: retroPulse 3s infinite;
-}
-
-/* 🌊 OCEAN */
-.theme-ocean {
-    --bg-color: #000;
-    --text-color: #00a8cc;
-}
-
-html.theme-ocean body {
-    animation: oceanWave 6s infinite;
-}
-
-@keyframes waterPulse {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.4; }
-}
-
-@keyframes waterLight {
-    from { transform: translateX(0); }
-    to { transform: translateX(80px); }
-}
-
-.chat-bubble {
-    position: absolute;
-    bottom: 10px;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: rgba(180,220,255,0.7);
-    box-shadow: 0 0 8px rgba(180,220,255,0.9);
-
-    animation: bubbleUp 2s ease-out forwards;
-}
-
-@keyframes bubbleUp {
-    0% {
-        transform: translateY(0) scale(1);
-        opacity: 0.8;
-    }
-    100% {
-        transform: translateY(-40px) scale(1.4);
-        opacity: 0;
-    }
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-2px); }
-}
-
-.animate-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes galaxyPulse {
-    0%, 100% { box-shadow: 0 0 10px rgba(180,100,255,0.4); }
-    50% { box-shadow: 0 0 20px rgba(180,100,255,0.7); }
-}
-
-.animate-galaxyPulse {
-    animation: galaxyPulse 3s ease-in-out infinite;
-}
-
-@keyframes firePulse {
-    0% { box-shadow: 0 0 10px rgba(255,100,0,0.5); }
-    50% { box-shadow: 0 0 20px rgba(255,150,0,0.8); }
-    100% { box-shadow: 0 0 10px rgba(255,100,0,0.5); }
-}
-
-.animate-firePulse {
-    animation: firePulse 2s ease-in-out infinite;
-}
-
-
-/* 🌲 FOREST */
-.theme-forest {
-    --bg-color: #000;
-    --text-color: #32cd32;
-}
-
-/* 🌌 GALAXY PRO */
-.theme-galaxy {
-    --bg-color: #000;
-    --text-color: #a855f7;
-}
-
-/* 🕳️ Agujero negro */
-html.theme-galaxy::before {
-    content: "";
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 80vmax;
-    height: 80vmax;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    pointer-events: none;
-
-    background:
-        radial-gradient(circle,
-            #000 0%,
-            #000 10%,
-            rgba(10,10,30,0.9) 15%,
-            rgba(59,130,246,0.4) 25%,
-            rgba(139,92,246,0.5) 40%,
-            rgba(59,130,246,0.2) 55%,
-            transparent 70%
-        );
-
-    box-shadow:
-        0 0 80px rgba(59,130,246,0.4),
-        0 0 160px rgba(139,92,246,0.3),
-        0 0 300px rgba(59,130,246,0.2);
-
-    animation: blackHoleBreath 6s ease-in-out infinite;
-
-    z-index: -12;
-}
-
-
-/* 💫 Anillo dinámico */
-html.theme-galaxy::after {
-    content: "";
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 120vmax;
-    height: 120vmax;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    pointer-events: none;
-
-    background:
-        conic-gradient(
-            from 0deg,
-            transparent,
-            rgba(59,130,246,0.9),
-            rgba(139,92,246,1),
-            rgba(59,130,246,0.9),
-            transparent
-        );
-
-    filter: blur(60px);
-    opacity: 0.7;
-
-    animation: blackHoleSpin 20s linear infinite;
-
-    z-index: -11;
-}
-
-/* Distorsión */
-html.theme-galaxy .gravitational-lens {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-
-    width: 250px;
-    height: 250px;
-
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    pointer-events: none;
-
-    backdrop-filter: blur(10px) contrast(140%) brightness(120%);
-    
-    box-shadow:
-        inset 0 0 60px rgba(0,0,0,1),
-        0 0 120px rgba(0,0,0,0.9);
-
-    z-index: 0;
-}
-
-
-/* Respiración */
-@keyframes blackHoleBreath {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -50%) scale(1.05); }
-}
-
-
-/* 🔄 Rotación principal */
-@keyframes blackHoleSpin {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.05); }
-    100% { transform: rotate(360deg) scale(1); }
-}
-
-/* 🔄 Rotación contraria (más realista) */
-@keyframes blackHoleSpinReverse {
-    0% { transform: rotate(360deg) scale(1.1); }
-    50% { transform: rotate(180deg) scale(1.15); }
-    100% { transform: rotate(0deg) scale(1.1); }
-}
-
-.gravitational-lens {
-    position: fixed;
-    width: 250px;
-    height: 250px;
-    pointer-events: none;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    z-index: -1;
-
-    backdrop-filter: blur(6px) contrast(120%);
-    
-    background: radial-gradient(
-        circle,
-        rgba(255,255,255,0.08) 0%,
-        rgba(255,255,255,0.04) 40%,
-        rgba(0,0,0,0.2) 70%,
-        transparent 100%
-    );
-
-    box-shadow:
-        0 0 40px rgba(255,255,255,0.15),
-        inset 0 0 60px rgba(0,0,0,0.8);
-}
-
-
-
-/* ⚪ MINIMAL */
-.theme-minimal {
-    --bg-color: #f9f9f9;
-    --text-color: #111;
-}
-
-/* 🌈 VAPORWAVE PRO */
-.theme-vaporwave {
-    --bg-color: #000;
-    --text-color: #ff71ce;
-}
-
-html.theme-vaporwave body {
-    position: relative;
     overflow: hidden;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Evitar scroll elástico en iOS */
+    position: fixed;
 }
 
-/* 🌅 SOL */
-html.theme-vaporwave::before {
-    content: "";
-    position: fixed;
-    left: 50%;
-    top: 45%;
-    transform: translate(-50%, -50%);
-    width: 500px;
-    height: 500px;
-    border-radius: 50%;
-    pointer-events: none;
-
-    background:
-        repeating-linear-gradient(
-            to bottom,
-            #ff2ec4 0px,
-            #ff2ec4 4px,
-            transparent 4px,
-            transparent 8px
-        ),
-        radial-gradient(circle, #ff2ec4 0%, #ff71ce 40%, transparent 70%);
-
-    box-shadow:
-        0 0 60px #ff2ec4,
-        0 0 120px #ff71ce;
-
-    z-index: -11;
-}
-
-/* 🟪 GRID EN PERSPECTIVA */
-html.theme-vaporwave::after {
-    content: "";
-    position: fixed;
-    left: 0;
-    bottom: 0;
+#root {
+    height: 100dvh;
     width: 100%;
-    height: 60%;
-    pointer-events: none;
-
-    background:
-        linear-gradient(to top, rgba(0,0,0,1), transparent 30%),
-        repeating-linear-gradient(
-            to right,
-            rgba(0,255,255,0.6) 0px,
-            rgba(0,255,255,0.6) 2px,
-            transparent 2px,
-            transparent 40px
-        ),
-        repeating-linear-gradient(
-            to top,
-            rgba(255,0,255,0.4) 0px,
-            rgba(255,0,255,0.4) 2px,
-            transparent 2px,
-            transparent 40px
-        );
-
-    transform: perspective(600px) rotateX(60deg);
-    transform-origin: bottom;
-
-    animation: vaporGridMove 8s linear infinite;
-
-    z-index: -11;
+    display: flex;
+    flex-direction: column;
 }
 
-/* 🎬 MOVIMIENTO DEL GRID */
-@keyframes vaporGridMove {
-    from {
-        background-position: 0 0, 0 0, 0 0;
-    }
-    to {
-        background-position: 0 0, 0 40px, 40px 0;
-    }
+/* Scrollbar Moderno */
+::-webkit-scrollbar {
+    width: 4px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
-
-
-/* 🔥 FIRE */
-.theme-fire {
-    --bg-color: #000;
-    --text-color: #ff4500;
-}
-
-html.theme-fire body {
-    animation: fire 2s ease-in-out infinite alternate;
-}
-
-/* ===================== ANIMACIONES ===================== */
-
-@keyframes fall {
-    0% { background-position: 0 -32px; }
-    100% { background-position: 0 100%; }
-}
-
-@keyframes neonPulse {
-    0%, 100% {
-        text-shadow: 0 0 5px #00ff88, 0 0 10px #00ff88;
-    }
-    50% {
-        text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
-    }
-}
-
-@keyframes cyberShift {
-    0% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(40deg); }
-    100% { filter: hue-rotate(0deg); }
-}
-
-@keyframes oceanWave {
-    0%, 100% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(30deg); }
-}
-
-@keyframes retroPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-@keyframes vaporGlow {
-    0% {
-        background: linear-gradient(135deg, #ff71ce, #01cdfe, #05ffa1, #b967ff);
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-@keyframes fire {
-    0% { filter: brightness(1); }
-    100% { filter: brightness(1.4); }
-}
-
-@keyframes galaxySpin {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.1); }
-    100% { transform: rotate(360deg) scale(1); }
-}
-
-/* ===================== COMPONENT ANIMATIONS ===================== */
-
-/* Entrada suave */
-.animate-fadeInUp {
-    animation: fadeInUp 0.5s ease forwards;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Slide lateral */
-.animate-slideInRight {
-    animation: slideInRight 0.4s ease forwards;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(100%);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Pop */
-.animate-popIn {
-    animation: popIn 0.3s ease forwards;
-}
-
-@keyframes popIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* VideoCall Popup animations */
-.animate-fade-in {
-    animation: fadeIn 0.2s ease forwards;
-}
-
-.animate-scale-in {
-    animation: scaleIn 0.2s ease forwards;
-}
-
+/* Animaciones Globales */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Estilos de Burbujas de Chat (Glassmorphism) */
+.message-bubble {
+    @apply relative max-w-[88%] sm:max-w-[80%] px-4 py-2.5 shadow-lg transition-all duration-200;
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+}
+
+.message-mine {
+    @apply self-end rounded-2xl rounded-tr-none bg-indigo-600/25 border-indigo-500/30;
+}
+
+.message-other {
+    @apply self-start rounded-2xl rounded-tl-none bg-white/5 border-white/10;
+}
+
+/* Ajustes para Mobile y Teclado */
+@media (max-width: 640px) {
+    .message-bubble {
+        @apply px-3 py-2 text-[0.9rem];
     }
 }
 
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes highlight {
-    0%, 100% { background-color: transparent; }
-    50% { background-color: rgba(255, 255, 255, 0.3); }
-}
-
-.animate-highlight {
-    animation: highlight 0.5s ease-in-out 3;
-}
+/* Temas Dinámicos - Optimizados */
+.theme-rosa { --bg-primary: #fff1f2; --text-primary: #881337; --accent: #fb7185; --glass-bg: rgba(255, 241, 242, 0.3); --glass-border: rgba(251, 113, 133, 0.2); }
+.theme-dark { --bg-primary: #0a0a0f; --text-primary: #f1f5f9; --accent: #38bdf8; --glass-bg: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); }
+.theme-neon { --bg-primary: #0a0a1a; --text-primary: #86efac; --accent: #22c55e; --glass-bg: rgba(34, 197, 94, 0.08); --glass-border: rgba(34, 197, 94, 0.25); }
+.theme-cyberpunk { --bg-primary: #0f0524; --text-primary: #f9a8d4; --accent: #f472b6; --glass-bg: rgba(255, 0, 128, 0.06); --glass-border: rgba(255, 0, 128, 0.2); }
+.theme-matrix { --bg-primary: #000500; --text-primary: #00ff41; --accent: #00ff41; --glass-bg: rgba(0, 255, 65, 0.05); --glass-border: rgba(0, 255, 65, 0.15); }
+.theme-retro { --bg-primary: #fef3c7; --text-primary: #92400e; --accent: #f59e0b; --glass-bg: rgba(245, 158, 11, 0.08); --glass-border: rgba(245, 158, 11, 0.2); }
+.theme-ocean { --bg-primary: #f0f9ff; --text-primary: #075985; --accent: #0ea5e9; --glass-bg: rgba(14, 165, 233, 0.08); --glass-border: rgba(14, 165, 233, 0.15); }
+.theme-forest { --bg-primary: #f0fdf4; --text-primary: #166534; --accent: #22c55e; --glass-bg: rgba(34, 197, 94, 0.06); --glass-border: rgba(34, 197, 94, 0.15); }
+.theme-galaxy { --bg-primary: #0c0a1f; --text-primary: #e9d5ff; --accent: #8b5cf6; --glass-bg: rgba(139, 92, 246, 0.08); --glass-border: rgba(139, 92, 246, 0.2); }
+.theme-vaporwave { --bg-primary: #2e1065; --text-primary: #f9a8d4; --accent: #22d3ee; --glass-bg: rgba(34, 211, 238, 0.06); --glass-border: rgba(34, 211, 238, 0.15); }
+.theme-fire { --bg-primary: #0f0500; --text-primary: #fca5a5; --accent: #ef4444; --glass-bg: rgba(239, 68, 68, 0.06); --glass-border: rgba(239, 68, 68, 0.15); }
+.theme-minimal { --bg-primary: #fafafa; --text-primary: #1e293b; --accent: #64748b; --glass-bg: rgba(100, 116, 139, 0.05); --glass-border: rgba(100, 116, 139, 0.12); }
+.theme-darkpink { --bg-primary: #120818; --text-primary: #f0abfc; --accent: #ec4899; --glass-bg: rgba(236, 72, 153, 0.08); --glass-border: rgba(236, 72, 153, 0.2); }
