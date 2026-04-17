@@ -212,7 +212,8 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
             return;
         }
 
-        const isAdmin = ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
+        const adminList = (process.env.ADMINS || "").split(",").map(a => a.trim()).filter(Boolean);
+        const isAdmin = adminList.includes(user.nombre);
         const targetRoom = room || user?.sala || userRoom || "sala-global";
         
         console.log("🗑️ Eliminando mensaje:", messageId, "por:", user.nombre, "isAdmin:", isAdmin, "en sala:", targetRoom);

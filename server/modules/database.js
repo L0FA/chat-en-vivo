@@ -25,7 +25,7 @@ export const db = new Proxy({}, {
     }
 });
 
-const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(a => a.trim());
 const APP_START_DATE = new Date("2026-04-01").getTime();
 
 export async function initDatabase() {
@@ -41,7 +41,7 @@ export async function initDatabase() {
     `);
 
     // Agregar admins por defecto
-    for (const admin of ADMINS) {
+    for (const admin of ADMIN_LIST) {
         await db.execute({
             sql: "INSERT OR IGNORE INTO Usuarios (nombre, avatar, creado) VALUES (?, ?, ?)",
             args: [admin, null, APP_START_DATE]
@@ -90,23 +90,25 @@ export async function initDatabase() {
         )
     `);
 
-    // Tabla Salas
+    // Tabla Salas (Alineada con Drizzle Studio)
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Salas (
             id TEXT PRIMARY KEY,
             nombre TEXT NOT NULL,
             descripcion TEXT,
-            creador TEXT,
-            timestamp INTEGER NOT NULL
+            dueno TEXT,
+            creado INTEGER NOT NULL,
+            esPrivada INTEGER DEFAULT 0
         )
     `);
 
-    // Tabla Miembros Sala
+    // Tabla Miembros Sala (Alineada con Drizzle Studio)
     await db.execute(`
-        CREATE TABLE IF NOT EXISTS SalaMiembros (
+        CREATE TABLE IF NOT EXISTS MiembrosSala (
             salaId TEXT,
             usuario TEXT,
             rol TEXT DEFAULT "miembro",
+            esAdmin INTEGER DEFAULT 0,
             joinedAt INTEGER,
             PRIMARY KEY (salaId, usuario)
         )

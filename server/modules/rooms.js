@@ -16,7 +16,7 @@ export function setupRooms(socket, connectedUsers) {
         try {
             const result = await db.execute({
                 sql: `SELECT s.* FROM Salas s 
-                      JOIN SalaMiembros sm ON s.id = sm.salaId 
+                      JOIN MiembrosSala sm ON s.id = sm.salaId 
                       WHERE sm.usuario = ?`,
                 args: [user.nombre]
             });
@@ -33,13 +33,13 @@ export function setupRooms(socket, connectedUsers) {
         
         try {
             await db.execute({
-                sql: "INSERT INTO Salas (id, nombre, descripcion, creador, timestamp) VALUES (?, ?, ?, ?, ?)",
+                sql: "INSERT INTO Salas (id, nombre, descripcion, dueno, creado) VALUES (?, ?, ?, ?, ?)",
                 args: [salaId, nombre, descripcion || "", user.nombre, Date.now()]
             });
             
             await db.execute({
-                sql: "INSERT INTO SalaMiembros (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
-                args: [salaId, user.nombre, "admin", Date.now()]
+                sql: "INSERT INTO MiembrosSala (salaId, usuario, rol, esAdmin, joinedAt) VALUES (?, ?, ?, ?, ?)",
+                args: [salaId, user.nombre, "owner", 1, Date.now()]
             });
             
             cb?.({ status: "ok", sala: { id: salaId, nombre, descripcion } });
@@ -54,8 +54,8 @@ export function setupRooms(socket, connectedUsers) {
         
         try {
             await db.execute({
-                sql: "INSERT OR IGNORE INTO SalaMiembros (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
-                args: [salaId, user.nombre, "miembro", Date.now()]
+                sql: "INSERT OR IGNORE INTO MiembrosSala (salaId, usuario, rol, esAdmin, joinedAt) VALUES (?, ?, ?, ?, ?)",
+                args: [salaId, user.nombre, "miembro", 0, Date.now()]
             });
             
             const salaResult = await db.execute({
@@ -81,7 +81,7 @@ export function setupRooms(socket, connectedUsers) {
         
         try {
             await db.execute({
-                sql: "DELETE FROM SalaMiembros WHERE salaId = ? AND usuario = ?",
+                sql: "DELETE FROM MiembrosSala WHERE salaId = ? AND usuario = ?",
                 args: [salaId, user.nombre]
             });
             
@@ -99,8 +99,8 @@ export function setupRooms(socket, connectedUsers) {
         
         try {
             await db.execute({
-                sql: "INSERT OR IGNORE INTO SalaMiembros (salaId, usuario, rol, joinedAt) VALUES (?, ?, ?, ?)",
-                args: [salaId, usuario, "miembro", Date.now()]
+                sql: "INSERT OR IGNORE INTO MiembrosSala (salaId, usuario, rol, esAdmin, joinedAt) VALUES (?, ?, ?, ?, ?)",
+                args: [salaId, usuario, "miembro", 0, Date.now()]
             });
             
             cb?.({ status: "ok" });

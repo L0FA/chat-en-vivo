@@ -98,12 +98,21 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
             }
             
             let results;
-            if (room === "sala-admins-global" && isAdmin) {
+            // Verificar si es la Sala de Admins y si el usuario tiene permiso (esAdmin desde DB)
+            const adminCheck = await db.execute({
+                sql: "SELECT esAdmin FROM MiembrosSala WHERE salaId = ? AND usuario = ?",
+                args: ["sala-admins-global", connectedUsers.get(socket.id)?.nombre]
+            });
+            const isAuthorizedAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1;
+
+            if (room === "sala-admins-global" && isAuthorizedAdmin) {
+                // REGISTRO ANTIGUO: Ver todos los mensajes de todas las salas
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: []
                 });
             } else {
+                // Mensajes normales filtrados por sala
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: [room]

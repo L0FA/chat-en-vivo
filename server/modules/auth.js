@@ -5,7 +5,7 @@
 
 import { db } from "./database.js";
 
-const ADMIN_USERS = ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
+const ADMIN_USERS = (process.env.ADMINS || "").split(",").map(a => a.trim()).filter(Boolean);
 
 export async function setupAuth(io, socket, connectedUsers) {
     const auth = socket.handshake.auth;
