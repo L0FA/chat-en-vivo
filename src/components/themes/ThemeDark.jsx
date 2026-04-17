@@ -3,6 +3,7 @@
 // ============================================
 
 export function createDarkAnimation(ctx, canvas) {
+    let animId = null;
     const particles = Array.from({ length: 80 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -22,8 +23,13 @@ export function createDarkAnimation(ctx, canvas) {
             ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
             ctx.fill();
         });
-        return requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     };
 
-    return animate;
+    animate();
+
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 }

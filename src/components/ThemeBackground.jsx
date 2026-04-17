@@ -51,14 +51,14 @@ const THEME_ANIMATIONS = {
 export default function ThemeBackground() {
     const { theme } = useChat();
     const canvasRef = useRef(null);
-    const genRef = useRef(0);
+    const animIdRef = useRef(0);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
-        const gen = ++genRef.current;
+        const myAnimId = ++animIdRef.current;
 
         const handleResize = () => {
             canvas.width = window.innerWidth;
@@ -77,8 +77,8 @@ export default function ThemeBackground() {
 
         // Cleanup al desmontar o cambiar tema
         return () => {
-            if (genRef.current !== gen) {
-                // Si la generación cambió, limpiar esta animación
+            // Solo limpiar si esta animación es la última
+            if (myAnimId === animIdRef.current) {
                 if (typeof cleanup === "function") {
                     cleanup();
                 }
@@ -91,7 +91,6 @@ export default function ThemeBackground() {
     // Renderizado del canvas
     return (
         <canvas
-            key={theme}
             ref={canvasRef}
             className="fixed inset-0 pointer-events-none"
             style={{ opacity: 0.5, zIndex: -10 }}

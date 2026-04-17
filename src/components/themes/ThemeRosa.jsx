@@ -6,7 +6,6 @@
 export function createRosaAnimation(ctx, canvas) {
     const PETALS = ["🌸", "🌺", "🌹", "💮"];
     let animId = null;
-    let stopped = false;
     
     const particles = Array.from({ length: 40 }, () => ({
         x: Math.random() * canvas.width,
@@ -20,7 +19,6 @@ export function createRosaAnimation(ctx, canvas) {
     }));
 
     const animate = () => {
-        if (stopped) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         particles.forEach(p => {
@@ -50,7 +48,6 @@ export function createRosaAnimation(ctx, canvas) {
     animate();
 
     return () => {
-        stopped = true;
         if (animId) cancelAnimationFrame(animId);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
