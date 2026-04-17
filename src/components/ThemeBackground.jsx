@@ -1,12 +1,10 @@
 // ============================================
 // 🎨 THEME BACKGROUND - Canvas animado por tema
-// Gestiona el canvas y distribuye a los archivos de temas
 // ============================================
 
 import { useEffect, useRef } from "react";
 import { useChat } from "../hooks/useChat";
 
-// Importaciones de temas individuales
 import {
     createRosaAnimation,
     createDarkPinkAnimation,
@@ -24,10 +22,8 @@ import {
     createDefaultAnimation
 } from "./themes";
 
-/**
- * Mapa de temas a sus funciones de animación
- * Cada tema tiene su propio archivo en /themes/
- */
+const activeAnimations = new WeakMap();
+
 const THEME_ANIMATIONS = {
     rosa: createRosaAnimation,
     darkpink: createDarkPinkAnimation,
@@ -45,21 +41,18 @@ const THEME_ANIMATIONS = {
     default: createDefaultAnimation
 };
 
-/**
- * Componente principal del fondo animado
- * Maneja el canvas y selecciona la animación correcta según el tema
- */
 export default function ThemeBackground() {
     const { theme } = useChat();
     const canvasRef = useRef(null);
-    const animIdRef = useRef(0);
+    const themeRef = useRef(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
-        const myAnimId = ++animIdRef.current;
+        const currentTheme = theme;
+        themeRef.current = currentTheme;
 
         const handleResize = () => {
             canvas.width = window.innerWidth;
@@ -69,27 +62,25 @@ export default function ThemeBackground() {
         handleResize();
         window.addEventListener("resize", handleResize);
 
-        // Obtener función de animación según el tema
-        const themeKey = theme === "default" || theme === "custom" ? "minimal" : theme;
+        const themeKey = currentTheme === "default" || currentTheme === "custom" ? "minimal" : currentTheme;
         const createAnimation = THEME_ANIMATIONS[themeKey] || createDefaultAnimation;
         
-        // Ejecutar animación (retorna cleanup function)
-        const cleanup = createAnimation(ctx, canvas);
+        const animResult = createAnimation(ctx, canvas);
+        
+        if (animResult && typeof animResult === "object") {
+            activeAnimations.set(canvas, animResult);
+        }
 
-        // Cleanup al desmontar o cambiar tema
         return () => {
-            // Solo limpiar si esta animación es la última
-            if (myAnimId === animIdRef.current) {
-                if (typeof cleanup === "function") {
-                    cleanup();
-                }
+            const storedAnim = activeAnimations.get(canvas);
+            if (storedAnim && storedAnim.stop) {
+                storedAnim.stop();
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             window.removeEventListener("resize", handleResize);
         };
     }, [theme]);
 
-    // Renderizado del canvas
     return (
         <canvas
             ref={canvasRef}

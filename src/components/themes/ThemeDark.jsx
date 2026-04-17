@@ -4,17 +4,22 @@
 
 export function createDarkAnimation(ctx, canvas) {
     let animId = null;
-    const particles = Array.from({ length: 80 }, () => ({
+    let stopped = false;
+
+    const particles = Array.from({ length: 100 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: 0.5 + Math.random() * 2,
+        size: 0.4 + Math.random() * 2,
         alpha: Math.random(),
-        speed: 0.005 + Math.random() * 0.02,
+        speed: 0.004 + Math.random() * 0.018,
         dir: Math.random() > 0.5 ? 1 : -1
     }));
 
     const animate = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (stopped) return;
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         particles.forEach(p => {
             p.alpha += p.speed * p.dir;
             if (p.alpha >= 1 || p.alpha <= 0) p.dir *= -1;
@@ -23,13 +28,17 @@ export function createDarkAnimation(ctx, canvas) {
             ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
             ctx.fill();
         });
-        animId = requestAnimationFrame(animate);
+
+        if (!stopped) animId = requestAnimationFrame(animate);
     };
 
     animate();
 
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return {
+        stop: () => {
+            stopped = true;
+            if (animId) cancelAnimationFrame(animId);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
     };
 }
