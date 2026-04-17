@@ -1,5 +1,5 @@
 // ============================================
-// 🌲 TEMA FOREST - Bosque profundo SIN opacidad
+// 🌲 TEMA FOREST - Bosques procedurales (SIN opacidad)
 // ============================================
 
 export function createForestAnimation(ctx, canvas) {
@@ -8,87 +8,113 @@ export function createForestAnimation(ctx, canvas) {
     let wind = 0;
     let time = 0;
 
-    const trees = Array.from({ length: 20 }, () => ({
+    const forestLayers = [
+        { depth: 0.2, count: 10 },
+        { depth: 0.5, count: 14 },
+        { depth: 1, count: 18 }
+    ];
+
+    const trees = forestLayers.flatMap(layer =>
+        Array.from({ length: layer.count }, () => ({
+            x: Math.random() * canvas.width,
+            depth: layer.depth,
+            height: canvas.height * (0.3 + Math.random() * 0.55),
+            swayOffset: Math.random() * Math.PI
+        }))
+    );
+
+    const fireflies = Array.from({ length: 25 }, () => ({
         x: Math.random() * canvas.width,
-        height: canvas.height * (0.4 + Math.random() * 0.45),
-        width: 40 + Math.random() * 60,
-        sway: Math.random() * Math.PI,
-        layer: Math.floor(Math.random() * 3)
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
+        pulse: Math.random() * Math.PI * 2
     }));
 
-    const fireflies = Array.from({ length: 15 }, () => ({
+    const leaves = Array.from({ length: 30 }, () => ({
         x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height * 0.65,
-        vx: (Math.random() - 0.5) * 0.15,
-        vy: (Math.random() - 0.5) * 0.1,
-        pulse: Math.random() * Math.PI * 2,
-        size: 1 + Math.random() * 1.5
+        y: Math.random() * canvas.height,
+        size: 5 + Math.random() * 10,
+        speed: 0.15 + Math.random() * 0.8,
+        wobble: Math.random() * Math.PI * 2,
+        depth: Math.random()
     }));
 
-    const drawTree = (t) => {
-        const sway = Math.sin(wind + t.sway) * (3 + t.layer * 2);
+    const drawTree = (t, sway) => {
         const x = t.x + sway;
         const baseY = canvas.height;
-        
-        const layerColors = [
-            ["#001000", "#001a05", "#002008"],
-            ["#000800", "#001000", "#001805"],
-            ["#000500", "#000a00", "#001200"]
-        ];
-        const colors = layerColors[t.layer];
+        const trunkWidth = 4 + t.depth * 12;
+        const trunkHeight = t.height;
+        const baseX = x + trunkWidth / 2;
 
-        // Tronco
-        ctx.fillStyle = colors[0];
-        ctx.fillRect(x, baseY - t.height * 0.15, t.width * 0.1, t.height * 0.15);
+        ctx.fillStyle = "#080808";
+        ctx.fillRect(x, baseY - trunkHeight, trunkWidth, trunkHeight);
 
-        // Capas de hojas
-        const layers = 4;
+        const layers = 3 + Math.floor(t.depth * 3);
         for (let i = 0; i < layers; i++) {
-            const y = baseY - t.height * (0.15 + i * 0.22);
-            const w = t.width * (1 - i * 0.22);
-            
-            ctx.fillStyle = colors[Math.min(i, 2)];
+            const variation = 0.85 + Math.sin(t.swayOffset + i) * 0.1;
+            const width = (55 + t.depth * 110) * (1 - i * 0.28) * variation;
+            const height = 20 + t.depth * 12;
+            const yOffset = i * (height * 0.65);
+
             ctx.beginPath();
-            ctx.moveTo(x + t.width * 0.05, y);
-            ctx.lineTo(x - w/2, y + t.height * 0.18);
-            ctx.lineTo(x + t.width * 1.05, y + t.height * 0.18);
+            ctx.moveTo(baseX, baseY - trunkHeight - yOffset - height);
+            ctx.lineTo(baseX - width / 2, baseY - trunkHeight - yOffset);
+            ctx.lineTo(baseX + width / 2, baseY - trunkHeight - yOffset);
             ctx.closePath();
+
+            const shade = Math.floor(15 + t.depth * 35 - i * 5);
+            ctx.fillStyle = `rgb(${shade}, ${shade + 8}, ${shade})`;
             ctx.fill();
         }
     };
 
     const animate = () => {
         if (stopped) return;
-        wind += 0.003;
-        time += 0.005;
+        wind += 0.005 + Math.sin(time * 0.25) * 0.002;
+        time += 0.008;
 
-        // FONDO - Negro total SIN opacidad
         ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Capa oscura sólida
-        ctx.fillStyle = "#000602";
+        ctx.fillStyle = "#050a05";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Árboles
-        trees.forEach(t => drawTree(t));
+        trees.forEach(t => {
+            const windFactor = Math.sin(wind + t.swayOffset) * (2.5 + t.depth * 7);
+            drawTree(t, windFactor);
+        });
 
-        // Luciérnagas - sin glow, puntos sólidos
         fireflies.forEach(f => {
-            f.x += f.vx + Math.sin(time * 0.4 + f.y * 0.008) * 0.05;
-            f.y += f.vy + Math.sin(time * 0.25 + f.x * 0.008) * 0.03;
-            f.pulse += 0.03;
-            const bright = Math.sin(f.pulse) > 0.3;
+            f.x += f.vx + Math.sin(time + f.y * 0.008) * 0.1;
+            f.y += f.vy;
+            f.pulse += 0.04;
+            const bright = Math.sin(f.pulse) > 0;
 
             if (f.x < 0) f.x = canvas.width;
             if (f.x > canvas.width) f.x = 0;
-            if (f.y < 0) f.y = canvas.height * 0.65;
-            if (f.y > canvas.height * 0.65) f.y = 0;
+            if (f.y < 0) f.y = canvas.height;
+            if (f.y > canvas.height) f.y = 0;
 
-            // Punto sólido de luz
             ctx.fillStyle = bright ? "#88ff55" : "#44aa33";
             ctx.beginPath();
-            ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+            ctx.arc(f.x, f.y, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        leaves.forEach(l => {
+            l.y += l.speed * (0.35 + l.depth);
+            l.wobble += 0.012;
+            l.x += Math.sin(l.wobble + wind) * (0.5 + l.depth * 1.5);
+
+            if (l.y > canvas.height) {
+                l.y = -15;
+                l.x = Math.random() * canvas.width;
+            }
+
+            ctx.fillStyle = "#1a2a1a";
+            ctx.beginPath();
+            ctx.arc(l.x, l.y, l.size * 0.2, 0, Math.PI * 2);
             ctx.fill();
         });
 

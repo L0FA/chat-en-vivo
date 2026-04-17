@@ -1,122 +1,89 @@
 // ============================================
-// 🌊 TEMA OCEAN - Océano profundo SIN opacidad
+// 🌊 TEMA OCEAN - Burbujas, peces yluces (SIN opacidad)
 // ============================================
 
 export function createOceanAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
-    let time = 0;
 
-    const fish = Array.from({ length: 8 }, () => ({
+    const particles = Array.from({ length: 80 }, () => ({
         x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height * 0.75,
-        speed: 0.3 + Math.random() * 0.5,
-        size: 25 + Math.random() * 35,
-        body: `hsl(${195 + Math.random() * 20}, ${30 + Math.random() * 15}%, ${15 + Math.random() * 10}%)`,
-        belly: `hsl(${200 + Math.random() * 15}, ${25 + Math.random() * 10}%, ${20 + Math.random() * 10}%)`,
-        fin: `hsl(${190 + Math.random() * 20}, ${35 + Math.random() * 15}%, ${12 + Math.random() * 8}%)`,
+        y: Math.random() * canvas.height,
+        size: 1 + Math.random() * 4,
+        depth: Math.random(),
+        speedY: 0.15 + Math.random() * 0.5,
+        speedX: (Math.random() - 0.5) * 0.25
+    }));
+
+    const fish = Array.from({ length: 6 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.7,
+        speed: 0.25 + Math.random() * 0.6,
+        size: 25 + Math.random() * 50,
         dir: Math.random() > 0.5 ? 1 : -1,
         wiggle: Math.random() * Math.PI * 2
     }));
 
-    const algae = Array.from({ length: 10 }, () => ({
-        x: Math.random() * canvas.width,
-        baseY: canvas.height,
-        height: 40 + Math.random() * 70,
-        segments: 3 + Math.floor(Math.random() * 3),
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.01 + Math.random() * 0.01,
-        color: `hsl(${110 + Math.random() * 20}, ${35 + Math.random() * 15}%, ${12 + Math.random() * 8}%)`
-    }));
-
     const drawFish = (f) => {
-        const w = f.size;
-        const h = w * 0.4;
-        
+        const width = f.size;
+        const height = width * 0.4;
+
         ctx.save();
         ctx.translate(f.x, f.y);
         ctx.scale(f.dir, 1);
 
-        // Cuerpo oscuro sólido
-        ctx.fillStyle = f.body;
+        ctx.fillStyle = "#0a1520";
         ctx.beginPath();
-        ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+        ctx.moveTo(-width * 0.5, 0);
+        ctx.quadraticCurveTo(0, -height, width * 0.4, 0);
+        ctx.quadraticCurveTo(0, height, -width * 0.5, 0);
         ctx.fill();
 
-        // Cola
-        ctx.fillStyle = f.fin;
+        ctx.fillStyle = "#061020";
         ctx.beginPath();
-        ctx.moveTo(-w * 0.35, 0);
-        ctx.lineTo(-w * 0.6, h * 0.5);
-        ctx.lineTo(-w * 0.5, 0);
-        ctx.lineTo(-w * 0.6, -h * 0.5);
+        ctx.moveTo(-width * 0.5, 0);
+        ctx.lineTo(-width * 0.8, height * 0.6);
+        ctx.lineTo(-width * 0.8, -height * 0.6);
         ctx.closePath();
         ctx.fill();
 
-        // Aleta dorsal
-        ctx.beginPath();
-        ctx.moveTo(-w * 0.1, -h * 0.3);
-        ctx.lineTo(0, -h * 0.6);
-        ctx.lineTo(w * 0.1, -h * 0.3);
-        ctx.closePath();
-        ctx.fill();
-
-        // Ojo
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(w * 0.25, -h * 0.05, h * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#000000";
-        ctx.beginPath();
-        ctx.arc(w * 0.27, -h * 0.05, h * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    };
-
-    const drawAlgae = (a) => {
-        ctx.save();
-        ctx.strokeStyle = a.color;
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-
-        const segH = a.height / a.segments;
-        
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.baseY);
-        
-        for (let i = 1; i <= a.segments; i++) {
-            const sway = Math.sin(time * a.speed + a.phase + i * 0.7) * (i * 2);
-            ctx.lineTo(a.x + sway, a.baseY - i * segH);
-        }
-        
-        ctx.stroke();
         ctx.restore();
     };
 
     const animate = () => {
         if (stopped) return;
-        time += 0.02;
-
-        // FONDO - Negro total, SIN glow, SIN opacidad
-        ctx.fillStyle = "#000000";
+        
+        ctx.fillStyle = "#000a15";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Capa oscuraextra (sólida, no con opacidad)
-        ctx.fillStyle = "#000508";
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "#001530");
+        gradient.addColorStop(1, "#000005");
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Algas al fondo
-        algae.forEach(a => drawAlgae(a));
+        particles.forEach(p => {
+            p.y -= p.speedY;
+            p.x += p.speedX + Math.sin(p.y * 0.008) * 0.15;
 
-        // Peces
+            if (p.y < -10) {
+                p.y = canvas.height + 10;
+                p.x = Math.random() * canvas.width;
+            }
+
+            ctx.fillStyle = "#4080aa";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
         fish.forEach(f => {
             f.wiggle += 0.035;
             f.x += f.speed * f.dir;
             f.y += Math.sin(f.wiggle) * 0.2;
 
-            if (f.x > canvas.width + 50) f.x = -50;
-            if (f.x < -50) f.x = canvas.width + 50;
+            if (f.x > canvas.width + 80) f.x = -80;
+            if (f.x < -80) f.x = canvas.width + 80;
 
             drawFish(f);
         });
