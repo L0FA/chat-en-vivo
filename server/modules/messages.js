@@ -212,7 +212,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
             return;
         }
 
-        const isAdmin = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
+        const isAdmin = ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
         console.log("🗑️ Eliminando mensaje:", messageId, "por:", user.nombre, "isAdmin:", isAdmin);
 
         try {

@@ -8,7 +8,7 @@ export function useSocket(nombreUsuario, password = "") {
         if (!nombreUsuario) return null;
         return io(SOCKET_URL, {
             auth: { NombreUsuario: nombreUsuario, password },
-            transports: ["websocket"],
+            transports: ["polling", "websocket"],
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 500,

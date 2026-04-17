@@ -3,6 +3,7 @@ import { useTheme } from "./hooks/useTheme";
 import Login from "./components/Login";
 import Chat from "./components/Chat";
 import ThemeBackground from "./components/ThemeBackground";
+import SplashScreen from "./components/SplashScreen";
 
 export default function App() {
     const { user } = useChat();
@@ -10,6 +11,7 @@ export default function App() {
 
     return (
         <div className="w-full flex flex-col" style={{ height: "100dvh" }}>
+            <SplashScreen />
             <ThemeBackground />
             {!user ? <Login /> : <Chat />}
         </div>

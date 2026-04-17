@@ -34,7 +34,7 @@ io.on("connection", async (socket) => {
     await setupAuth(io, socket, connectedUsers);
 
     const user = connectedUsers.get(socket.id);
-    const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
+    const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
     const userRoom = user?.sala || null;
 
     // Cargar todos los módulos en paralelo para velocidad
