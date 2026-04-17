@@ -18,7 +18,6 @@ import {
     createGalaxyAnimation,
     createVaporwaveAnimation,
     createRetroAnimation,
-    createMinimalAnimation,
     createDefaultAnimation
 } from "./themes";
 
@@ -37,7 +36,6 @@ const THEME_ANIMATIONS = {
     galaxy: createGalaxyAnimation,
     vaporwave: createVaporwaveAnimation,
     retro: createRetroAnimation,
-    minimal: createMinimalAnimation,
     default: createDefaultAnimation
 };
 

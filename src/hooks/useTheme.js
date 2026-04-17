@@ -4,7 +4,7 @@ import { useChat } from "../hooks/useChat";
 const THEMES = [
     "default", "rosa", "dark", "darkpink", "neon",
     "cyberpunk", "matrix", "retro", "ocean", "forest",
-    "galaxy", "minimal", "vaporwave", "fire", "custom"
+    "galaxy", "vaporwave", "fire", "custom"
 ];
 
 export function useTheme() {

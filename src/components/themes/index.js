@@ -14,4 +14,4 @@ export { createForestAnimation } from "./ThemeForest";
 export { createGalaxyAnimation } from "./ThemeGalaxy";
 export { createVaporwaveAnimation } from "./ThemeVaporwave";
 export { createRetroAnimation } from "./ThemeRetro";
-export { createMinimalAnimation, createDefaultAnimation } from "./ThemeMinimal";
+export { createDefaultAnimation } from "./ThemeDefault";

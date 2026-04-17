@@ -1,5 +1,5 @@
 // ============================================
-// 🌊 TEMA OCEAN - Océano profundo con peces y algas
+// 🌊 TEMA OCEAN - Océano profundo con peces realistas y algas
 // ============================================
 
 export function createOceanAnimation(ctx, canvas) {
@@ -7,89 +7,113 @@ export function createOceanAnimation(ctx, canvas) {
     let stopped = false;
     let time = 0;
 
-    // Burbujas - más visibles
-    const bubbles = Array.from({ length: 40 }, () => ({
+    const bubbles = Array.from({ length: 30 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: 2 + Math.random() * 5,
-        speed: 0.3 + Math.random() * 0.8,
+        size: 1.5 + Math.random() * 4,
+        speed: 0.4 + Math.random() * 0.6,
         wobble: Math.random() * Math.PI * 2,
-        alpha: 0.3 + Math.random() * 0.4
+        alpha: 0.2 + Math.random() * 0.25
     }));
 
-    // Peces - más cantidad y diversos
-    const fishTypes = [
-        { color: "#1a4a6e", sizeRange: [25, 45] },
-        { color: "#0d3a50", sizeRange: [35, 60] },
-        { color: "#2a5a7a", sizeRange: [20, 35] }
+    const fishColors = [
+        { body: "#0a2a3a", belly: "#1a4a5a", fin: "#0d3545" },
+        { body: "#051520", belly: "#0a2530", fin: "#031520" },
+        { body: "#152a35", belly: "#1a3540", fin: "#102030" },
+        { body: "#081828", belly: "#0c2030", fin: "#061520" },
+        { body: "#1a2530", belly: "#203540", fin: "#151e28" }
     ];
 
-    const fish = Array.from({ length: 12 }, () => {
-        const type = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+    const fish = Array.from({ length: 10 }, () => {
+        const c = fishColors[Math.floor(Math.random() * fishColors.length)];
         return {
             x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height * 0.8,
-            speed: 0.4 + Math.random() * 0.8,
-            size: type.sizeRange[0] + Math.random() * (type.sizeRange[1] - type.sizeRange[0]),
-            color: type.color,
+            y: Math.random() * canvas.height * 0.7,
+            speed: 0.3 + Math.random() * 0.6,
+            size: 30 + Math.random() * 40,
+            ...c,
             dir: Math.random() > 0.5 ? 1 : -1,
-            wiggle: Math.random() * Math.PI * 2
+            wiggle: Math.random() * Math.PI * 2,
+            waveAmp: 0.5 + Math.random() * 0.5
         };
     });
 
-    // Algas en el fondo - movimientos suaves
-    const algae = Array.from({ length: 15 }, () => ({
+    const algae = Array.from({ length: 12 }, () => ({
         x: Math.random() * canvas.width,
-        baseY: canvas.height + Math.random() * 50,
-        height: 60 + Math.random() * 100,
-        segments: 5 + Math.floor(Math.random() * 4),
+        baseY: canvas.height,
+        height: 50 + Math.random() * 80,
+        segments: 4 + Math.floor(Math.random() * 3),
         phase: Math.random() * Math.PI * 2,
-        speed: 0.02 + Math.random() * 0.02,
-        color: `hsl(${140 + Math.random() * 20}, ${40 + Math.random() * 20}%, ${20 + Math.random() * 15}%)`
+        speed: 0.015 + Math.random() * 0.015,
+        hue: 100 + Math.random() * 30
     }));
 
     const drawFish = (f) => {
         const w = f.size;
-        const h = w * 0.4;
+        const h = w * 0.45;
         
         ctx.save();
         ctx.translate(f.x, f.y);
         ctx.scale(f.dir, 1);
 
-        // Cuerpo del pez
-        ctx.fillStyle = f.color;
+        // Cuerpo con gradiente
+        const bodyGrad = ctx.createLinearGradient(0, -h/2, 0, h/2);
+        bodyGrad.addColorStop(0, f.body);
+        bodyGrad.addColorStop(0.5, f.belly);
+        bodyGrad.addColorStop(1, f.body);
+        
+        ctx.fillStyle = bodyGrad;
         ctx.beginPath();
         ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Cola
+        // Cola - más realista y fluida
+        ctx.fillStyle = f.fin;
         ctx.beginPath();
-        ctx.moveTo(-w * 0.4, 0);
-        ctx.lineTo(-w * 0.7, h * 0.5);
-        ctx.lineTo(-w * 0.7, -h * 0.5);
+        ctx.moveTo(-w * 0.35, 0);
+        ctx.quadraticCurveTo(-w * 0.55, h * 0.4, -w * 0.7, h * 0.6);
+        ctx.lineTo(-w * 0.6, 0);
+        ctx.lineTo(-w * 0.7, -h * 0.6);
+        ctx.quadraticCurveTo(-w * 0.55, -h * 0.4, -w * 0.35, 0);
+        ctx.fill();
+
+        // Aleta dorsal
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.1, -h * 0.35);
+        ctx.quadraticCurveTo(0, -h * 0.75, w * 0.15, -h * 0.35);
         ctx.closePath();
         ctx.fill();
 
-        // Aleta superior
+        // Aleta pectoral
         ctx.beginPath();
-        ctx.moveTo(-w * 0.1, -h * 0.3);
-        ctx.quadraticCurveTo(w * 0.1, -h * 0.7, w * 0.2, -h * 0.3);
+        ctx.ellipse(w * 0.05, h * 0.15, w * 0.12, h * 0.15, 0.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Aleta inferior
+        // Aleta ventral
         ctx.beginPath();
-        ctx.moveTo(-w * 0.1, h * 0.2);
-        ctx.quadraticCurveTo(w * 0.05, h * 0.5, w * 0.15, h * 0.2);
+        ctx.moveTo(-w * 0.05, h * 0.25);
+        ctx.quadraticCurveTo(w * 0.05, h * 0.45, w * 0.1, h * 0.25);
+        ctx.closePath();
+        ctx.fill();
+
+        // Brillo lateral
+        ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+        ctx.beginPath();
+        ctx.ellipse(w * 0.1, 0, w * 0.3, h * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Ojo
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(w * 0.25, -h * 0.1, h * 0.2, 0, Math.PI * 2);
+        ctx.arc(w * 0.28, -h * 0.05, h * 0.18, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#000000";
         ctx.beginPath();
-        ctx.arc(w * 0.28, -h * 0.1, h * 0.1, 0, Math.PI * 2);
+        ctx.arc(w * 0.31, -h * 0.05, h * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(w * 0.33, -h * 0.08, h * 0.03, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -97,36 +121,33 @@ export function createOceanAnimation(ctx, canvas) {
 
     const drawAlgae = (a) => {
         ctx.save();
-        ctx.strokeStyle = a.color;
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = `hsl(${a.hue}, 50%, 18%)`;
+        ctx.lineWidth = 5;
         ctx.lineCap = "round";
-        ctx.shadowColor = a.color;
-        ctx.shadowBlur = 5;
 
-        const segmentH = a.height / a.segments;
+        const segH = a.height / a.segments;
         
         ctx.beginPath();
         ctx.moveTo(a.x, a.baseY);
         
         for (let i = 1; i <= a.segments; i++) {
-            const sway = Math.sin(time * a.speed + a.phase + i * 0.5) * (i * 3);
-            ctx.lineTo(a.x + sway, a.baseY - i * segmentH);
+            const sway = Math.sin(time * a.speed + a.phase + i * 0.6) * (i * 2.5);
+            ctx.lineTo(a.x + sway, a.baseY - i * segH);
         }
         
         ctx.stroke();
 
-        // Hojas pequeñas en las algas
+        // Hojas
         for (let i = 1; i < a.segments; i++) {
-            const leafY = a.baseY - i * segmentH;
-            const sway = Math.sin(time * a.speed + a.phase + i * 0.5) * (i * 3);
+            const leafY = a.baseY - i * segH;
+            const sway = Math.sin(time * a.speed + a.phase + i * 0.6) * (i * 2.5);
             const leafX = a.x + sway;
-            
-            const leafSize = 8 + Math.random() * 8;
             const dir = i % 2 === 0 ? 1 : -1;
+            const leafSize = 6 + Math.random() * 6;
             
-            ctx.fillStyle = a.color;
+            ctx.fillStyle = `hsl(${a.hue + 10}, 45%, 15%)`;
             ctx.beginPath();
-            ctx.ellipse(leafX + dir * 6, leafY, leafSize, 3, dir * 0.5, 0, Math.PI * 2);
+            ctx.ellipse(leafX + dir * 8, leafY, leafSize, 3, dir * 0.4, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -135,74 +156,51 @@ export function createOceanAnimation(ctx, canvas) {
 
     const animate = () => {
         if (stopped) return;
-        time += 0.03;
+        time += 0.025;
 
-        // FONDO - Oscuro y profundo SIN opacidad
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bgGrad.addColorStop(0, "#001122");
-        bgGrad.addColorStop(0.3, "#001a33");
-        bgGrad.addColorStop(0.6, "#001830");
-        bgGrad.addColorStop(1, "#000a15");
-        ctx.fillStyle = bgGrad;
+        // FONDO - Muy oscuro, SIN blancura
+        ctx.fillStyle = "#000810";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // ALGAS - al fondo
+        // Capa de profundidad oscura
+        const deepGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        deepGrad.addColorStop(0, "#001020");
+        deepGrad.addColorStop(0.5, "#000c18");
+        deepGrad.addColorStop(1, "#000508");
+        ctx.fillStyle = deepGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Algas al fondo
         algae.forEach(a => drawAlgae(a));
 
         // Peces
         fish.forEach(f => {
-            f.wiggle += 0.05;
+            f.wiggle += 0.04 * f.waveAmp;
             f.x += f.speed * f.dir;
-            f.y += Math.sin(f.wiggle) * 0.3;
+            f.y += Math.sin(f.wiggle) * 0.25;
 
-            if (f.x > canvas.width + 80) f.x = -80;
-            if (f.x < -80) f.x = canvas.width + 80;
+            if (f.x > canvas.width + 60) f.x = -60;
+            if (f.x < -60) f.x = canvas.width + 60;
 
             drawFish(f);
         });
 
-        // Burbujas
+        // Burbujas sutiles
         bubbles.forEach(b => {
-            b.wobble += 0.03;
+            b.wobble += 0.025;
             b.y -= b.speed;
-            b.x += Math.sin(b.wobble) * 0.5;
+            b.x += Math.sin(b.wobble) * 0.4;
 
-            if (b.y < -10) {
-                b.y = canvas.height + 10;
+            if (b.y < -8) {
+                b.y = canvas.height + 8;
                 b.x = Math.random() * canvas.width;
             }
 
-            // Burbuja principal
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(150, 200, 255, ${b.alpha})`;
-            ctx.fill();
-
-            // Brillo de la burbuja
-            ctx.beginPath();
-            ctx.arc(b.x - b.size * 0.3, b.y - b.size * 0.3, b.size * 0.3, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${b.alpha * 0.6})`;
+            ctx.fillStyle = `rgba(80, 150, 200, ${b.alpha})`;
             ctx.fill();
         });
-
-        // Rayos de luz desde arriba - más sutiles
-        ctx.save();
-        const lightGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.5);
-        lightGrad.addColorStop(0, "rgba(100, 180, 255, 0.08)");
-        lightGrad.addColorStop(1, "transparent");
-        ctx.fillStyle = lightGrad;
-
-        for (let i = 0; i < 6; i++) {
-            const x = (i / 6) * canvas.width + 50;
-            ctx.beginPath();
-            ctx.moveTo(x - 20, 0);
-            ctx.lineTo(x + 20, 0);
-            ctx.lineTo(x + 50, canvas.height * 0.5);
-            ctx.lineTo(x - 50, canvas.height * 0.5);
-            ctx.closePath();
-            ctx.fill();
-        }
-        ctx.restore();
 
         if (!stopped) animId = requestAnimationFrame(animate);
     };

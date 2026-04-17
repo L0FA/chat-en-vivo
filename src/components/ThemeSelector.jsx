@@ -14,7 +14,6 @@ const THEME_OPTIONS = [
     { value: "forest",     label: "Bosque",     emoji: "🌲", bg: "bg-green-700" },
     { value: "vaporwave",  label: "Vaporwave",  emoji: "🌴", bg: "bg-violet-600" },
     { value: "galaxy",     label: "Galaxia",    emoji: "🌌", bg: "bg-indigo-900" },
-    { value: "minimal",    label: "Minimal",     emoji: "⚪", bg: "bg-slate-100" },
     { value: "fire",       label: "Fuego",      emoji: "🔥", bg: "bg-orange-700" },
 ];
 
