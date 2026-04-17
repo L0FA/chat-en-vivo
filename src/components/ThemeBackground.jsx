@@ -41,7 +41,8 @@ const THEME_ANIMATIONS = {
     galaxy: createGalaxyAnimation,
     vaporwave: createVaporwaveAnimation,
     retro: createRetroAnimation,
-    minimal: createMinimalAnimation
+    minimal: createMinimalAnimation,
+    default: createDefaultAnimation
 };
 
 /**
