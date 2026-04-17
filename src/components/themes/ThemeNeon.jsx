@@ -3,6 +3,7 @@
 // ============================================
 
 export function createNeonAnimation(ctx, canvas) {
+    let animId = null;
     const particles = Array.from({ length: 50 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -28,8 +29,13 @@ export function createNeonAnimation(ctx, canvas) {
             ctx.fill();
             ctx.shadowBlur = 0;
         });
-        return requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     };
 
-    return animate;
+    animate();
+
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 }

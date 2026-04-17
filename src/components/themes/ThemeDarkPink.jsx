@@ -4,6 +4,7 @@
 
 export function createDarkPinkAnimation(ctx, canvas) {
     const PETALS = ["🌸", "🌺", "🌹", "💮"];
+    let animId = null;
 
     const particles = Array.from({ length: 40 }, () => ({
         x: Math.random() * canvas.width,
@@ -27,8 +28,13 @@ export function createDarkPinkAnimation(ctx, canvas) {
             ctx.fillText(p.emoji, p.x, p.y);
         });
         ctx.globalAlpha = 1;
-        return requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     };
 
-    return animate;
+    animate();
+
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 }

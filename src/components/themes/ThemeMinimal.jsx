@@ -3,48 +3,47 @@
 // ============================================
 
 export function createMinimalAnimation(ctx, canvas) {
-    const particles = Array.from({ length: 8 }, () => ({
+    let animId = null;
+    const circles = Array.from({ length: 6 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: 30 + Math.random() * 80,
+        size: 20 + Math.random() * 60,
         vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        alpha: 0.03 + Math.random() * 0.05
+        vy: (Math.random() - 0.5) * 0.3
     }));
 
     const animate = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            if (p.x < -p.size) p.x = canvas.width + p.size;
-            if (p.x > canvas.width + p.size) p.x = -p.size;
-            if (p.y < -p.size) p.y = canvas.height + p.size;
-            if (p.y > canvas.height + p.size) p.y = -p.size;
+        circles.forEach(c => {
+            c.x += c.vx;
+            c.y += c.vy;
+            if (c.x < -c.size || c.x > canvas.width + c.size) c.vx *= -1;
+            if (c.y < -c.size || c.y > canvas.height + c.size) c.vy *= -1;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(0,0,0,${p.alpha})`;
+            ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(0,0,0,0.05)";
             ctx.lineWidth = 1;
             ctx.stroke();
         });
-        return requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     };
 
-    return animate;
+    animate();
+
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 }
 
-// ============================================
-// ❓ TEMA DEFAULT - Partículas simples
-// ============================================
-
 export function createDefaultAnimation(ctx, canvas) {
-    const particles = Array.from({ length: 30 }, () => ({
+    let animId = null;
+    const particles = Array.from({ length: 25 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: 2 + Math.random() * 4,
+        size: 1 + Math.random() * 3,
         vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        alpha: 0.1 + Math.random() * 0.2
+        vy: (Math.random() - 0.5) * 0.5
     }));
 
     const animate = () => {
@@ -56,11 +55,16 @@ export function createDefaultAnimation(ctx, canvas) {
             if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,105,180,${p.alpha})`;
+            ctx.fillStyle = "rgba(255,105,180,0.5)";
             ctx.fill();
         });
-        return requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     };
 
-    return animate;
+    animate();
+
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 }
