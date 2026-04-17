@@ -16,7 +16,7 @@ import ProfileDropdown from "./ProfileDropdown";
 import Settings from "./Settings";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers } = useChat();
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers } = useChat();
     const { socket, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     

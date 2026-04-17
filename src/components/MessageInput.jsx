@@ -32,7 +32,7 @@ export default function MessageInput({ socket, onType, stopTyping, currentRoom }
             })
         };
         
-        socket.emit("Mensaje en Chat", payload, (response) => {
+        socket.emit("Mensaje en Chat", payload, () => {
             setSendingId(null);
             setInput("");
             setReplyingTo(null);

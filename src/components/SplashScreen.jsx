@@ -73,7 +73,7 @@ export default function SplashScreen() {
 
     return (
         <div
-            className={`fixed inset-0 bg-black flex flex-col items-center justify-center z-[9999] transition-opacity duration-500 ${
+            className={`fixed inset-0 bg-black flex flex-col items-center justify-center z-9999 transition-opacity duration-500 ${
                 fadeOut ? "opacity-0" : "opacity-100"
             }`}
             style={{ height: "100dvh" }}

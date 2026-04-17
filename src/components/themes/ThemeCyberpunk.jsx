@@ -30,9 +30,9 @@ export function createCyberpunkAnimation(ctx, canvas) {
 
         nodes.forEach(n => {
             n.pulse += 0.05;
-            const glow = (Math.sin(n.pulse) + 1) / 2;
+            const sizeMod = (Math.sin(n.pulse) + 1) / 2;
             ctx.beginPath();
-            ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
+            ctx.arc(n.x, n.y, n.size + sizeMod * 1.5, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(255,0,128,0.22)";
             ctx.shadowBlur = 5;
             ctx.shadowColor = "#ff0080";
