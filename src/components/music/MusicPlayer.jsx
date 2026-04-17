@@ -36,7 +36,7 @@ export default function MusicPlayer({
         <div className="bg-[#2a1a2a] p-4 rounded-t-xl border-t border-x border-pink-500/30 shadow-lg shadow-pink-500/10">
             {/* Info de canción */}
             <div className="flex items-center gap-3 mb-3">
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-2xl shadow-lg">
+                <div className="w-14 h-14 rounded-lg bg-linear-to-br from-pink-500 to-purple-600 flex items-center justify-center text-2xl shadow-lg">
                     🎵
                 </div>
                 <div className="flex-1 min-w-0">
@@ -60,7 +60,7 @@ export default function MusicPlayer({
                 }}
             >
                 <div 
-                    className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full relative shadow-sm"
+                    className="h-full bg-linear-to-r from-pink-500 to-purple-500 rounded-full relative shadow-sm"
                     style={{ width: `${progress}%` }}
                 >
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -78,7 +78,7 @@ export default function MusicPlayer({
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={onPlayPause}
-                        className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 flex items-center justify-center text-white text-2xl shadow-lg"
+                        className="w-12 h-12 rounded-full bg-linear-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 flex items-center justify-center text-white text-2xl shadow-lg"
                     >
                         {isPlaying ? "⏸️" : "▶️"}
                     </button>

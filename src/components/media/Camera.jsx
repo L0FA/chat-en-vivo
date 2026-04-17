@@ -19,8 +19,14 @@ export default function Camera({ onCapture, onClose }) {
     const videoRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const videoChunksRef = useRef([]);
+    const onCaptureRef = useRef(onCapture);
+    const onCloseRef = useRef(onClose);
 
-    // Funciones definidas antes del useEffect que las usa
+    useEffect(() => {
+        onCaptureRef.current = onCapture;
+        onCloseRef.current = onClose;
+    });
+
     const cleanup = useCallback(() => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(t => t.stop());
@@ -41,16 +47,14 @@ export default function Camera({ onCapture, onClose }) {
         } catch (err) {
             console.error("Error cámara:", err);
             alert("No se pudo acceder a la cámara.");
-            onClose();
+            onCloseRef.current?.();
         }
-    }, [onClose]);
+    }, []);
 
-    // Iniciar cámara al montar
     useEffect(() => {
         startCamera();
         return cleanup;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [startCamera, cleanup]);
 
     const takePhoto = useCallback(() => {
         const video = videoRef.current;
@@ -63,8 +67,8 @@ export default function Camera({ onCapture, onClose }) {
         const src = canvas.toDataURL("image/jpeg");
         
         cleanup();
-        onCapture({ src, type: "image" });
-    }, [onCapture]);
+        onCaptureRef.current?.({ src, type: "image" });
+    }, [cleanup]);
 
     const startVideoRecording = useCallback(() => {
         if (!streamRef.current) return;
@@ -80,12 +84,12 @@ export default function Camera({ onCapture, onClose }) {
             const blob = new Blob(videoChunksRef.current, { type: mimeType });
             const src = URL.createObjectURL(blob);
             cleanup();
-            onCapture({ src, type: "video", blob });
+            onCaptureRef.current?.({ src, type: "video", blob });
         };
         recorder.start();
         mediaRecorderRef.current = recorder;
         setVideoRecording(true);
-    }, [onCapture]);
+    }, [cleanup]);
 
     const stopVideoRecording = useCallback(() => {
         mediaRecorderRef.current?.stop();
