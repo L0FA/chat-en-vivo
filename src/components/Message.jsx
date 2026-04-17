@@ -72,7 +72,7 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
         const htmlContent = highlightMentions(linkify(message.content), currentUser);
         return (
             <p 
-                className="text-[0.95rem] leading-relaxed break-words whitespace-pre-wrap"
+                className="text-[0.95rem] leading-relaxed wrap-break-word whitespace-pre-wrap"
                 dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
         );

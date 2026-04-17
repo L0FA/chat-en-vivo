@@ -6,7 +6,6 @@ export function createVaporwaveAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
     let gridOffset = 0;
-    let time = 0;
 
     const cx = canvas.width / 2;
     const horizon = canvas.height * 0.42;
@@ -21,7 +20,6 @@ export function createVaporwaveAnimation(ctx, canvas) {
     const animate = () => {
         if (stopped) return;
         
-        time += 0.02;
         gridOffset = (gridOffset + 1.5) % 40;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
