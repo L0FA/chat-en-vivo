@@ -1,5 +1,5 @@
 // ============================================
-// 🌲 TEMA FOREST - Bosques procedurales (SIN opacidad)
+// 🌲 TEMA FOREST - Estilo chat-en-vivo (fondo claro)
 // ============================================
 
 export function createForestAnimation(ctx, canvas) {
@@ -9,53 +9,44 @@ export function createForestAnimation(ctx, canvas) {
     let time = 0;
 
     const forestLayers = [
-        { depth: 0.2, count: 10 },
-        { depth: 0.5, count: 14 },
-        { depth: 1, count: 18 }
+        { depth: 0.2, count: 8 },
+        { depth: 0.5, count: 12 },
+        { depth: 1, count: 16 }
     ];
 
     const trees = forestLayers.flatMap(layer =>
         Array.from({ length: layer.count }, () => ({
             x: Math.random() * canvas.width,
             depth: layer.depth,
-            height: canvas.height * (0.3 + Math.random() * 0.55),
+            height: canvas.height * (0.3 + Math.random() * 0.5),
             swayOffset: Math.random() * Math.PI
         }))
     );
 
-    const fireflies = Array.from({ length: 25 }, () => ({
+    const fireflies = Array.from({ length: 20 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.2,
-        vy: (Math.random() - 0.5) * 0.2,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
         pulse: Math.random() * Math.PI * 2
-    }));
-
-    const leaves = Array.from({ length: 30 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: 5 + Math.random() * 10,
-        speed: 0.15 + Math.random() * 0.8,
-        wobble: Math.random() * Math.PI * 2,
-        depth: Math.random()
     }));
 
     const drawTree = (t, sway) => {
         const x = t.x + sway;
         const baseY = canvas.height;
-        const trunkWidth = 4 + t.depth * 12;
+        const trunkWidth = 4 + t.depth * 10;
         const trunkHeight = t.height;
         const baseX = x + trunkWidth / 2;
 
-        ctx.fillStyle = "#080808";
+        ctx.fillStyle = "#14331f";
         ctx.fillRect(x, baseY - trunkHeight, trunkWidth, trunkHeight);
 
-        const layers = 3 + Math.floor(t.depth * 3);
+        const layers = 3 + Math.floor(t.depth * 2);
         for (let i = 0; i < layers; i++) {
             const variation = 0.85 + Math.sin(t.swayOffset + i) * 0.1;
-            const width = (55 + t.depth * 110) * (1 - i * 0.28) * variation;
-            const height = 20 + t.depth * 12;
-            const yOffset = i * (height * 0.65);
+            const width = (45 + t.depth * 90) * (1 - i * 0.26) * variation;
+            const height = 18 + t.depth * 10;
+            const yOffset = i * (height * 0.6);
 
             ctx.beginPath();
             ctx.moveTo(baseX, baseY - trunkHeight - yOffset - height);
@@ -63,32 +54,36 @@ export function createForestAnimation(ctx, canvas) {
             ctx.lineTo(baseX + width / 2, baseY - trunkHeight - yOffset);
             ctx.closePath();
 
-            const shade = Math.floor(15 + t.depth * 35 - i * 5);
-            ctx.fillStyle = `rgb(${shade}, ${shade + 8}, ${shade})`;
+            const shade = Math.floor(45 + t.depth * 50 - i * 8);
+            ctx.fillStyle = `rgb(${shade}, ${shade + 20}, ${shade})`;
             ctx.fill();
         }
     };
 
     const animate = () => {
         if (stopped) return;
-        wind += 0.005 + Math.sin(time * 0.25) * 0.002;
-        time += 0.008;
+        wind += 0.004;
+        time += 0.006;
 
-        ctx.fillStyle = "#000000";
+        // Fondo estilo chat-en-vivo - gradiente claro SIN opacidad
+        ctx.fillStyle = "#f1fbf3";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#050a05";
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "#dff2e2");
+        gradient.addColorStop(1, "#f1fbf3");
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         trees.forEach(t => {
-            const windFactor = Math.sin(wind + t.swayOffset) * (2.5 + t.depth * 7);
+            const windFactor = Math.sin(wind + t.swayOffset) * (2 + t.depth * 5);
             drawTree(t, windFactor);
         });
 
         fireflies.forEach(f => {
-            f.x += f.vx + Math.sin(time + f.y * 0.008) * 0.1;
+            f.x += f.vx + Math.sin(time + f.y * 0.006) * 0.08;
             f.y += f.vy;
-            f.pulse += 0.04;
+            f.pulse += 0.035;
             const bright = Math.sin(f.pulse) > 0;
 
             if (f.x < 0) f.x = canvas.width;
@@ -96,25 +91,9 @@ export function createForestAnimation(ctx, canvas) {
             if (f.y < 0) f.y = canvas.height;
             if (f.y > canvas.height) f.y = 0;
 
-            ctx.fillStyle = bright ? "#88ff55" : "#44aa33";
+            ctx.fillStyle = bright ? "#22c55e" : "#16a34a";
             ctx.beginPath();
-            ctx.arc(f.x, f.y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        leaves.forEach(l => {
-            l.y += l.speed * (0.35 + l.depth);
-            l.wobble += 0.012;
-            l.x += Math.sin(l.wobble + wind) * (0.5 + l.depth * 1.5);
-
-            if (l.y > canvas.height) {
-                l.y = -15;
-                l.x = Math.random() * canvas.width;
-            }
-
-            ctx.fillStyle = "#1a2a1a";
-            ctx.beginPath();
-            ctx.arc(l.x, l.y, l.size * 0.2, 0, Math.PI * 2);
+            ctx.arc(f.x, f.y, 1.2, 0, Math.PI * 2);
             ctx.fill();
         });
 

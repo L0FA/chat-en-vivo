@@ -1,63 +1,63 @@
 // ============================================
-// 🌌 TEMA GALAXY - Galaxia con черная дыра y efecto succion
+// 🌌 TEMA GALAXY - Estilo chat-en-vivo (oscuro sin opacidad)
 // ============================================
 
 export function createGalaxyAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
 
-    const createGalaxy = () => {
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const densityFactor = Math.min(canvas.width, canvas.height) / 700;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
 
-        return {
-            stars: Array.from({ length: 140 * densityFactor }, () => ({
-                angle: Math.random() * Math.PI * 2,
-                radius: 50 + Math.random() * (canvas.width * 0.55),
-                speed: 0.00035 + Math.random() * 0.0014,
-                size: 0.4 + Math.random() * 1.8,
-                hue: 200 + Math.random() * 160
-            })),
-            particles: Array.from({ length: 80 * densityFactor }, () => ({
-                angle: Math.random() * Math.PI * 2,
-                radius: 70 + Math.random() * (canvas.width * 0.45),
-                speed: 0.0018 + Math.random() * 0.0035,
-                size: 0.9 + Math.random() * 2.2,
-                life: Math.random()
-            })),
-            shootingStars: [],
-            centerX,
-            centerY
-        };
-    };
+    const stars = Array.from({ length: 120 }, () => ({
+        angle: Math.random() * Math.PI * 2,
+        radius: 40 + Math.random() * (canvas.width * 0.5),
+        speed: 0.0003 + Math.random() * 0.0012,
+        size: 0.4 + Math.random() * 1.5,
+        hue: 200 + Math.random() * 140
+    }));
 
-    let galaxy = createGalaxy();
+    const particles = Array.from({ length: 60 }, () => ({
+        angle: Math.random() * Math.PI * 2,
+        radius: 60 + Math.random() * (canvas.width * 0.4),
+        speed: 0.0015 + Math.random() * 0.003,
+        size: 0.8 + Math.random() * 1.8,
+        life: Math.random()
+    }));
+
     let rotation = 0;
     let time = 0;
+    const shootingStars = [];
 
     const animate = () => {
         if (stopped) return;
-        const { centerX, centerY } = galaxy;
-        rotation += 0.0018;
-        time += 0.008;
+        rotation += 0.0015;
+        time += 0.006;
 
-        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        // Fondo estilo chat-en-vivo - gradiente oscuro SIN opacidad
+        ctx.fillStyle = "#0f0c24";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bgGrad.addColorStop(0, "#1a0d30");
+        bgGrad.addColorStop(1, "#2d1548");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Brillos sutiles
         for (let i = 0; i < 2; i++) {
-            const x = centerX + Math.sin(time * 0.18 + i) * 130;
-            const y = centerY + Math.cos(time * 0.13 + i) * 105;
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 250);
-            gradient.addColorStop(0, `hsla(${255 + i * 35},100%,55%,0.04)`);
+            const x = centerX + Math.sin(time * 0.15 + i) * 100;
+            const y = centerY + Math.cos(time * 0.1 + i) * 80;
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 200);
+            gradient.addColorStop(0, "#4a2080");
             gradient.addColorStop(1, "transparent");
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        const blackHoleRadius = 25;
+        const blackHoleRadius = 20;
 
-        galaxy.stars.forEach(s => {
+        stars.forEach(s => {
             s.angle += s.speed;
             let x = centerX + Math.cos(s.angle + rotation) * s.radius;
             let y = centerY + Math.sin(s.angle + rotation) * s.radius;
@@ -66,78 +66,67 @@ export function createGalaxyAnimation(ctx, canvas) {
             const dy = y - centerY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 220) {
-                const force = Math.pow((220 - dist) / 220, 1.5);
-                const suctionSpeed = 0.35;
+            if (dist < 180) {
+                const force = Math.pow((180 - dist) / 180, 1.5);
+                const suctionSpeed = 0.3;
                 x -= dx * force * suctionSpeed;
                 y -= dy * force * suctionSpeed;
 
-                if (dist < blackHoleRadius * 2.5) {
-                    s.radius = 60 + Math.random() * (canvas.width * 0.5);
+                if (dist < blackHoleRadius * 2) {
+                    s.radius = 50 + Math.random() * (canvas.width * 0.45);
                     s.angle = Math.random() * Math.PI * 2;
-                    s.speed = 0.0004 + Math.random() * 0.0015;
                 }
-
-                const fadeAlpha = Math.max(0, (dist - blackHoleRadius) / (blackHoleRadius * 2));
-                ctx.globalAlpha = fadeAlpha;
             }
 
             ctx.beginPath();
             ctx.arc(x, y, s.size, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${s.hue},100%,82%,1)`;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = `hsla(${s.hue},100%,65%,1)`;
+            ctx.fillStyle = `hsl(${s.hue}, 100%, 80%)`;
             ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.globalAlpha = 1;
         });
 
-        galaxy.particles.forEach(p => {
+        particles.forEach(p => {
             p.angle += p.speed;
-            p.radius -= 0.45;
+            p.radius -= 0.4;
             let x = centerX + Math.cos(p.angle) * p.radius;
             let y = centerY + Math.sin(p.angle) * p.radius;
 
-            ctx.beginPath();
-            ctx.arc(x, y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${p.life})`;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#ffffff";
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            if (p.radius < 22) {
-                p.radius = 70 + Math.random() * (canvas.width * 0.45);
+            if (p.radius < 18) {
+                p.radius = 55 + Math.random() * (canvas.width * 0.4);
                 p.angle = Math.random() * Math.PI * 2;
                 p.life = Math.random();
             }
+
+            ctx.beginPath();
+            ctx.arc(x, y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgb(255, 255, 255)`;
+            ctx.fill();
         });
 
-        if (Math.random() < 0.007) {
-            galaxy.shootingStars.push({
+        if (Math.random() < 0.005) {
+            shootingStars.push({
                 x: Math.random() * canvas.width,
                 y: 0,
-                vx: -2.8 - Math.random() * 1.8,
-                vy: 2.8 + Math.random() * 2.8,
+                vx: -2 - Math.random() * 1.5,
+                vy: 2 + Math.random() * 2,
                 life: 1
             });
         }
 
-        galaxy.shootingStars.forEach((ss, index) => {
+        shootingStars.forEach((ss, index) => {
             ss.x += ss.vx;
             ss.y += ss.vy;
-            ss.life -= 0.025;
+            ss.life -= 0.02;
 
             if (ss.life <= 0) {
-                galaxy.shootingStars.splice(index, 1);
+                shootingStars.splice(index, 1);
                 return;
             }
 
             ctx.beginPath();
             ctx.moveTo(ss.x, ss.y);
-            ctx.lineTo(ss.x - ss.vx * 4, ss.y - ss.vy * 4);
-            ctx.strokeStyle = `rgba(255,255,255,${ss.life})`;
-            ctx.lineWidth = 1.8;
+            ctx.lineTo(ss.x - ss.vx * 3, ss.y - ss.vy * 3);
+            ctx.strokeStyle = `rgb(255, 255, 255)`;
+            ctx.lineWidth = 1.5;
             ctx.stroke();
         });
 
