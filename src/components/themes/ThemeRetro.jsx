@@ -1,162 +1,158 @@
 // ============================================
-// 🌅 TEMA RETRO - Outrun Synthwave 80s Clásico
+// 🌅 TEMA RETRO - Outrun Synthwave 80s
 // ============================================
 
 export function createRetroAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
-    let time = 0;
+    let gridOffset = 0;
     const horizon = canvas.height * 0.5;
+    const cx = canvas.width / 2;
 
-    const stars = Array.from({ length: 100 }, () => ({
+    const stars = Array.from({ length: 80 }, () => ({
         x: Math.random() * canvas.width,
-        y: Math.random() * horizon * 0.8,
-        size: 0.6 + Math.random() * 1.4,
-        twinkle: Math.random() * Math.PI * 2
+        y: Math.random() * horizon * 0.7,
+        size: 0.5 + Math.random() * 1.2,
+        blink: Math.random() * Math.PI * 2
     }));
 
-    const mountainLayers = [
-        { peaks: [], height: 180, color: ["#6b1a5c", "#8a2d7a", "#a83d96"] },
-        { peaks: [], height: 120, color: ["#4a1245", "#6a1f60", "#8a2d7a"] },
-        { peaks: [], height: 70, color: ["#2d0a2a", "#4a1245", "#6a1a5c"] }
+    const mountains = [
+        { peaks: [], h: 200, c1: "#5c1a4a", c2: "#7a2a5c", c3: "#a03d80" },
+        { peaks: [], h: 140, c1: "#3a1240", c2: "#501a5c", c3: "#702a7a" },
+        { peaks: [], h: 80, c1: "#1a0a20", c2: "#2a1040", c3: "#401a60" }
     ];
 
-    mountainLayers.forEach(layer => {
-        for (let x = -50; x <= canvas.width + 50; x += 25) {
-            layer.peaks.push({
-                x,
-                h: layer.height * (0.6 + Math.random() * 0.5)
-            });
+    mountains.forEach(m => {
+        for (let x = -100; x <= canvas.width + 100; x += 40) {
+            m.peaks.push({ x, h: m.h * (0.5 + Math.random() * 0.6) });
         }
     });
 
-    let gridOffset = 0;
-
     const animate = () => {
         if (stopped) return;
-        
-        time += 0.02;
-        gridOffset = (gridOffset + 1.5) % 30;
+        gridOffset = (gridOffset + 2) % 35;
 
-        // Cielo - gradiente sólido sin opacidad
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, horizon);
-        skyGrad.addColorStop(0, "#0d0018");
-        skyGrad.addColorStop(0.3, "#1a0a2e");
-        skyGrad.addColorStop(0.6, "#3d1250");
-        skyGrad.addColorStop(1, "#6b1a6b");
-        ctx.fillStyle = skyGrad;
+        // CIELO - Gradiente SIN opacidad
+        const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+        sky.addColorStop(0, "#080010");
+        sky.addColorStop(0.2, "#15002a");
+        sky.addColorStop(0.5, "#2d0050");
+        sky.addColorStop(0.8, "#500080");
+        sky.addColorStop(1, "#7000a0");
+        ctx.fillStyle = sky;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Estrellas
+        // ESTRELLAS
         stars.forEach(s => {
-            s.twinkle += 0.03;
-            const alpha = 0.6 + Math.sin(s.twinkle) * 0.4;
+            s.blink += 0.04;
+            const a = 0.5 + Math.sin(s.blink) * 0.5;
+            ctx.fillStyle = `rgb(255, 255, 255)`;
+            ctx.globalAlpha = a;
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
             ctx.fill();
         });
+        ctx.globalAlpha = 1;
 
-        // Sol Outrun
-        const sunX = canvas.width / 2;
-        const sunY = horizon - 40;
-        const sunRadius = Math.min(canvas.width, canvas.height) * 0.2;
+        // SOL - Grande y colorful
+        const sunY = horizon - 50;
+        const sunR = Math.min(canvas.width, canvas.height) * 0.22;
 
-        // Brillo exterior del sol
-        const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 3);
-        sunGlow.addColorStop(0, "rgba(255, 180, 100, 0.5)");
-        sunGlow.addColorStop(0.3, "rgba(255, 100, 150, 0.3)");
-        sunGlow.addColorStop(0.7, "rgba(255, 50, 100, 0.1)");
-        sunGlow.addColorStop(1, "transparent");
-        ctx.fillStyle = sunGlow;
-        ctx.fillRect(0, 0, canvas.width, horizon + 100);
+        // Glow del sol
+        const glow = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, sunR * 3);
+        glow.addColorStop(0, "rgb(255, 200, 100)");
+        glow.addColorStop(0.3, "rgb(255, 100, 150)");
+        glow.addColorStop(0.7, "rgb(200, 50, 100)");
+        glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, canvas.width, horizon + 80);
 
         // Cuerpo del sol
-        const sunGrad = ctx.createLinearGradient(sunX, sunY - sunRadius, sunX, sunY + sunRadius);
-        sunGrad.addColorStop(0, "#ffffaa");
-        sunGrad.addColorStop(0.2, "#ffdd00");
-        sunGrad.addColorStop(0.5, "#ff8800");
-        sunGrad.addColorStop(1, "#ff3366");
-
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+        const sunGrad = ctx.createLinearGradient(cx, sunY - sunR, cx, sunY + sunR);
+        sunGrad.addColorStop(0, "#ffffcc");
+        sunGrad.addColorStop(0.15, "#ffff00");
+        sunGrad.addColorStop(0.4, "#ffaa00");
+        sunGrad.addColorStop(0.7, "#ff5500");
+        sunGrad.addColorStop(1, "#ff0077");
         ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(cx, sunY, sunR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Líneas de escaneo en el sol
-        ctx.save();
-        ctx.globalCompositeOperation = "destination-out";
-        for (let i = 0; i < 8; i++) {
-            const lineY = sunY + (i * 14) - 15 + Math.sin(time + i * 0.5) * 3;
-            const lineH = 2 + i * 0.4;
-            if (lineY > sunY - sunRadius * 0.5 && lineY < sunY + sunRadius * 0.8) {
-                ctx.fillRect(sunX - sunRadius, lineY, sunRadius * 2, lineH);
-            }
-        }
-        ctx.globalCompositeOperation = "source-over";
-        ctx.restore();
+        // Ojos del sol (estilo anime retro)
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(cx - 20, sunY - 5, 10, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 16, sunY - 3, 8, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Montañas
-        mountainLayers.forEach((layer, idx) => {
-            const mtnGrad = ctx.createLinearGradient(0, horizon - layer.height, 0, horizon);
-            mtnGrad.addColorStop(0, layer.color[0]);
-            mtnGrad.addColorStop(0.5, layer.color[1]);
-            mtnGrad.addColorStop(1, layer.color[2]);
+        // Pupilas
+        ctx.fillStyle = "#220044";
+        ctx.beginPath();
+        ctx.arc(cx - 18, sunY - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + 18, sunY - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
 
-            ctx.fillStyle = mtnGrad;
+        // MONTAÑAS - Capas coloridas SIN opacidad
+        mountains.forEach((m, idx) => {
+            const mg = ctx.createLinearGradient(0, horizon - m.h, 0, horizon);
+            mg.addColorStop(0, m.c1);
+            mg.addColorStop(0.5, m.c2);
+            mg.addColorStop(1, m.c3);
+            ctx.fillStyle = mg;
+            
             ctx.beginPath();
-            ctx.moveTo(-50, horizon);
-            
-            layer.peaks.forEach((peak, i) => {
-                const xOffset = idx * 25;
-                const wave = Math.sin(i * 0.3 + time * 0.5) * 8;
-                ctx.lineTo(peak.x + xOffset, horizon - peak.h + wave);
+            ctx.moveTo(-100, horizon);
+            m.peaks.forEach((p, i) => {
+                ctx.lineTo(p.x - idx * 40, horizon - p.h + Math.sin(i) * 10);
             });
-            
-            ctx.lineTo(canvas.width + 50, horizon);
+            ctx.lineTo(canvas.width + 100, horizon);
             ctx.closePath();
             ctx.fill();
         });
 
-        // Suelo - gradiente sólido
-        const groundGrad = ctx.createLinearGradient(0, horizon, 0, canvas.height);
-        groundGrad.addColorStop(0, "#0d0018");
-        groundGrad.addColorStop(0.5, "#1a0525");
-        groundGrad.addColorStop(1, "#2a0a35");
-        ctx.fillStyle = groundGrad;
+        // SUELO - Gradiente oscuro SIN opacidad
+        const ground = ctx.createLinearGradient(0, horizon, 0, canvas.height);
+        ground.addColorStop(0, "#0a0015");
+        ground.addColorStop(0.5, "#150025");
+        ground.addColorStop(1, "#250040");
+        ctx.fillStyle = ground;
         ctx.fillRect(0, horizon, canvas.width, canvas.height - horizon);
 
-        // Grid - líneas más fluidas y vibrantes
+        // GRID - Líneas vibrantes y fluidas
         ctx.save();
-        ctx.strokeStyle = "rgba(255, 80, 180, 0.7)";
-        ctx.lineWidth = 1.8;
-        ctx.shadowColor = "rgba(255, 100, 220, 0.9)";
-        ctx.shadowBlur = 12;
+        ctx.strokeStyle = "rgb(255, 80, 180)";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "rgb(255, 100, 220)";
+        ctx.shadowBlur = 15;
 
         // Horizontales - movimiento fluido
-        for (let i = 0; i < 25; i++) {
-            const y = horizon + Math.pow((i + gridOffset / 30) / 25, 2.8) * (canvas.height - horizon);
+        for (let i = 0; i < 20; i++) {
+            const base = horizon + 30 + i * i * 4;
+            const y = base + gridOffset * (1 + i * 0.1);
+            const wrappedY = ((y - horizon) % (canvas.height - horizon - 30)) + horizon + 30;
             
-            if (y > horizon + 5) {
-                ctx.globalAlpha = 0.3 + (1 - i / 25) * 0.5;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
+            const alpha = 1 - (i / 20);
+            ctx.globalAlpha = alpha * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(0, wrappedY);
+            ctx.lineTo(canvas.width, wrappedY);
+            ctx.stroke();
         }
 
-        // Verticales - perspectiva hacia el horizonte
-        ctx.globalAlpha = 0.6;
-        const centerX = canvas.width / 2;
-        
-        for (let i = -15; i <= 15; i++) {
-            const x = centerX + i * (canvas.width / 16);
-            const vanishX = centerX + i * 15;
+        // Verticales - perspectiva convergente
+        ctx.globalAlpha = 0.9;
+        for (let i = -18; i <= 18; i++) {
+            const x = cx + i * (canvas.width / 20);
+            const vanishX = cx + i * 12;
             
             ctx.beginPath();
             ctx.moveTo(x, canvas.height);
-            ctx.lineTo(vanishX, horizon + 20);
+            ctx.lineTo(vanishX, horizon + 30);
             ctx.stroke();
         }
 
