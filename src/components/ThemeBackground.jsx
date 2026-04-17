@@ -52,46 +52,43 @@ export default function ThemeBackground() {
     const { theme } = useChat();
     const canvasRef = useRef(null);
     const animFrameRef = useRef(null);
+    const ctxRef = useRef(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
+        ctxRef.current = ctx;
 
-        const resize = () => {
+        const handleResize = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         };
         
-        resize();
-        window.addEventListener("resize", resize);
-
-        // Configurar tamaño del canvas
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        // Limpiar frame anterior
-        if (animFrameRef.current) {
-            cancelAnimationFrame(animFrameRef.current);
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        handleResize();
+        window.addEventListener("resize", handleResize);
 
         // Obtener función de animación según el tema
         const createAnimation = THEME_ANIMATIONS[theme] || createDefaultAnimation;
         
         // Crear y ejecutar animación
-        const animate = createAnimation(ctx, canvas);
+        const animateResult = createAnimation(ctx, canvas);
         
-        if (typeof animate === "function") {
-            animFrameRef.current = animate();
+        if (typeof animateResult === "function") {
+            animFrameRef.current = animateResult;
         }
 
         // Cleanup al desmontar o cambiar tema
         return () => {
-            cancelAnimationFrame(animFrameRef.current);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            window.removeEventListener("resize", resize);
+            if (animFrameRef.current) {
+                cancelAnimationFrame(animFrameRef.current);
+                animFrameRef.current = null;
+            }
+            if (ctxRef.current) {
+                ctxRef.current.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            window.removeEventListener("resize", handleResize);
         };
     }, [theme]);
 

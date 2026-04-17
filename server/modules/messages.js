@@ -205,7 +205,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
     });
 
     // ---- ELIMINAR MENSAJE ----
-    socket.on("Eliminar Mensaje", async ({ messageId }, cb) => {
+    socket.on("Eliminar Mensaje", async ({ messageId, room }, cb) => {
         const user = connectedUsers.get(socket.id);
         if (!user) {
             cb?.({ status: "error", message: "No logueado" });
@@ -213,7 +213,9 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         }
 
         const isAdmin = ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
-        console.log("🗑️ Eliminando mensaje:", messageId, "por:", user.nombre, "isAdmin:", isAdmin);
+        const targetRoom = room || user?.sala || userRoom || "sala-global";
+        
+        console.log("🗑️ Eliminando mensaje:", messageId, "por:", user.nombre, "isAdmin:", isAdmin, "en sala:", targetRoom);
 
         try {
             // Admins pueden eliminar cualquier mensaje
@@ -229,10 +231,13 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
                 });
             }
 
-            io.to(userRoom).emit("Mensaje Eliminado", { messageId });
+            // Emitir a la sala correcta
+            io.to(targetRoom).emit("Mensaje Eliminado", { messageId });
+            socket.broadcast.to(targetRoom).emit("Mensaje Eliminado", { messageId });
             cb?.({ status: "ok" });
-        } catch {
-            cb?.({ status: "error" });
+        } catch (e) {
+            console.error("❌ Error eliminando mensaje:", e);
+            cb?.({ status: "error", message: e.message });
         }
     });
 

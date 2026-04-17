@@ -167,7 +167,7 @@ function MessageInner({ message, currentUser, socket, onImageClick, onPlayMusic,
     };
 
     const handleDelete = () => {
-        socket?.emit("Eliminar Mensaje", { messageId: message.id });
+        socket?.emit("Eliminar Mensaje", { messageId: message.id, room: message.room });
         setShowDeleteConfirm(false);
     };
 
