@@ -121,10 +121,12 @@ export function ChatProvider({ children }) {
         }
     }, []);
 
+    const clearMessages = useCallback(() => setMessages([]), []);
+
     return (
         <ChatContext.Provider value={{
             user, password, login, avatar, updateProfile,
-            messages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
+            messages, setMessages, clearMessages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
             theme, changeTheme,
             connectedUsers, setConnectedUsers,
             replyingTo, setReplyingTo,

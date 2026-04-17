@@ -68,7 +68,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         try {
             await db.execute({
                 sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
             });
             console.log("✅ Mensaje guardado:", id, "en sala:", room);

@@ -75,6 +75,12 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
     // ---- CARGAR MENSAJES POR SALA ----
     // eslint-disable-next-line no-unused-vars
     socket.on("Cargar Mensajes Sala", async ({ room }, _cb) => {
+        const currentUser = connectedUsers.get(socket.id);
+        const adminList = (process.env.ADMINS || "").split(",").map(a => a.trim()).filter(Boolean);
+        const isHardcodedAdmin = currentUser && adminList.includes(currentUser.nombre);
+        
+        console.log(`📥 [PAGINATION] Cargar Mensajes de sala: ${room} para usuario: ${currentUser?.nombre || "N/A"} (Hardcoded Admin: ${isHardcodedAdmin})`);
+
         try {
             // Unir socket a la sala
             if (room && !socket.rooms.has(room)) {
@@ -82,12 +88,18 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
             }
             
             let results;
-            // Verificar si es la Sala de Admins y si el usuario tiene permiso (esAdmin desde DB)
-            const adminCheck = await db.execute({
-                sql: "SELECT esAdmin FROM MiembrosSala WHERE salaId = ? AND usuario = ?",
-                args: ["sala-admins-global", connectedUsers.get(socket.id)?.nombre]
-            });
-            const isAuthorizedAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1;
+            // Detección robusta de Admin para el Registro Global
+            let isAuthorizedAdmin = isHardcodedAdmin;
+            
+            if (room === "sala-admins-global" && currentUser) {
+                const adminCheck = await db.execute({
+                    sql: "SELECT esAdmin FROM MiembrosSala WHERE salaId = ? AND usuario = ?",
+                    args: ["sala-admins-global", currentUser.nombre]
+                });
+                const dbIsAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1;
+                isAuthorizedAdmin = isHardcodedAdmin || dbIsAdmin;
+                console.log(`🛡️ [PAGINATION] Admin Check para sala global: DB=${dbIsAdmin}, Env=${isHardcodedAdmin} => Final=${isAuthorizedAdmin}`);
+            }
 
             if (room === "sala-admins-global" && isAuthorizedAdmin) {
                 // REGISTRO ANTIGUO: Ver todos los mensajes de todas las salas
@@ -95,13 +107,18 @@ export async function setupPagination(io, socket, connectedUsers, isAdmin, userR
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: []
                 });
+                console.log(`🌌 [PAGINATION] Sirviendo REGISTRO GLOBAL (${results.rows.length} mensajes)`);
             } else {
                 // Mensajes normales filtrados por sala
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: [room]
                 });
+                console.log(`📝 [PAGINATION] Sirviendo mensajes normales (${results.rows.length} mensajes) para sala: ${room}`);
             }
+
+            // Llamar al callback si existe
+            _cb?.({ status: "ok", count: results.rows.length });
             
             const rows = [...results.rows].reverse();
             
