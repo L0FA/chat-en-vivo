@@ -22,7 +22,7 @@ const port = process.env.PORT ?? 3000;
 
 const io = new Server(server, {
     cors: { 
-        origin: ["https://l0fachat.online", "http://localhost:5173", "http://localhost:3000"], 
+        origin: ["https://chat.portfolioslf.com", "https://l0fachat.online", "http://localhost:5173", "http://localhost:3000"], 
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -167,7 +167,7 @@ app.use((req, res, next) => {
 // CORS preflight
 app.options("*", (req, res, next) => {
     const origin = req.headers.origin;
-    if (["https://l0fachat.online", "http://localhost:5173", "http://localhost:3000"].includes(origin)) {
+    if (["https://chat.portfolioslf.com", "https://l0fachat.online", "http://localhost:5173", "http://localhost:3000"].includes(origin)) {
         res.set("Access-Control-Allow-Origin", origin);
         res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
