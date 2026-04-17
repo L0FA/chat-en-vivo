@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export function useSocket(nombreUsuario, password = "") {
     const socket = useMemo(() => {
@@ -14,8 +14,7 @@ export function useSocket(nombreUsuario, password = "") {
             reconnectionDelay: 500,
             reconnectionDelayMax: 2000,
             timeout: 20000,
-            forceNew: false,
-            withCredentials: true
+            forceNew: false
         });
     }, [nombreUsuario, password]);
 
