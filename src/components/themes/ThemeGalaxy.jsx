@@ -1,5 +1,5 @@
 // ============================================
-// 🌌 TEMA GALAXY - Galaxia con黑洞 y efectos
+// 🌌 TEMA GALAXY - Galaxia con черная дыра y efecto succion
 // ============================================
 
 export function createGalaxyAnimation(ctx, canvas) {
@@ -42,7 +42,7 @@ export function createGalaxyAnimation(ctx, canvas) {
         rotation += 0.0018;
         time += 0.008;
 
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         for (let i = 0; i < 2; i++) {
@@ -55,6 +55,8 @@ export function createGalaxyAnimation(ctx, canvas) {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
+        const blackHoleRadius = 25;
+
         galaxy.stars.forEach(s => {
             s.angle += s.speed;
             let x = centerX + Math.cos(s.angle + rotation) * s.radius;
@@ -64,10 +66,17 @@ export function createGalaxyAnimation(ctx, canvas) {
             const dy = y - centerY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 200) {
-                const force = (200 - dist) / 200;
-                x -= dx * force * 0.75;
-                y -= dy * force * 0.75;
+            if (dist < 220) {
+                const force = Math.pow((220 - dist) / 220, 1.5);
+                const suctionSpeed = 0.35;
+                x -= dx * force * suctionSpeed;
+                y -= dy * force * suctionSpeed;
+
+                if (dist < blackHoleRadius * 2) {
+                    s.radius = 60 + Math.random() * (canvas.width * 0.5);
+                    s.angle = Math.random() * Math.PI * 2;
+                    s.speed = 0.0004 + Math.random() * 0.0015;
+                }
             }
 
             ctx.beginPath();

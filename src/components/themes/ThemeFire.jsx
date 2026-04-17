@@ -6,56 +6,97 @@ export function createFireAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
 
-    const fireParticles = Array.from({ length: 150 }, () => ({
-        x: Math.random() * canvas.width,
-        y: canvas.height + Math.random() * 150,
-        size: 3 + Math.random() * 12,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: -(2 + Math.random() * 4),
-        life: 0.7 + Math.random() * 0.5,
-        decay: 0.006 + Math.random() * 0.018
-    }));
-
-    const smokeParticles = Array.from({ length: 40 }, () => ({
+    const fireLines = Array.from({ length: 40 }, () => ({
         x: Math.random() * canvas.width,
         y: canvas.height,
-        size: 15 + Math.random() * 25,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: -(0.5 + Math.random() * 1),
-        alpha: 0.2 + Math.random() * 0.3,
-        decay: 0.002 + Math.random() * 0.004
+        height: 80 + Math.random() * 180,
+        width: 4 + Math.random() * 8,
+        life: 0.6 + Math.random() * 0.4,
+        speed: 1.8 + Math.random() * 2.5,
+        decay: 0.004 + Math.random() * 0.012,
+        wobble: Math.random() * Math.PI * 2,
+        hue: 20 + Math.random() * 30
     }));
 
-    const embers = Array.from({ length: 50 }, () => ({
+    const fireParticles = Array.from({ length: 60 }, () => ({
         x: Math.random() * canvas.width,
-        y: canvas.height,
-        size: 1 + Math.random() * 3,
-        vx: (Math.random() - 0.5) * 2,
-        vy: -(1.5 + Math.random() * 3),
+        y: canvas.height + Math.random() * 80,
+        size: 2 + Math.random() * 6,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -(1.5 + Math.random() * 2.5),
         life: 0.5 + Math.random() * 0.5,
-        decay: 0.008 + Math.random() * 0.018
+        decay: 0.005 + Math.random() * 0.015
+    }));
+
+    const smokeParticles = Array.from({ length: 25 }, () => ({
+        x: Math.random() * canvas.width,
+        y: canvas.height,
+        size: 12 + Math.random() * 20,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -(0.4 + Math.random() * 0.8),
+        alpha: 0.15 + Math.random() * 0.25,
+        decay: 0.0015 + Math.random() * 0.003
+    }));
+
+    const embers = Array.from({ length: 35 }, () => ({
+        x: Math.random() * canvas.width,
+        y: canvas.height,
+        size: 0.8 + Math.random() * 2.2,
+        vx: (Math.random() - 0.5) * 1.8,
+        vy: -(1.2 + Math.random() * 2.5),
+        life: 0.4 + Math.random() * 0.5,
+        decay: 0.006 + Math.random() * 0.015
     }));
 
     let wind = 0;
 
     const animate = () => {
         if (stopped) return;
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
+        ctx.fillStyle = "rgba(0,0,0,0.12)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        wind += 0.008;
+        wind += 0.006;
+
+        fireLines.forEach(line => {
+            line.life -= line.decay;
+            line.wobble += 0.025;
+            const x = line.x + Math.sin(line.wobble) * (line.life * 8);
+            const currentHeight = line.height * line.life;
+            
+            const grad = ctx.createLinearGradient(x, canvas.height, x, canvas.height - currentHeight);
+            grad.addColorStop(0, `hsla(${line.hue + 30}, 100%, 60%, ${line.life})`);
+            grad.addColorStop(0.4, `hsla(${line.hue + 10}, 100%, 55%, ${line.life * 0.85})`);
+            grad.addColorStop(0.7, `hsla(${line.hue - 5}, 100%, 50%, ${line.life * 0.6})`);
+            grad.addColorStop(1, `hsla(${line.hue - 15}, 100%, 40%, 0)`);
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(x - line.width, canvas.height);
+            ctx.quadraticCurveTo(x - line.width * 0.3, canvas.height - currentHeight * 0.6, x, canvas.height - currentHeight);
+            ctx.quadraticCurveTo(x + line.width * 0.3, canvas.height - currentHeight * 0.6, x + line.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            if (line.life <= 0 || line.y < canvas.height * 0.15) {
+                line.x = Math.random() * canvas.width;
+                line.y = canvas.height;
+                line.life = 1;
+                line.height = 80 + Math.random() * 180;
+                line.wobble = Math.random() * Math.PI * 2;
+            }
+        });
 
         fireParticles.forEach(p => {
             p.life -= p.decay;
-            p.x += p.vx + Math.sin(wind + p.y * 0.008) * 0.3;
+            p.x += p.vx + Math.sin(wind + p.y * 0.006) * 0.25;
             p.y += p.vy;
-            p.size *= 1.012;
+            p.size *= 1.008;
 
-            if (p.life <= 0 || p.y < canvas.height * 0.2) {
+            if (p.life <= 0 || p.y < canvas.height * 0.18) {
                 p.x = Math.random() * canvas.width;
-                p.y = canvas.height + Math.random() * 80;
+                p.y = canvas.height + Math.random() * 60;
                 p.life = 1;
-                p.size = 3 + Math.random() * 12;
-                p.vy = -(2 + Math.random() * 4);
+                p.size = 2 + Math.random() * 6;
+                p.vy = -(1.5 + Math.random() * 2.5);
             }
 
             const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
