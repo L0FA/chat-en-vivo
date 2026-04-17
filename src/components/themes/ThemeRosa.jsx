@@ -7,15 +7,15 @@ export function createRosaAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
     
-    const particles = Array.from({ length: 60 }, () => ({
+    const particles = Array.from({ length: 30 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: 16 + Math.random() * 18,
-        speed: 1.2 + Math.random() * 2.5,
+        size: 18 + Math.random() * 16,
+        speed: 3 + Math.random() * 4,
         wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: 0.012 + Math.random() * 0.02,
+        wobbleSpeed: 0.02 + Math.random() * 0.03,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.04,
+        rotationSpeed: (Math.random() - 0.5) * 0.08,
         emoji: PETALS[Math.floor(Math.random() * PETALS.length)]
     }));
 

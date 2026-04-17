@@ -72,11 +72,14 @@ export function createGalaxyAnimation(ctx, canvas) {
                 x -= dx * force * suctionSpeed;
                 y -= dy * force * suctionSpeed;
 
-                if (dist < blackHoleRadius * 2) {
+                if (dist < blackHoleRadius * 2.5) {
                     s.radius = 60 + Math.random() * (canvas.width * 0.5);
                     s.angle = Math.random() * Math.PI * 2;
                     s.speed = 0.0004 + Math.random() * 0.0015;
                 }
+
+                const fadeAlpha = Math.max(0, (dist - blackHoleRadius) / (blackHoleRadius * 2));
+                ctx.globalAlpha = fadeAlpha;
             }
 
             ctx.beginPath();
@@ -86,6 +89,7 @@ export function createGalaxyAnimation(ctx, canvas) {
             ctx.shadowColor = `hsla(${s.hue},100%,65%,1)`;
             ctx.fill();
             ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
         });
 
         galaxy.particles.forEach(p => {
