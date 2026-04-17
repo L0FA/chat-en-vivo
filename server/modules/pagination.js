@@ -7,11 +7,12 @@ import { db } from "./database.js";
 
 const PAGE_SIZE = 20;
 
-export async function setupPagination(io, socket, connectedUsers, isAdmin, userRoom) {
+export async function setupPagination(io, socket, connectedUsers) {
     // ---- CARGAR MENSAJES ANTERIORES ----
     socket.on("Cargar mensajes anteriores", async ({ beforeTimestamp, room } = {}, cb) => {
         if (!beforeTimestamp) { cb?.({ status: "error" }); return; }
-        const queryRoom = room || userRoom;
+        const user = connectedUsers.get(socket.id);
+        const queryRoom = room || user?.sala || "sala-global";
 
         try {
             let results;

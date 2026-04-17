@@ -98,11 +98,12 @@ export async function setupAuth(io, socket, connectedUsers) {
         const finalAvatar = storedAvatar || avatar || null;
         connectedUsers.set(socket.id, { nombre: user, avatar: finalAvatar, sala: null });
         
+        const isAdmin = ADMIN_USERS.some(a => a.toLowerCase() === user.toLowerCase());
         
         socket.emit("Login Exitoso", { 
             user, 
             avatar: finalAvatar,
-            isAdmin: ADMIN_USERS.includes(user)
+            isAdmin: isAdmin
         });
         
         const users = await Promise.all([...connectedUsers.values()].map(async u => {

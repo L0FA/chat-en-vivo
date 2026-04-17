@@ -13,7 +13,7 @@ function emitMessage(io, socket, room, payload) {
     socket.broadcast.to(room).emit("Mensaje en Chat", payload);
 }
 
-export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoom) {
+export async function setupMessages(io, socket, connectedUsers) {
     // ---- MENSAJE EN CHAT ----
     socket.on("Mensaje en Chat", async (payload, cb) => {
         let currentUser = connectedUsers.get(socket.id);
@@ -43,7 +43,7 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         const { content, msg, replyToId, replyToUser, replyToContent, destructSeconds, room: payloadRoom } = payload;
         const id = generateId();
         const timestamp = Date.now();
-        const room = payloadRoom || userRoom || null;
+        const room = payloadRoom || currentUser.sala || "sala-global";
         const messageContent = content || msg || "";
 
         // Unir socket a la sala si no está

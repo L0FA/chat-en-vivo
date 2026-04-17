@@ -23,17 +23,32 @@ export const db = new Proxy({}, {
     get(_, prop) {
         const client = getDb();
         const value = client[prop];
-        // IMPORTANTE: Enlazar funciones al cliente original para no perder el contexto 'this'
         if (typeof value === "function") return value.bind(client);
         return value;
     }
 });
+
+/**
+ * Verifica la conexión con la base de datos al arrancar
+ */
+export async function pingDatabase() {
+    try {
+        await db.execute("SELECT 1");
+    } catch (error) {
+        console.error("❌ Error de comunicación con Turso:", error.message);
+        throw error;
+    }
+}
 
 const ADMIN_LIST = (process.env.ADMINS || "Testing,La Compu Del Admin,Anonimo,Wachin,usuariorosa").split(",").map(a => a.trim());
 const APP_START_DATE = new Date("2026-04-01").getTime();
 
 export async function initDatabase() {
     const db = getDb();
+    
+    // Ping inicial para asegurar que el token es válido
+    await pingDatabase();
+    console.log("✅ Conexión con Turso establecida");
 
     // Tabla Usuarios
     await db.execute(`

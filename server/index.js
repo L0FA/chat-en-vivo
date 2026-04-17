@@ -35,56 +35,49 @@ const connectedUsers = new Map();
 io.on("connection", async (socket) => {
     console.log("🔌 Cliente conectado:", socket.id);
 
-    await setupAuth(io, socket, connectedUsers);
+    try {
+        // 1. Configurar Auth (Maneja handshake y login explícito)
+        await setupAuth(io, socket, connectedUsers);
 
-    const user = connectedUsers.get(socket.id);
-    const isAdmin = user?.nombre && ["Testing", "La Compu Del Admin", "El Celu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user?.nombre);
-    const userRoom = user?.sala || null;
+        // 2. Cargar módulos (Los módulos buscarán al usuario en connectedUsers dinámicamente)
+        setupRooms(socket, connectedUsers);
+        setupMessages(io, socket, connectedUsers);
+        setupPagination(io, socket, connectedUsers);
+        setupMusic(io, socket, connectedUsers);
+        setupCalls(io, socket, connectedUsers);
 
-    // Cargar todos los módulos en paralelo para velocidad
-    setupRooms(socket, connectedUsers);
-    setupMessages(io, socket, connectedUsers, isAdmin, userRoom);
-    await setupMusic(io, socket, connectedUsers);
-    await setupPagination(io, socket, connectedUsers, isAdmin, userRoom);
-    setupCalls(io, socket, connectedUsers);
-
-    socket.on("Escribiendo", ({ typing }) => {
-        if (user) {
-            socket.broadcast.to(userRoom).emit("Usuario Escribiendo", { user: user.nombre, typing, room: userRoom });
-        }
-    });
-
-    socket.on("Mensaje Leído", ({ messageId }) => {
-        socket.broadcast.to(userRoom).emit("Estado Leído", { messageId });
-    });
-
-    socket.on("Mensaje Visto", ({ messageId, seconds }) => {
-        if (!messageId || !seconds) return;
-        io.emit("Countdown Iniciado", { messageId, seconds });
-        setTimeout(async () => {
-            try {
-                await db.execute({ sql: "DELETE FROM Mensajes WHERE id = ?", args: [messageId] });
-                io.emit("Mensaje Autodestruido", { messageId });
-            } catch (e) {
-                console.error("❌ ERROR SELF DESTRUCT:", e);
+        // 3. Handlers globales de socket
+        socket.on("Escribiendo", ({ typing }) => {
+            const user = connectedUsers.get(socket.id);
+            if (user) {
+                // Emitir a todas las salas del usuario o a la sala específica
+                const userRoom = user.sala || "sala-global";
+                socket.broadcast.to(userRoom).emit("Usuario Escribiendo", { user: user.nombre, typing, room: userRoom });
             }
-        }, seconds * 1000);
-    });
+        });
 
-    socket.on("Mensaje Global", async (payload, cb) => {
-        if (!isAdmin) { cb?.({ status: "error", message: "Solo admins" }); return; }
-        cb?.({ status: "ok" });
-    });
+        socket.on("Mensaje Leído", ({ messageId }) => {
+            const user = connectedUsers.get(socket.id);
+            const userRoom = user?.sala || "sala-global";
+            socket.broadcast.to(userRoom).emit("Estado Leído", { messageId });
+        });
 
-    socket.on("Hacer Admin", async (_payload, cb) => {
-        if (!isAdmin) { cb?.({ status: "error" }); return; }
-        cb?.({ status: "ok" });
-    });
+        socket.on("Mensaje Visto", ({ messageId, seconds }) => {
+            if (!messageId || !seconds) return;
+            io.emit("Countdown Iniciado", { messageId, seconds });
+            setTimeout(async () => {
+                try {
+                    await db.execute({ sql: "DELETE FROM Mensajes WHERE id = ?", args: [messageId] });
+                    io.emit("Mensaje Autodestruido", { messageId });
+                } catch (e) {
+                    console.error("❌ ERROR SELF DESTRUCT:", e);
+                }
+            }, seconds * 1000);
+        });
 
-    socket.on("Banear Usuario", async (_payload, cb) => {
-        if (!isAdmin) { cb?.({ status: "error" }); return; }
-        cb?.({ status: "ok" });
-    });
+    } catch (err) {
+        console.error("❌ Error en handshake de socket:", err);
+    }
 });
 
 app.get("/", (_, res) => res.send("☁️ WhatsAppn't Server"));
