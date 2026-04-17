@@ -12,10 +12,11 @@ export default defineConfig({
             usePolling: true
         },
         proxy: {
-            "/api": "http://localhost:3000",
+            "/api": "https://chat-en-vivo-ymsf.onrender.com",
             "/socket.io": {
-                target: "http://localhost:3000",
-                ws: true
+                target: "https://chat-en-vivo-ymsf.onrender.com",
+                ws: true,
+                changeOrigin: true
             }
         }
     },

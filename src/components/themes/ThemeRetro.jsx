@@ -1,162 +1,158 @@
 // ============================================
-// 🌅 TEMA RETRO - Outrun Synthwave 80s
+// 🕹️ TEMA RETRO - Outrun con Auto
 // ============================================
 
 export function createRetroAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
     let gridOffset = 0;
+    let carBob = 0;
     const horizon = canvas.height * 0.5;
     const cx = canvas.width / 2;
+    const pxSize = 4;
 
-    const stars = Array.from({ length: 80 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * horizon * 0.7,
-        size: 0.5 + Math.random() * 1.2,
+    const stars = Array.from({ length: 60 }, () => ({
+        x: Math.floor(Math.random() * canvas.width / pxSize) * pxSize,
+        y: Math.floor(Math.random() * horizon * 0.6 / pxSize) * pxSize,
+        size: pxSize,
         blink: Math.random() * Math.PI * 2
     }));
 
-    const mountains = [
-        { peaks: [], h: 200, c1: "#5c1a4a", c2: "#7a2a5c", c3: "#a03d80" },
-        { peaks: [], h: 140, c1: "#3a1240", c2: "#501a5c", c3: "#702a7a" },
-        { peaks: [], h: 80, c1: "#1a0a20", c2: "#2a1040", c3: "#401a60" }
-    ];
-
-    mountains.forEach(m => {
-        for (let x = -100; x <= canvas.width + 100; x += 40) {
-            m.peaks.push({ x, h: m.h * (0.5 + Math.random() * 0.6) });
+    const mountains = [];
+    for (let layer = 0; layer < 3; layer++) {
+        const peaks = [];
+        for (let x = 0; x <= canvas.width + pxSize * 4; x += pxSize * 4) {
+            peaks.push({ x, h: (60 + layer * 40) * (0.4 + Math.random() * 0.6) });
         }
-    });
+        mountains.push({ peaks, layer });
+    }
+
+    const drawCar = (time) => {
+        const carX = cx;
+        const carY = canvas.height - 60 + Math.sin(time * 2) * 2; // Leve rebote
+        const carW = 50;
+        const carH = 20;
+
+        // Sombra
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(carX - carW / 2 - 2, carY + carH + 2, carW + 4, 6);
+
+        // Cuerpo
+        ctx.fillStyle = "#ff2060";
+        ctx.fillRect(carX - carW / 2, carY, carW, carH);
+        // Techo
+        ctx.fillStyle = "#cc1850";
+        ctx.fillRect(carX - carW / 4, carY - carH * 0.6, carW / 2, carH * 0.6);
+        // Ventana
+        ctx.fillStyle = "#40d0ff";
+        ctx.fillRect(carX - carW / 4 + 3, carY - carH * 0.5, carW / 2 - 6, carH * 0.45);
+        // Ruedas
+        ctx.fillStyle = "#222";
+        ctx.fillRect(carX - carW / 2 + 4, carY + carH, 10, 6);
+        ctx.fillRect(carX + carW / 2 - 14, carY + carH, 10, 6);
+        // Luces traseras
+        ctx.fillStyle = "#ff4444";
+        ctx.fillRect(carX - carW / 2, carY + 4, 4, 6);
+        ctx.fillRect(carX + carW / 2 - 4, carY + 4, 4, 6);
+        // Destello delantero (faros reflejados)
+        ctx.fillStyle = `rgba(255, 255, 200, ${0.3 + Math.sin(time * 5) * 0.1})`;
+        ctx.fillRect(carX - carW / 2 - 8, carY + carH - 2, 6, 4);
+        ctx.fillRect(carX + carW / 2 + 2, carY + carH - 2, 6, 4);
+    };
 
     const animate = () => {
         if (stopped) return;
-        gridOffset = (gridOffset + 2) % 35;
+        gridOffset = (gridOffset + 1.2) % (pxSize * 8);
+        carBob += 0.03;
 
-        // CIELO - Gradiente SIN opacidad
+        // Cielo
         const sky = ctx.createLinearGradient(0, 0, 0, horizon);
         sky.addColorStop(0, "#080010");
-        sky.addColorStop(0.2, "#15002a");
-        sky.addColorStop(0.5, "#2d0050");
-        sky.addColorStop(0.8, "#500080");
-        sky.addColorStop(1, "#7000a0");
+        sky.addColorStop(0.4, "#1a0030");
+        sky.addColorStop(0.8, "#400060");
+        sky.addColorStop(1, "#600090");
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // ESTRELLAS
+        // Estrellas
         stars.forEach(s => {
-            s.blink += 0.04;
-            const a = 0.5 + Math.sin(s.blink) * 0.5;
-            ctx.fillStyle = `rgb(255, 255, 255)`;
-            ctx.globalAlpha = a;
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-            ctx.fill();
+            s.blink += 0.03;
+            if (Math.sin(s.blink) > 0) {
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(s.x, s.y, pxSize, pxSize);
+            }
         });
-        ctx.globalAlpha = 1;
 
-        // SOL - Grande y colorful
-        const sunY = horizon - 50;
-        const sunR = Math.min(canvas.width, canvas.height) * 0.22;
+        // Sol pixelado
+        const sunY = horizon - 60;
+        const sunR = 50;
+        for (let py = -sunR; py <= sunR; py += pxSize) {
+            for (let px = -sunR; px <= sunR; px += pxSize) {
+                if (px * px + py * py <= sunR * sunR) {
+                    const dist = Math.sqrt(px * px + py * py) / sunR;
+                    if (dist < 0.5) ctx.fillStyle = "#ffffaa";
+                    else if (dist < 0.75) ctx.fillStyle = "#ffaa00";
+                    else ctx.fillStyle = "#ff5500";
+                    ctx.fillRect(cx + px, sunY + py, pxSize, pxSize);
+                }
+            }
+        }
 
-        // Glow del sol
-        const glow = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, sunR * 3);
-        glow.addColorStop(0, "rgb(255, 200, 100)");
-        glow.addColorStop(0.3, "rgb(255, 100, 150)");
-        glow.addColorStop(0.7, "rgb(200, 50, 100)");
-        glow.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.fillStyle = glow;
-        ctx.fillRect(0, 0, canvas.width, horizon + 80);
-
-        // Cuerpo del sol
-        const sunGrad = ctx.createLinearGradient(cx, sunY - sunR, cx, sunY + sunR);
-        sunGrad.addColorStop(0, "#ffffcc");
-        sunGrad.addColorStop(0.15, "#ffff00");
-        sunGrad.addColorStop(0.4, "#ffaa00");
-        sunGrad.addColorStop(0.7, "#ff5500");
-        sunGrad.addColorStop(1, "#ff0077");
-        ctx.fillStyle = sunGrad;
-        ctx.beginPath();
-        ctx.arc(cx, sunY, sunR, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Ojos del sol (estilo anime retro)
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.ellipse(cx - 20, sunY - 5, 10, 14, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(cx + 16, sunY - 3, 8, 12, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Pupilas
-        ctx.fillStyle = "#220044";
-        ctx.beginPath();
-        ctx.arc(cx - 18, sunY - 4, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + 18, sunY - 2, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // MONTAÑAS - Capas coloridas SIN opacidad
+        // Montañas
+        const mColors = ["#6a2080", "#4a1060", "#2a0840"];
         mountains.forEach((m, idx) => {
-            const mg = ctx.createLinearGradient(0, horizon - m.h, 0, horizon);
-            mg.addColorStop(0, m.c1);
-            mg.addColorStop(0.5, m.c2);
-            mg.addColorStop(1, m.c3);
-            ctx.fillStyle = mg;
-            
-            ctx.beginPath();
-            ctx.moveTo(-100, horizon);
+            ctx.fillStyle = mColors[idx];
             m.peaks.forEach((p, i) => {
-                ctx.lineTo(p.x - idx * 40, horizon - p.h + Math.sin(i) * 10);
+                if (i === 0) return;
+                const prev = m.peaks[i - 1];
+                const steps = Math.ceil((p.x - prev.x) / pxSize);
+                for (let s = 0; s < steps; s++) {
+                    const t = s / steps;
+                    const h = prev.h + (p.h - prev.h) * t;
+                    const x = prev.x + s * pxSize;
+                    for (let y = horizon - h; y < horizon; y += pxSize) {
+                        ctx.fillRect(Math.floor(x / pxSize) * pxSize, Math.floor(y / pxSize) * pxSize, pxSize, pxSize);
+                    }
+                }
             });
-            ctx.lineTo(canvas.width + 100, horizon);
-            ctx.closePath();
-            ctx.fill();
         });
 
-        // SUELO - Gradiente oscuro SIN opacidad
-        const ground = ctx.createLinearGradient(0, horizon, 0, canvas.height);
-        ground.addColorStop(0, "#0a0015");
-        ground.addColorStop(0.5, "#150025");
-        ground.addColorStop(1, "#250040");
-        ctx.fillStyle = ground;
+        // Suelo
+        ctx.fillStyle = "#0a0015";
         ctx.fillRect(0, horizon, canvas.width, canvas.height - horizon);
 
-        // GRID - Líneas vibrantes y fluidas
-        ctx.save();
-        ctx.strokeStyle = "rgb(255, 80, 180)";
+        // Grid - Horizontales fluidas (interpolación sub-pixel)
+        ctx.strokeStyle = "rgba(255, 60, 180, 0.6)";
         ctx.lineWidth = 2;
-        ctx.shadowColor = "rgb(255, 100, 220)";
-        ctx.shadowBlur = 15;
-
-        // Horizontales - movimiento fluido
-        for (let i = 0; i < 20; i++) {
-            const base = horizon + 30 + i * i * 4;
-            const y = base + gridOffset * (1 + i * 0.1);
-            const wrappedY = ((y - horizon) % (canvas.height - horizon - 30)) + horizon + 30;
-            
-            const alpha = 1 - (i / 20);
-            ctx.globalAlpha = alpha * 0.8;
-            ctx.beginPath();
-            ctx.moveTo(0, wrappedY);
-            ctx.lineTo(canvas.width, wrappedY);
-            ctx.stroke();
+        for (let i = 0; i < 18; i++) {
+            const spacing = 6 + i * 4.5;
+            const y = horizon + 8 + i * spacing + gridOffset * (1 + i * 0.12);
+            const wrapped = ((y - horizon) % (canvas.height - horizon)) + horizon;
+            if (wrapped > horizon && wrapped < canvas.height) {
+                const alpha = (1 - i / 18) * 0.7;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.moveTo(0, wrapped);
+                ctx.lineTo(canvas.width, wrapped);
+                ctx.stroke();
+            }
         }
 
-        // Verticales - perspectiva convergente
-        ctx.globalAlpha = 0.9;
-        for (let i = -18; i <= 18; i++) {
-            const x = cx + i * (canvas.width / 20);
-            const vanishX = cx + i * 12;
-            
+        // Grid - Verticales fluidas
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
+        for (let i = -14; i <= 14; i++) {
+            const topX = cx + i * 12;
+            const bottomX = cx + i * (canvas.width / 14);
             ctx.beginPath();
-            ctx.moveTo(x, canvas.height);
-            ctx.lineTo(vanishX, horizon + 30);
+            ctx.moveTo(topX, horizon + 8);
+            ctx.lineTo(bottomX, canvas.height);
             ctx.stroke();
         }
+        ctx.globalAlpha = 1;
 
-        ctx.restore();
+        // Auto
+        drawCar(carBob);
 
         if (!stopped) animId = requestAnimationFrame(animate);
     };

@@ -1,59 +1,99 @@
 // ============================================
-// 🌸 TEMA ROSA - Cascada de pétalos (estilo chat-en-vivo)
+// 🌸 TEMA ROSA - Cascada de Flores Rosadas
 // ============================================
 
 export function createRosaAnimation(ctx, canvas) {
-    const PETALS = ["🌸", "🌺", "🌹", "💮", "🌷", "🎀", "✨"];
     let animId = null;
     let stopped = false;
-    
-    const particles = Array.from({ length: 25 }, () => createPetal());
+    let time = 0;
+
+    const petals = Array.from({ length: 75 }, () => createPetal());
 
     function createPetal() {
         return {
             x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: 20 + Math.random() * 14,
-            speed: 2 + Math.random() * 3,
-            wobble: Math.random() * Math.PI * 2,
-            wobbleSpeed: 0.015 + Math.random() * 0.02,
+            y: -20 - Math.random() * canvas.height,
+            size: 6 + Math.random() * 11,
+            speedY: 1 + Math.random() * 2,
+            speedX: (Math.random() - 0.5) * 1,
             rotation: Math.random() * Math.PI * 2,
-            rotationSpeed: (Math.random() - 0.5) * 0.06,
-            emoji: PETALS[Math.floor(Math.random() * PETALS.length)]
+            rotationSpeed: (Math.random() - 0.5) * 0.1,
+            wobble: Math.random() * Math.PI * 2,
+            type: Math.floor(Math.random() * 3),
+            hue: 335 + Math.random() * 25,
+            lightness: 75 + Math.random() * 15
         };
     }
 
+    const drawFlower = (p) => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation + Math.sin(time + p.wobble) * 0.4);
+        ctx.globalAlpha = 0.8;
+
+        const color = `hsl(${p.hue}, 80%, ${p.lightness}%)`;
+        ctx.fillStyle = color;
+
+        if (p.type === 0) {
+            // Flor de 5 pétalos
+            for (let i = 0; i < 5; i++) {
+                ctx.save();
+                ctx.rotate((Math.PI * 2 / 5) * i);
+                ctx.beginPath();
+                ctx.ellipse(0, -p.size * 0.5, p.size * 0.28, p.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.fillStyle = "#fff0c0";
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (p.type === 1) {
+            // Pétalo simple
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(-p.size, -p.size, 0, -p.size * 1.4);
+            ctx.quadraticCurveTo(p.size, -p.size, 0, 0);
+            ctx.fill();
+        } else {
+            // Cerezo 4 pétalos
+            for (let i = 0; i < 4; i++) {
+                ctx.save();
+                ctx.rotate((Math.PI / 2) * i);
+                ctx.beginPath();
+                ctx.arc(p.size * 0.3, 0, p.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    };
+
     const animate = () => {
         if (stopped) return;
-        
-        ctx.fillStyle = "#fff5f8";
+        time += 0.015;
+
+        // Fondo rosa oscuro para contraste
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bgGrad.addColorStop(0, "#4a1025");
+        bgGrad.addColorStop(1, "#2d0a16");
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, "#ffe9f1");
-        gradient.addColorStop(1, "#fff0f5");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        particles.forEach(p => {
-            p.y += p.speed;
-            p.wobble += p.wobbleSpeed;
+        petals.forEach(p => {
+            p.y += p.speedY;
+            p.x += p.speedX + Math.sin(time + p.wobble) * 1.2;
             p.rotation += p.rotationSpeed;
-            p.x += Math.sin(p.wobble) * 0.8;
-
-            if (p.y > canvas.height + 30) {
-                p.y = -32;
-                p.x = Math.random() * canvas.width;
-                p.speed = 2 + Math.random() * 3;
-                p.emoji = PETALS[Math.floor(Math.random() * PETALS.length)];
+            if (p.y > canvas.height + 20) {
+                Object.assign(p, createPetal());
+                p.y = -20;
             }
-
-            ctx.font = `${p.size}px serif`;
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rotation);
-            ctx.fillText(p.emoji, 0, 0);
-            ctx.restore();
+            drawFlower(p);
         });
 
         if (!stopped) animId = requestAnimationFrame(animate);

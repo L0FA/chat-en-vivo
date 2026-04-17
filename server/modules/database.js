@@ -6,15 +6,31 @@
 import { createClient } from "@libsql/client/web";
 import process from "node:process";
 
-const db = createClient({
-    url: process.env.DB_URL,
-    authToken: process.env.DB_TOKEN,
+let _db;
+
+export function getDb() {
+    if (!_db) {
+        _db = createClient({
+            url: process.env.DB_URL,
+            authToken: process.env.DB_TOKEN,
+        });
+    }
+    return _db;
+}
+
+// Proxy que permite usar `db.execute(...)` pero inicializa lazy
+export const db = new Proxy({}, {
+    get(_, prop) {
+        return getDb()[prop];
+    }
 });
 
 const ADMINS = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"];
 const APP_START_DATE = new Date("2026-04-01").getTime();
 
 export async function initDatabase() {
+    const db = getDb();
+
     // Tabla Usuarios
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Usuarios (
@@ -99,5 +115,4 @@ export async function initDatabase() {
     console.log("✅ Base de datos inicializada");
 }
 
-export { db };
 export default db;

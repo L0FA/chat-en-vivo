@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
 export function useSocket(nombreUsuario, password = "") {
     const socket = useMemo(() => {
@@ -39,7 +39,8 @@ export function useSocket(nombreUsuario, password = "") {
         socket.on("Admin Password Required", (data) => {
             alert(data.message);
         });
-        socket.on("Logged In", (data) => {
+        socket.on("Login Exitoso", (data) => {
+            console.log("🔌 [SOCKET] Login Exitoso para:", data.user);
             setIsAdmin(data.isAdmin || false);
         });
 
@@ -48,7 +49,7 @@ export function useSocket(nombreUsuario, password = "") {
             socket.off("disconnect");
             socket.off("Error");
             socket.off("Admin Password Required");
-            socket.off("Logged In");
+            socket.off("Login Exitoso");
             socket.disconnect();
             setConnected(false);
         };

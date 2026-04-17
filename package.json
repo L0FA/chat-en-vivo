@@ -8,18 +8,18 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "npm run build && node ./server/index.js",
+    "start": "node ./server/index.js",
     "serve": "npm run build && npm run start"
   },
   "dependencies": {
-    "emoji-picker-element": "^1.29.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
     "@libsql/client": "^0.17.2",
     "dotenv": "^17.4.1",
+    "emoji-picker-element": "^1.29.1",
     "express": "^5.2.1",
     "morgan": "1.10.1",
     "open-graph-scraper": "^6.11.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

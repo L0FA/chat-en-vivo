@@ -83,7 +83,7 @@ export default function ThemeBackground() {
         <canvas
             ref={canvasRef}
             className="fixed inset-0 pointer-events-none"
-            style={{ opacity: 0.5, zIndex: -10 }}
+            style={{ opacity: 1, zIndex: -10 }}
         />
     );
 }

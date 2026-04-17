@@ -1,152 +1,134 @@
 // ============================================
-// 🌅 TEMA VAPORWAVE - Synthwave mejorado
+// 🌅 TEMA VAPORWAVE - Sol Elevado y Limpio
 // ============================================
 
 export function createVaporwaveAnimation(ctx, canvas) {
     let animId = null;
     let stopped = false;
-    let gridOffset = 0;
+    let time = 0;
 
-    const cx = canvas.width / 2;
-    const horizon = canvas.height * 0.42;
+    const horizon = canvas.height * 0.7; // Más espacio arriba
 
-    const stars = Array.from({ length: 60 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * horizon,
-        size: 0.5 + Math.random() * 1.5,
-        twinkle: Math.random() * Math.PI * 2
-    }));
+    const drawSun = (time) => {
+        const x = canvas.width / 2;
+        const y = horizon - 150; // Elevado
+        const radius = 100;
+        
+        // Brillo exterior
+        const sunGlow = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.5);
+        sunGlow.addColorStop(0, "rgba(255, 50, 150, 0.4)");
+        sunGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = sunGlow;
+        ctx.fillRect(0, 0, canvas.width, horizon);
+
+        // Sol segmentado
+        ctx.save();
+        // Recortar para que el sol no pase del horizonte (la pista)
+        ctx.beginPath();
+        ctx.rect(0, 0, canvas.width, horizon);
+        ctx.clip();
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        const sunGrad = ctx.createLinearGradient(x, y - radius, x, y + radius);
+        sunGrad.addColorStop(0, "#ffeb3b");
+        sunGrad.addColorStop(1, "#f44336");
+        ctx.fillStyle = sunGrad;
+        ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+
+        // Cortes horizontales
+        ctx.globalCompositeOperation = "destination-out";
+        for (let i = 0; i < 8; i++) {
+            const h = 5 + i * 2;
+            const py = y + radius - ((i * 30 + time * 25) % (radius * 2.5));
+            if (py > y - radius) {
+                ctx.fillRect(x - radius, py, radius * 2, h);
+            }
+        }
+        ctx.restore();
+    };
+
+    const drawMountains = () => {
+        ctx.save();
+        const drawLayer = (color, heightMult, offset, opacity) => {
+            ctx.fillStyle = color;
+            ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.moveTo(0, horizon);
+            for (let i = 0; i <= 10; i++) {
+                const x = (canvas.width / 10) * i;
+                const h = horizon - (Math.sin(i * 1.5 + offset) * 30 + heightMult);
+                ctx.lineTo(x, h);
+            }
+            ctx.lineTo(canvas.width, horizon);
+            ctx.fill();
+            
+            ctx.strokeStyle = "#ff00ff";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        };
+
+        drawLayer("#1a0624", 50, 0.5, 1);
+        drawLayer("#0d0312", 30, 1.2, 1);
+        ctx.restore();
+    };
+
+    const drawGrid = (time) => {
+        ctx.save();
+        const gridOffset = (time * 60) % 50;
+        
+        ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "cyan";
+
+        // Horizontales
+        for (let i = 0; i < 20; i++) {
+            const y = horizon + ((i * 50 + gridOffset) ** 1.3) / 10;
+            if (y > canvas.height) continue;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.globalAlpha = Math.min(1, (y - horizon) / 50);
+            ctx.stroke();
+        }
+
+        // Verticales
+        const centerX = canvas.width / 2;
+        for (let i = -15; i <= 15; i++) {
+            ctx.beginPath();
+            ctx.moveTo(centerX + i * 10, horizon);
+            ctx.lineTo(centerX + i * 300, canvas.height);
+            ctx.globalAlpha = 0.3;
+            ctx.stroke();
+        }
+        ctx.restore();
+    };
 
     const animate = () => {
         if (stopped) return;
-        
-        gridOffset = (gridOffset + 1.5) % 40;
+        time += 0.016;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, horizon + 50);
-        skyGrad.addColorStop(0, "#1a0530");
-        skyGrad.addColorStop(0.5, "#3d1045");
-        skyGrad.addColorStop(1, "#6b2080");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, horizon + 50);
-
-        stars.forEach(s => {
-            s.twinkle += 0.05;
-            const alpha = 0.5 + Math.sin(s.twinkle) * 0.5;
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-            ctx.fill();
-        });
-
-        const sunY = horizon - 20;
-        const sunRadius = Math.min(canvas.width, canvas.height) * 0.22;
-
-        const sunGlow = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, sunRadius * 2.5);
-        sunGlow.addColorStop(0, "rgba(255, 180, 50, 0.5)");
-        sunGlow.addColorStop(0.4, "rgba(255, 100, 150, 0.25)");
-        sunGlow.addColorStop(1, "transparent");
-        ctx.fillStyle = sunGlow;
+        ctx.fillStyle = "#05010a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const sunGrad = ctx.createLinearGradient(cx, sunY - sunRadius, cx, sunY + sunRadius);
-        sunGrad.addColorStop(0, "#ffeb99");
-        sunGrad.addColorStop(0.2, "#ffcc00");
-        sunGrad.addColorStop(0.5, "#ff6699");
-        sunGrad.addColorStop(1, "#cc3399");
-        
-        ctx.beginPath();
-        ctx.arc(cx, sunY, sunRadius, 0, Math.PI * 2);
-        ctx.fillStyle = sunGrad;
-        ctx.fill();
+        // Cielo
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, horizon);
+        skyGrad.addColorStop(0, "#05010a");
+        skyGrad.addColorStop(1, "#1a0624");
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, canvas.width, horizon);
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-        ctx.beginPath();
-        ctx.ellipse(cx - 18, sunY - 8, 8, 10, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(cx + 14, sunY - 6, 6, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
+        drawSun(time);
+        drawMountains();
+        drawGrid(time);
 
-        const groundGrad = ctx.createLinearGradient(0, horizon, 0, canvas.height);
-        groundGrad.addColorStop(0, "#1a0530");
-        groundGrad.addColorStop(0.5, "#2d0a40");
-        groundGrad.addColorStop(1, "#150820");
-        ctx.fillStyle = groundGrad;
-        ctx.fillRect(0, horizon, canvas.width, canvas.height - horizon);
-
-        ctx.save();
-        ctx.strokeStyle = "rgba(255, 70, 180, 0.6)";
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = "rgba(255, 100, 200, 0.8)";
-        ctx.shadowBlur = 8;
-
-        for (let y = 0; y < 15; y++) {
-            const baseY = horizon + 20 + y * y * 3;
-            const yPos = (baseY + gridOffset * (1 + y * 0.15)) % (canvas.height - horizon);
-            if (yPos < horizon + 15) continue;
-
-            ctx.beginPath();
-            ctx.moveTo(0, yPos);
-            ctx.lineTo(canvas.width, yPos);
-            ctx.globalAlpha = 1 - (y / 15);
-            ctx.stroke();
-        }
-
-        ctx.globalAlpha = 1;
-        for (let i = 0; i <= 20; i++) {
-            const x = (i / 20) * canvas.width;
-            const vanishingX = cx + (x - cx) * 0.08;
-            
-            ctx.beginPath();
-            ctx.moveTo(x, horizon + 20);
-            ctx.lineTo(vanishingX, canvas.height);
-            ctx.globalAlpha = 0.4;
-            ctx.stroke();
-        }
-
-        ctx.restore();
-
-        const cx2 = canvas.width / 2;
-        const carY = canvas.height - 80;
-        
-        ctx.save();
-        ctx.fillStyle = "#ff3399";
-        ctx.fillRect(cx2 - 80, carY, 160, 25);
-        
-        ctx.fillStyle = "#ff66b2";
-        ctx.beginPath();
-        ctx.moveTo(cx2 - 70, carY);
-        ctx.lineTo(cx2 + 70, carY);
-        ctx.lineTo(cx2 + 55, carY - 30);
-        ctx.lineTo(cx2 - 60, carY - 30);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = "rgba(200, 240, 255, 0.15)";
-        ctx.fillRect(cx2 - 60, carY - 20, 50, 15);
-
-        ctx.fillStyle = "#111";
-        ctx.fillRect(cx2 - 70, carY - 3, 25, 6);
-        ctx.fillRect(cx2 + 40, carY - 3, 25, 6);
-
-        ctx.fillStyle = "#ffff00";
-        ctx.fillRect(cx2 - 55, carY - 25, 6, 3);
-        ctx.fillRect(cx2 + 45, carY - 25, 6, 3);
-
-        ctx.fillStyle = "#ff0000";
-        ctx.fillRect(cx2 - 75, carY + 18, 12, 5);
-        ctx.fillRect(cx2 + 60, carY + 18, 12, 5);
-
-        ctx.fillStyle = "rgba(255, 0, 150, 0.3)";
-        ctx.fillRect(cx2 - 150, carY + 10, 80, 3);
-        
-        ctx.restore();
-
-        for (let y = 0; y < canvas.height; y += 3) {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
-            ctx.fillRect(0, y, canvas.width, 1.5);
+        // Scanlines
+        ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+        for (let i = 0; i < canvas.height; i += 4) {
+            ctx.fillRect(0, i, canvas.width, 2);
         }
 
         if (!stopped) animId = requestAnimationFrame(animate);
