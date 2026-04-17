@@ -18,7 +18,7 @@ export function createMinimalAnimation(ctx, canvas) {
 
     const animate = () => {
         if (stopped) return;
-        ctx.fillStyle = "rgba(250, 250, 250, 0.04)";
+        ctx.fillStyle = "rgba(30, 30, 35, 0.08)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         circles.forEach(c => {
@@ -31,7 +31,7 @@ export function createMinimalAnimation(ctx, canvas) {
 
             ctx.beginPath();
             ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
-            ctx.strokeStyle = `hsla(${c.hue}, 30%, 50%, 0.15)`;
+            ctx.strokeStyle = `hsla(${c.hue}, 40%, 55%, 0.25)`;
             ctx.lineWidth = c.lineWidth;
             ctx.stroke();
         });
@@ -65,7 +65,7 @@ export function createDefaultAnimation(ctx, canvas) {
 
     const animate = () => {
         if (stopped) return;
-        ctx.fillStyle = "rgba(255, 245, 250, 0.08)";
+        ctx.fillStyle = "rgba(20, 20, 25, 0.1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         particles.forEach(p => {
@@ -76,7 +76,7 @@ export function createDefaultAnimation(ctx, canvas) {
 
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${p.hue}, 70%, 65%, 0.5)`;
+            ctx.fillStyle = `hsla(${p.hue}, 60%, 60%, 0.6)`;
             ctx.fill();
         });
 
