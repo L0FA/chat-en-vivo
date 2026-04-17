@@ -74,22 +74,18 @@ export async function setupPagination(io, socket, connectedUsers) {
     });
 
     // ---- CARGAR MENSAJES POR SALA ----
-    // eslint-disable-next-line no-unused-vars
     socket.on("Cargar Mensajes Sala", async ({ room }, _cb) => {
         const currentUser = connectedUsers.get(socket.id);
-        const adminList = (process.env.ADMINS || "").split(",").map(a => a.trim()).filter(Boolean);
-        const isHardcodedAdmin = currentUser && adminList.includes(currentUser.nombre);
+        const adminList = (process.env.ADMINS || "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+        const isHardcodedAdmin = currentUser && adminList.includes(currentUser.nombre.toLowerCase());
         
-        console.log(`📥 [PAGINATION] Cargar Mensajes de sala: ${room} para usuario: ${currentUser?.nombre || "N/A"} (Hardcoded Admin: ${isHardcodedAdmin})`);
+        console.log(`📥 [PAGINATION] Cargar Mensajes de sala: ${room} para usuario: ${currentUser?.nombre || "N/A"}`);
 
         try {
             // Unir socket a la sala
-            if (room && !socket.rooms.has(room)) {
-                socket.join(room);
-            }
+            if (room && !socket.rooms.has(room)) socket.join(room);
             
-            let results;
-            // Detección robusta de Admin para el Registro Global
+            // 1. Detección robusta de Admin en paralelo con la búsqueda de mensajes si el ID es conocido
             let isAuthorizedAdmin = isHardcodedAdmin;
             
             if (room === "sala-admins-global" && currentUser) {
@@ -97,75 +93,71 @@ export async function setupPagination(io, socket, connectedUsers) {
                     sql: "SELECT esAdmin FROM MiembrosSala WHERE salaId = ? AND usuario = ?",
                     args: ["sala-admins-global", currentUser.nombre]
                 });
-                const dbIsAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1;
-                isAuthorizedAdmin = isHardcodedAdmin || dbIsAdmin;
-                console.log(`🛡️ [PAGINATION] Admin Check para sala global: DB=${dbIsAdmin}, Env=${isHardcodedAdmin} => Final=${isAuthorizedAdmin}`);
+                isAuthorizedAdmin = isHardcodedAdmin || (adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1);
             }
 
+            // 2. Ejecutar búsqueda de mensajes
+            let results;
             if (room === "sala-admins-global" && isAuthorizedAdmin) {
-                // REGISTRO ANTIGUO: Ver todos los mensajes de todas las salas
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
                     args: []
                 });
-                console.log(`🌌 [PAGINATION] Sirviendo REGISTRO GLOBAL (${results.rows.length} mensajes)`);
             } else {
-                // Mensajes normales filtrados por sala
                 results = await db.execute({
                     sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: [room]
+                    args: [room || "sala-global"]
                 });
-                console.log(`📝 [PAGINATION] Sirviendo mensajes normales (${results.rows.length} mensajes) para sala: ${room}`);
             }
 
-            // Llamar al callback si existe
-            _cb?.({ status: "ok", count: results.rows.length });
-            
             const rows = [...results.rows].reverse();
             
-            // Batch query para avatares
+            // 3. Obtener avatares y verificar 'hasMore' en paralelo
             const uniqueUsers = [...new Set(rows.map(r => r.user).filter(Boolean))];
-            let avatarMap = {};
-            if (uniqueUsers.length > 0) {
-                const placeholders = uniqueUsers.map(() => "?").join(",");
-                const avatarResults = await db.execute({
-                    sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
-                    args: uniqueUsers
-                });
-                for (const row of avatarResults.rows) {
-                    avatarMap[row.nombre] = row.avatar;
-                }
-            }
             
-            for (const row of rows) {
-                socket.emit("Mensaje en Chat", {
-                    id: row.id,
-                    type: row.type || "text",
-                    content: row.content,
-                    timestamp: row.timestamp,
-                    user: row.user || "Invitado",
-                    senderAvatar: avatarMap[row.user] || null,
-                    replyToId: row.replyToId || null,
-                    replyToUser: row.replyToUser || null,
-                    replyToContent: row.replyToContent || null,
-                    edited: Number(row.edited) === 1,
-                    destructSeconds: row.destructSeconds || 0,
-                    room: row.room || null
-                });
-            }
+            const [avatarResults, olderCheck] = await Promise.all([
+                uniqueUsers.length > 0 
+                  ? db.execute({ sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${uniqueUsers.map(() => "?").join(",")})`, args: uniqueUsers })
+                  : Promise.resolve({ rows: [] }),
+                rows.length > 0
+                  ? db.execute({ sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1", args: [rows[0].timestamp, room || "sala-global"] })
+                  : Promise.resolve({ rows: [] })
+            ]);
 
-            let hasMore = false;
-            if (rows.length > 0) {
-                const older = await db.execute({
-                    sql: "SELECT 1 FROM Mensajes WHERE timestamp < ? AND room = ? LIMIT 1",
-                    args: [rows[0].timestamp, room]
-                });
-                hasMore = older.rows.length > 0;
-            }
+            const avatarMap = {};
+            avatarResults.rows.forEach(r => avatarMap[r.nombre] = r.avatar);
+            
+            const messages = rows.map(row => ({
+                id: row.id,
+                type: row.type || "text",
+                content: row.content,
+                timestamp: row.timestamp,
+                user: row.user || "Invitado",
+                senderAvatar: avatarMap[row.user] || null,
+                replyToId: row.replyToId || null,
+                replyToUser: row.replyToUser || null,
+                replyToContent: row.replyToContent || null,
+                edited: Number(row.edited) === 1,
+                destructSeconds: row.destructSeconds || 0,
+                room: row.room || null
+            }));
 
-            socket.emit("historial cargado", { hasMore, pageSize: PAGE_SIZE });
+            const hasMore = olderCheck.rows.length > 0;
+
+            // 4. EMISIÓN EN LOTE (Single emit instead of N emits)
+            socket.emit("historial total", { 
+                room,
+                messages, 
+                hasMore, 
+                pageSize: PAGE_SIZE 
+            });
+
+            // Callback de confirmación
+            _cb?.({ status: "ok", count: messages.length });
+
         } catch (e) {
             console.error("❌ Error al cargar mensajes:", e);
+            _cb?.({ status: "error" });
         }
     });
 }

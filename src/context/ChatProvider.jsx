@@ -35,6 +35,10 @@ export function ChatProvider({ children }) {
         setMessages(prev => [...msgs, ...prev]);
     }, []);
 
+    const setBatchMessages = useCallback((newMessages) => {
+        setMessages(newMessages.sort((a,b) => a.timestamp - b.timestamp));
+    }, []);
+
     const updateMessage = useCallback((id, updates) => {
         setMessages(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
     }, []);
@@ -126,7 +130,7 @@ export function ChatProvider({ children }) {
     return (
         <ChatContext.Provider value={{
             user, password, login, avatar, updateProfile,
-            messages, setMessages, clearMessages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
+            messages, setMessages, setBatchMessages, clearMessages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
             theme, changeTheme,
             connectedUsers, setConnectedUsers,
             replyingTo, setReplyingTo,

@@ -41,35 +41,30 @@ export async function setupAuth(io, socket, connectedUsers) {
             isAdmin: isAdmin
         });
         
-        // Obtener todos los usuarios de DB para avatares (batch query)
-        const nombres = [...connectedUsers.values()].map(u => u.nombre);
-        let results = { rows: [] };
-        if (nombres.length > 0) {
-            const placeholders = nombres.map(() => "?").join(",");
-            results = await db.execute({
-                sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
-                args: nombres
-            });
-        }
-        
-        const avatarMap = {};
-        for (const row of results.rows) {
-            avatarMap[row.nombre] = row.avatar;
-        }
-        
-        const users = [...connectedUsers.values()].map(u => ({
-            ...u,
-            avatar: avatarMap[u.nombre] || u.avatar
-        }));
-        
-        const admins = ADMIN_USERS;
-        
-        // Pequeño retraso para asegurar que el frontend esté montado y escuchando
-        setTimeout(() => {
-            console.log("📢 [AUTH] Emitiendo Users Actualizados inicial para:", user);
-            socket.emit("Users Actualizados", { users, admins });
-            io.emit("Users Actualizados", { users, admins });
-        }, 500);
+        // Función auxiliar para emitir la lista de usuarios
+        const emitUserList = async () => {
+            const nombres = [...connectedUsers.values()].map(u => u.nombre);
+            let avatarMap = {};
+            if (nombres.length > 0) {
+                const placeholders = nombres.map(() => "?").join(",");
+                const results = await db.execute({
+                    sql: `SELECT nombre, avatar FROM Usuarios WHERE nombre IN (${placeholders})`,
+                    args: nombres
+                });
+                results.rows.forEach(row => { avatarMap[row.nombre] = row.avatar; });
+            }
+            
+            const users = [...connectedUsers.values()].map(u => ({
+                ...u,
+                avatar: avatarMap[u.nombre] || u.avatar
+            }));
+            
+            io.emit("Users Actualizados", { users, admins: ADMIN_USERS });
+        };
+
+        // Emitir inmediatamente y con un pequeño delay para asegurar sync
+        emitUserList();
+        setTimeout(emitUserList, 500);
     }
 
     // ---- LOGIN EVENT (explicit) ----

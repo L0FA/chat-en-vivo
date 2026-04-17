@@ -4,7 +4,7 @@ import { useChat } from "../hooks/useChat";
 export function useMessages(socket, currentRoom = null) {
     const {
         addMessage, updateMessage, removeMessage,
-        updateReaction, setTypingUsers, clearMessages
+        updateReaction, setTypingUsers, clearMessages, setBatchMessages
     } = useChat();
 
     const [historialListo, setHistorialListo] = useState(false);
@@ -20,7 +20,7 @@ export function useMessages(socket, currentRoom = null) {
     useEffect(() => {
         if (!socket || !currentRoom) return;
         
-        console.log("🧹 Cambiando a sala:", currentRoom, "- Limpiando chat");
+        console.log("🧹 [MESSAGES] Cambiando a sala:", currentRoom, "- Limpiando chat");
         clearMessages();
         oldestTimestamp.current = null;
         setHistorialListo(false);
@@ -28,17 +28,29 @@ export function useMessages(socket, currentRoom = null) {
 
         socket.emit("Cargar Mensajes Sala", { room: currentRoom }, (res) => {
             if (res?.status === "ok") {
-                console.log(`📥 Cargados ${res.count} mensajes para sala ${currentRoom}`);
+                console.log(`📥 [MESSAGES] Solicitud de mensajes enviada para ${currentRoom}`);
             }
         });
-    }, [socket, currentRoom]);
+    }, [socket, currentRoom, clearMessages]);
 
     useEffect(() => {
         if (!socket) return;
 
-        oldestTimestamp.current = null;
-        setHistorialListo(false);
-        setHasMore(false);
+        // Nuevo handler para carga masiva inicial
+        const handleBatchHistorial = ({ messages = [], hasMore: more, room: roomReceived }) => {
+            // Solo procesar si es la sala actual
+            if (roomReceived !== currentRoomRef.current) return;
+            
+            console.log(`📦 [MESSAGES] Recibido lote de ${messages.length} mensajes. hasMore: ${more}`);
+            
+            if (messages.length > 0) {
+                oldestTimestamp.current = messages[0].timestamp;
+            }
+            
+            setBatchMessages(messages);
+            setHasMore(!!more);
+            setHistorialListo(true);
+        };
 
         const handleNewMessage = (data) => {
             // Solo mostrar mensajes de la sala actual
@@ -50,15 +62,13 @@ export function useMessages(socket, currentRoom = null) {
                 edited: Number(data.edited) === 1,
                 pending: Number(data.pending) === 1
             };
+            
+            // Actualizar el timestamp más antiguo si es un mensaje histórico que llega por "Mensaje en Chat" (fallback)
             if (normalized.timestamp && (!oldestTimestamp.current || normalized.timestamp < oldestTimestamp.current)) {
                 oldestTimestamp.current = normalized.timestamp;
             }
-            addMessage(normalized);
-        };
 
-        const handleHistorial = (meta = {}) => {
-            setHasMore(!!meta.hasMore);
-            setHistorialListo(true);
+            addMessage(normalized);
         };
 
         const handleEdit = ({ messageId, newContent }) => {
@@ -96,9 +106,10 @@ export function useMessages(socket, currentRoom = null) {
                         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
                         oscillator.start(audioCtx.currentTime);
                         oscillator.stop(audioCtx.currentTime + 0.1);
-                    } catch { /* silence is golden */ }
+                    } catch { /* silence */ }
                 }
             }
+
             setTypingUsers(prev =>
                 typing
                     ? prev.includes(user) ? prev : [...prev, user]
@@ -106,22 +117,22 @@ export function useMessages(socket, currentRoom = null) {
             );
         };
 
+        socket.on("historial total", handleBatchHistorial);
         socket.on("Mensaje en Chat", handleNewMessage);
-        socket.on("historial cargado", handleHistorial);
         socket.on("Mensaje Editado", handleEdit);
         socket.on("Mensaje Eliminado", handleDelete);
         socket.on("Reacción Actualizada", handleReaction);
         socket.on("Usuario Escribiendo", handleTyping);
 
         return () => {
+            socket.off("historial total", handleBatchHistorial);
             socket.off("Mensaje en Chat", handleNewMessage);
-            socket.off("historial cargado", handleHistorial);
             socket.off("Mensaje Editado", handleEdit);
             socket.off("Mensaje Eliminado", handleDelete);
             socket.off("Reacción Actualizada", handleReaction);
             socket.off("Usuario Escribiendo", handleTyping);
         };
-    }, [socket, currentRoom]);
+    }, [socket, addMessage, removeMessage, setBatchMessages, setTypingUsers, updateMessage, updateReaction]);
 
     const loadOlder = (callback) => {
         if (!socket || !oldestTimestamp.current || !currentRoom) return;

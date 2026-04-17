@@ -15,15 +15,34 @@ export function setupRooms(socket, connectedUsers) {
             console.log("⚠️ [ROOMS] Intento de Obtener Mis Salas sin user en map para:", socket.id);
             return cb?.({ status: "error", message: "No autenticado" });
         }
+        
+        const ADMIN_LIST = (process.env.ADMINS || "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+        const isAdmin = ADMIN_LIST.includes(user.nombre.toLowerCase());
+
         try {
             const result = await db.execute({
-                sql: `SELECT s.* FROM Salas s 
+                sql: `SELECT s.*, sm.esAdmin FROM Salas s 
                       JOIN MiembrosSala sm ON s.id = sm.salaId 
                       WHERE sm.usuario = ?`,
                 args: [user.nombre]
             });
-            cb?.({ status: "ok", salas: result.rows });
-        } catch {
+            
+            let salas = result.rows;
+
+            // Inyectar sala de admins si es admin y no está en la lista
+            if (isAdmin && !salas.find(s => s.id === "sala-admins-global")) {
+                salas.push({
+                    id: "sala-admins-global",
+                    nombre: "💻 Registro Global (Admin)",
+                    descripcion: "Historial de todos los mensajes del sistema",
+                    dueno: "System",
+                    esAdmin: 1
+                });
+            }
+
+            cb?.({ status: "ok", salas });
+        } catch (err) {
+            console.error("❌ ERROR AL OBTENER SALAS:", err);
             cb?.({ status: "error" });
         }
     });

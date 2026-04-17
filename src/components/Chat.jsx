@@ -16,8 +16,8 @@ import ProfileDropdown from "./ProfileDropdown";
 import Settings from "./Settings";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers } = useChat();
-    const { socket, isAdmin: userIsAdmin } = useSocket(user, password);
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom } = useChat();
+    const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
@@ -34,6 +34,18 @@ export default function Chat() {
     const [showSettings, setShowSettings] = useState(false);
     const [callTrigger, setCallTrigger] = useState(0);
 
+    // Pedir salas al conectar
+    useEffect(() => {
+        if (socket && isConnected) {
+            console.log("🏠 [CHAT] Pidiendo lista de salas...");
+            socket.emit("Obtener Mis Salas", (res) => {
+                if (res.status === "ok") {
+                    res.salas.forEach(s => addUserRoom(s));
+                }
+            });
+        }
+    }, [socket, isConnected, addUserRoom]);
+
     // Efecto para actualizar título con notificaciones
     useEffect(() => {
         if (unreadCount > 0) {
@@ -48,12 +60,10 @@ export default function Chat() {
         if (scrolled) {
             return "bg-white/90 border-gray-200 text-gray-800";
         }
-        // Temas claros necesitan botones oscuros
         const lightThemes = ["rosa", "minimal", "retro", "ocean", "forest"];
         if (lightThemes.includes(theme)) {
             return "bg-black/50 border-white/30 text-white backdrop-blur-sm";
         }
-        // Temas oscuros necesitan botones claros
         return "bg-white/20 border-white/30 text-white backdrop-blur-sm";
     };
 
@@ -64,54 +74,19 @@ export default function Chat() {
         const playNotificationSound = () => {
             const notificationSound = localStorage.getItem("notification-sound") || "default";
             if (notificationSound === "none") return;
-            
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === "suspended") {
-                    audioCtx.resume();
-                }
+                if (audioCtx.state === "suspended") audioCtx.resume();
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
-                
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-                
-                if (notificationSound === "ding") {
-                    oscillator.frequency.value = 800;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.3);
-                } else if (notificationSound === "chime") {
-                    oscillator.frequency.value = 600;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.15);
-                    
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(audioCtx.destination);
-                    osc2.frequency.value = 900;
-                    gain2.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.15);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                    osc2.start(audioCtx.currentTime + 0.15);
-                    osc2.stop(audioCtx.currentTime + 0.4);
-                } else if (notificationSound === "pop") {
-                    oscillator.frequency.value = 400;
-                    gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.1);
-                } else {
-                    // default
-                    oscillator.frequency.value = 600;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.2);
-                }
-            } catch { /* silence is golden */ }
+                oscillator.frequency.value = 600;
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            } catch { /* silence */ }
         };
         
         const handleNewMessage = (msg) => {
@@ -136,19 +111,12 @@ export default function Chat() {
         const handleUsers = (data) => {
             const users = data.users || data;
             const admins = data.admins || [];
-            console.log("📋 RAW usuarios recibidos:", JSON.stringify(users).slice(0, 200));
-            console.log("📋 Admins recibidos:", admins);
-            
-            // Normalizar usuarios - puede ser array de strings o de objetos
             const normalizedUsers = users.map(u => {
                 if (typeof u === "string") return { nombre: u, avatar: null };
                 return { nombre: u?.nombre || u, avatar: u?.avatar || null };
             });
-            
-            console.log("📋 Normalizado:", normalizedUsers.map(u => `${u.nombre.substring(0,10)}: avatar=${u.avatar ? "SÍ" : "NO"}`));
             setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
-            console.log("📋 AdminBadge - adminsList actualizado:", admins);
         };
         
         socket.on("Users Actualizados", handleUsers);
@@ -185,20 +153,13 @@ export default function Chat() {
             const vh = window.visualViewport?.height || window.innerHeight;
             document.documentElement.style.setProperty("--app-height", `${vh}px`);
         };
-
         setHeight();
         window.addEventListener("resize", setHeight);
         window.addEventListener("orientationchange", () => setTimeout(setHeight, 100));
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", setHeight);
-        }
-
+        if (window.visualViewport) window.visualViewport.addEventListener("resize", setHeight);
         return () => {
             window.removeEventListener("resize", setHeight);
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener("resize", setHeight);
-            }
+            if (window.visualViewport) window.visualViewport.removeEventListener("resize", setHeight);
         };
     }, []);
 
@@ -210,7 +171,6 @@ export default function Chat() {
         if (atBottom) setShowScrollBtn(false);
         setScrolled(el.scrollTop > 10);
         
-        // Marcar mensajes como leídos cuando se ven
         if (socket && messages.length > 0) {
             const visibleMessages = Array.from(el.querySelectorAll('[id^="msg-"]'));
             visibleMessages.forEach(msgEl => {
@@ -260,7 +220,7 @@ export default function Chat() {
             >
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
-                    <ProfileDropdown isAdmin={adminsList.includes(user)} socket={socket} />
+                    <ProfileDropdown isAdmin={userIsAdmin || adminsList.includes(user)} socket={socket} />
                     <RoomSelector scrolled={scrolled} socket={socket} />
                 </div>
 
@@ -293,8 +253,6 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* VideoCall - manejando estado desde el navbar */}
-
             {/* Mensajes */}
             <div
                 ref={mensajesRef}
@@ -302,7 +260,6 @@ export default function Chat() {
                 className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1"
                 style={{ overscrollBehavior: "contain" }}
             >
-                {/* Seleccionar sala */}
                 {!currentRoom && (
                     <div className="flex flex-col items-center justify-center py-10 gap-3">
                         <p className="text-white/70 text-lg">💬 Elegí una sala para empezar</p>
@@ -310,7 +267,6 @@ export default function Chat() {
                     </div>
                 )}
 
-                {/* Cargando mensajes */}
                 {currentRoom && !historialListo && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-10 gap-3">
                         <div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"/>
@@ -318,7 +274,6 @@ export default function Chat() {
                     </div>
                 )}
 
-                {/* Cargar anteriores */}
                 {hasMore && (
                     <div className="flex justify-center py-2">
                         <button
@@ -331,10 +286,7 @@ export default function Chat() {
                     </div>
                 )}
 
-                {/* Lista de mensajes */}
-                {messages.map(msg => {
-                    // El avatar ya viene en el mensaje del servidor
-                    return (
+                {messages.map(msg => (
                     <Message
                         key={msg.id}
                         message={msg}
@@ -345,9 +297,8 @@ export default function Chat() {
                         userAvatar={msg.user === user ? avatar : (msg.senderAvatar || null)}
                         adminsList={adminsList}
                     />
-                );})}
+                ))}
 
-                {/* Indicador de escritura */}
                 {typingUsers.filter(u => u !== user).length > 0 && (
                     <div className="flex items-center gap-2 px-3 py-2 w-fit">
                         <div className="flex gap-1">
@@ -360,11 +311,9 @@ export default function Chat() {
                         </span>
                     </div>
                 )}
-
                 <div ref={bottomRef} />
             </div>
 
-            {/* Botón scroll al fondo */}
             {showScrollBtn && (
                 <button
                     onClick={scrollToBottom}
@@ -374,7 +323,6 @@ export default function Chat() {
                 </button>
             )}
 
-            {/* Input */}
             <MessageInput
                 socket={socket}
                 onType={onType}
@@ -382,7 +330,6 @@ export default function Chat() {
                 currentRoom={currentRoom}
             />
 
-            {/* Music App */}
             <MusicApp
                 socket={socket}
                 currentUser={user}
@@ -390,13 +337,11 @@ export default function Chat() {
                 onClose={() => setShowMusicApp(false)}
             />
 
-            {/* Settings */}
             <Settings
                 open={showSettings}
                 onClose={() => setShowSettings(false)}
             />
 
-            {/* Lightbox */}
             {lightboxSrc && (
                 <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
             )}

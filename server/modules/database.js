@@ -95,6 +95,13 @@ export async function initDatabase() {
         )
     `);
 
+    // --- ÍNDICES DE RENDIMIENTO ---
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_mensajes_room_ts ON Mensajes(room, timestamp DESC)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_mensajes_room ON Mensajes(room)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_reacciones_msg ON Reacciones(messageId)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_miembros_usuario ON MiembrosSala(usuario)");
+    console.log("🚀 Índices de rendimiento verificados");
+
     // Tabla Canciones
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Canciones (
