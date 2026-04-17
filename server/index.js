@@ -160,21 +160,9 @@ app.use((req, res, next) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate");
     res.set("Pragma", "no-cache");
     res.set("Expires", "0");
-    res.set("Access-Control-Allow-Credentials", "true");
     next();
 });
 
-// CORS preflight
-app.options("*", (req, res, next) => {
-    const origin = req.headers.origin;
-    if (["https://chat.portfolioslf.com", "https://l0fachat.online", "http://localhost:5173", "http://localhost:3000"].includes(origin)) {
-        res.set("Access-Control-Allow-Origin", origin);
-        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        res.set("Access-Control-Allow-Credentials", "true");
-    }
-    res.status(204).end();
-});
 app.use(express.static(path.join(process.cwd(), "dist")));
 app.get(/.*/, (_, res) => {
     res.sendFile(path.join(process.cwd(), "dist", "index.html"));
