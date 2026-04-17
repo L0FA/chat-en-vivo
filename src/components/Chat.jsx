@@ -182,28 +182,22 @@ export default function Chat() {
     // Fijar altura para evitar problemas con teclado en mobile
     useEffect(() => {
         const setHeight = () => {
-            document.documentElement.style.setProperty(
-                "--app-height",
-                `${window.innerHeight}px`
-            );
+            const vh = window.visualViewport?.height || window.innerHeight;
+            document.documentElement.style.setProperty("--app-height", `${vh}px`);
         };
 
         setHeight();
         window.addEventListener("resize", setHeight);
         window.addEventListener("orientationchange", () => setTimeout(setHeight, 100));
-        
-        // Manejar teclado virtual en móviles
-        const handleVisualViewportResize = () => {
-            setHeight();
-        };
+
         if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", handleVisualViewportResize);
+            window.visualViewport.addEventListener("resize", setHeight);
         }
-        
+
         return () => {
             window.removeEventListener("resize", setHeight);
             if (window.visualViewport) {
-                window.visualViewport.removeEventListener("resize", handleVisualViewportResize);
+                window.visualViewport.removeEventListener("resize", setHeight);
             }
         };
     }, []);

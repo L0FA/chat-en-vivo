@@ -72,7 +72,9 @@ export default function ThemeBackground() {
         canvas.height = window.innerHeight;
 
         // Limpiar frame anterior
-        cancelAnimationFrame(animFrameRef.current);
+        if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Obtener función de animación según el tema

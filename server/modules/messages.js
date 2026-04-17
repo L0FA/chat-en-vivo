@@ -63,12 +63,17 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
         emitMessage(io, socket, room, messagePayload);
         cb?.({ status: "ok", id });
 
-        // Guardar en DB en background (fire & forget)
-        db.execute({
-            sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
-        }).catch(e => console.error("❌ Error guardando mensaje:", e));
+        // Guardar en DB (await para asegurar que se guarde correctamente)
+        try {
+            await db.execute({
+                sql: `INSERT INTO Mensajes (id, content, user, timestamp, type, replyToId, replyToUser, replyToContent, edited, destructSeconds, room)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                args: [id, messageContent, currentUser.nombre, timestamp, "text", replyToId || null, replyToUser || null, replyToContent || null, 0, destructSeconds || 0, room]
+            });
+            console.log("✅ Mensaje guardado:", id, "en sala:", room);
+        } catch (e) {
+            console.error("❌ Error guardando mensaje:", e.message, "id:", id);
+        }
     });
 
     // ---- IMAGEN EN CHAT ----
@@ -202,9 +207,13 @@ export async function setupMessages(io, socket, connectedUsers, isAdmin, userRoo
     // ---- ELIMINAR MENSAJE ----
     socket.on("Eliminar Mensaje", async ({ messageId }, cb) => {
         const user = connectedUsers.get(socket.id);
-        if (!user) return;
+        if (!user) {
+            cb?.({ status: "error", message: "No logueado" });
+            return;
+        }
 
         const isAdmin = ["Testing", "La Compu Del Admin", "Anonimo", "Wachin", "usuariorosa"].includes(user.nombre);
+        console.log("🗑️ Eliminando mensaje:", messageId, "por:", user.nombre, "isAdmin:", isAdmin);
 
         try {
             // Admins pueden eliminar cualquier mensaje

@@ -38,61 +38,13 @@ body {
 }
 
 /* ===================== THEMES ===================== */
-
-/* 🌸 ROSA */
-.theme-rosa {
-    --bg-color: #ffe4e6;
-    --text-color: #4b004b;
-}
-
-html.theme-rosa::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 32px;
-    animation: fall 15s linear infinite;
-    z-index: -11;
-}
-
-@keyframes petalFloat {
-    0%, 100% { transform: translateY(0px) scale(1); }
-    50% { transform: translateY(-1.5px) scale(1.01); }
-}
-
-.animate-petalFloat {
-    animation: petalFloat 4s ease-in-out infinite;
-}
-
-html.theme-rosa body {
-    box-shadow: inset 0 0 80px rgba(255, 182, 193, 0.15);
-}
-
+/* Los fondos de temas se manejan en ThemeBackground.jsx (canvas) */
+/* Solo se mantienen efectos especiales que no tienen equivalente en canvas */
 
 /* 🌑 DARK */
 .theme-dark {
     --bg-color: #121212;
     --text-color: #ffffff;
-}
-
-/* 🌑💗 DARK PINK */
-.theme-darkpink {
-    --bg-color: #000;
-    --text-color: #ffb6c1;
-}
-
-html.theme-darkpink::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='0' y='24' font-size='24'%3E🌸%3C/text%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 32px;
-    animation: fall 15s linear infinite;
-    z-index: -11;
 }
 
 /* ⚡ NEON */
@@ -130,30 +82,6 @@ html.theme-cyberpunk body {
 
 .glitch-soft {
     animation: glitch 1.2s infinite;
-}
-
-html.theme-cyberpunk::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-
-    background: repeating-linear-gradient(
-        to bottom,
-        rgba(255, 0, 128, 0.05),
-        rgba(255, 0, 128, 0.05) 1px,
-        transparent 1px,
-        transparent 4px
-    );
-
-    animation: scanMove 4s linear infinite;
-
-    z-index: -9;
-}
-
-@keyframes scanMove {
-    from { transform: translateY(0); }
-    to { transform: translateY(4px); }
 }
 
 @keyframes cyberFlicker {
@@ -194,48 +122,14 @@ html.theme-retro body {
     --text-color: #00a8cc;
 }
 
-html.theme-ocean::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-
-    background: linear-gradient(
-        to bottom,
-        rgba(100, 180, 255, 0.15),
-        transparent 40%
-    );
-
-    z-index: -11;
-}
-
-
 html.theme-ocean body {
     animation: oceanWave 6s infinite;
-}
-
-html.theme-ocean::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-
-    background: radial-gradient(
-        ellipse at top,
-        rgba(100, 180, 255, 0.15),
-        transparent 60%
-    );
-
-    animation: waterPulse 6s ease-in-out infinite;
-
-    z-index: -11;
 }
 
 @keyframes waterPulse {
     0%, 100% { opacity: 0.2; }
     50% { opacity: 0.4; }
 }
-
 
 @keyframes waterLight {
     from { transform: translateX(0); }
