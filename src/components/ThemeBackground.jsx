@@ -51,15 +51,14 @@ const THEME_ANIMATIONS = {
 export default function ThemeBackground() {
     const { theme } = useChat();
     const canvasRef = useRef(null);
-    const animFrameRef = useRef(null);
-    const ctxRef = useRef(null);
+    const runningRef = useRef(false);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
-        ctxRef.current = ctx;
+        runningRef.current = true;
 
         const handleResize = () => {
             canvas.width = window.innerWidth;
@@ -70,24 +69,20 @@ export default function ThemeBackground() {
         window.addEventListener("resize", handleResize);
 
         // Obtener función de animación según el tema
-        const createAnimation = THEME_ANIMATIONS[theme] || createDefaultAnimation;
+        const themeKey = theme === "default" || theme === "custom" ? "minimal" : theme;
+        const createAnimation = THEME_ANIMATIONS[themeKey] || createDefaultAnimation;
         
         // Crear y ejecutar animación
-        const animateResult = createAnimation(ctx, canvas);
+        const animateFn = createAnimation(ctx, canvas);
         
-        if (typeof animateResult === "function") {
-            animFrameRef.current = animateResult;
+        if (typeof animateFn === "function") {
+            animateFn();
         }
 
         // Cleanup al desmontar o cambiar tema
         return () => {
-            if (animFrameRef.current) {
-                cancelAnimationFrame(animFrameRef.current);
-                animFrameRef.current = null;
-            }
-            if (ctxRef.current) {
-                ctxRef.current.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            runningRef.current = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             window.removeEventListener("resize", handleResize);
         };
     }, [theme]);
