@@ -170,4 +170,7 @@ app.get(/.*/, (_, res) => {
 
 initDatabase().then(() => {
     server.listen(port, () => console.log(`🚀 Server corriendo en puerto ${port}`));
+}).catch(err => {
+    console.error("❌ Falló la inicialización de la base de datos:", err);
+    process.exit(1);
 });

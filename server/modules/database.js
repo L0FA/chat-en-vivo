@@ -21,7 +21,11 @@ export function getDb() {
 // Proxy que permite usar `db.execute(...)` pero inicializa lazy
 export const db = new Proxy({}, {
     get(_, prop) {
-        return getDb()[prop];
+        const client = getDb();
+        const value = client[prop];
+        // IMPORTANTE: Enlazar funciones al cliente original para no perder el contexto 'this'
+        if (typeof value === "function") return value.bind(client);
+        return value;
     }
 });
 
