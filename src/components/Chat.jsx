@@ -93,12 +93,11 @@ export default function Chat() {
         return () => socket.off("Mensaje en Chat", handleNewMessage);
     }, [socket, user, isAtBottom, historialListo]);
 
-    const [userIsAdminFlag, setUserIsAdminFlag] = useState(() => {
-        const saved = localStorage.getItem("user-is-admin");
-        return saved === "true";
-    });
-
     const loadedRef = useRef(false);
+
+    useEffect(() => {
+        loadedRef.current = false;
+    }, [user]);
 
     useEffect(() => {
         if (!socket || loadedRef.current) return;
@@ -157,7 +156,7 @@ export default function Chat() {
             socket.off("Users Actualizados", handleUsers);
             loadedRef.current = false;
         };
-    }, [socket, setConnectedUsers, addUserRoom]);
+    }, [socket, user, setConnectedUsers, addUserRoom]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
