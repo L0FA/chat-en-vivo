@@ -21,14 +21,14 @@ export default function UsersPanel() {
                         <button onClick={() => setOpen(false)} className="text-white text-sm hover:scale-110 transition">✖</button>
                     </div>
                     <ul className="p-2 flex flex-col gap-1">
-                        {connectedUsers.map(u => {
+                        {connectedUsers.map((u, i) => {
                             const nombre = typeof u === "string" ? u : u?.nombre || "Usuario";
                             const avatar = typeof u === "string" ? null : u?.avatar;
                             const isMe = nombre === user;
                             const isImageAvatar = avatar && avatar.startsWith("data:image");
                             
                             return (
-                            <li key={nombre} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-white ${isMe ? "bg-blue-500/20" : "hover:bg-white/5"}`}>
+                            <li key={`${nombre}-${i}`} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-white ${isMe ? "bg-blue-500/20" : "hover:bg-white/5"}`}>
                                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)] shrink-0"/>
                                 {isImageAvatar ? (
                                     <img src={avatar} alt="" className="w-5 h-5 rounded-full object-cover" />

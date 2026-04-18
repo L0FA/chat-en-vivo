@@ -107,15 +107,12 @@ export default function Chat() {
             loadedRef.current = true;
             console.log("📥 [CHAT] Cargando datos...");
             
-            // Timeout de seguridad
-            const timeout = setTimeout(() => {
-                console.log("⏱️ [CHAT] Timeout de seguridad - no hubo respuesta");
-                loadedRef.current = false;
-            }, 10000);
+            if (!socket.connected) {
+                setTimeout(loadData, 1000);
+                return;
+            }
             
             socket.emit("Obtener Mis Salas", (res) => {
-                clearTimeout(timeout);
-                console.log("🏠 [CHAT] Respuesta salas:", res);
                 if (res.status === "ok") {
                     console.log("🏠 [CHAT] Salas:", res.salas);
                     const adminSala = res.salas.find(s => s.esAdmin === 1);
@@ -127,22 +124,11 @@ export default function Chat() {
                         return true;
                     });
                     filtered.forEach(s => addUserRoom(s));
-                } else {
-                    console.error("🏠 [CHAT] Error:", res);
                 }
             });
         };
 
-        // Cargar inmediatamente con delay para asegurar que socket esté listo
-        const timer = setTimeout(() => {
-            console.log("⏰ [CHAT] Timeout ejecutado, cargo datos");
-            loadData();
-        }, 500);
-
-        socket.on("connect", () => {
-            console.log("🔌 [CHAT] Socket connect!");
-            loadData();
-        });
+        socket.on("connect", loadData);
 
         socket.on("Login Exitoso", (data) => {
             console.log("🔐 [CHAT] Login Exitoso:", data);
@@ -168,8 +154,7 @@ export default function Chat() {
         socket.on("Users Actualizados", handleUsers);
 
         return () => {
-            clearTimeout(timer);
-            socket.off("connect");
+            socket.off("connect", loadData);
             socket.off("Login Exitoso");
             socket.off("Users Actualizados", handleUsers);
         };

@@ -58,8 +58,7 @@ export function useSocket(nombreUsuario, password = "") {
             socket.off("Error");
             socket.off("Admin Password Required");
             socket.off("Login Exitoso");
-            socket.disconnect();
-            setConnected(false);
+            // NO disconnect - el socket persiste
         };
     }, [socket]);
 
