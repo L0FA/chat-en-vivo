@@ -103,6 +103,7 @@ export default function Chat() {
     }, [socket, user, isAtBottom, historialListo]);
 
     const [adminsList, setAdminsList] = useState([]);
+    const [userIsAdminFlag, setUserIsAdminFlag] = useState(false);
 
     useEffect(() => {
         if (!socket) return;
@@ -110,13 +111,19 @@ export default function Chat() {
         socket.on("Login Exitoso", (data) => {
             console.log("🔐 [CHAT] Auth listo:", data);
             if (data.isAdmin && user) {
+                setUserIsAdminFlag(true);
                 setAdminsList([user]);
             }
             console.log("🏠 [CHAT] Pidiendo lista de salas...");
             socket.emit("Obtener Mis Salas", (res) => {
                 if (res.status === "ok") {
                     console.log("🏠 [CHAT] Salas recibidas:", res.salas.length);
-                    res.salas.forEach(s => addUserRoom(s));
+                    // Filtrar sala de admins si no es admin
+                    const filtered = res.salas.filter(s => {
+                        if (s.id === "sala-admins-global" && !data.isAdmin) return false;
+                        return true;
+                    });
+                    filtered.forEach(s => addUserRoom(s));
                 } else {
                     console.error("🏠 [CHAT] Error al obtener salas:", res);
                 }
@@ -239,7 +246,7 @@ export default function Chat() {
             >
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
-                    <ProfileDropdown isAdmin={userIsAdmin || adminsList.includes(user)} socket={socket} />
+                    <ProfileDropdown isAdmin={userIsAdminFlag || adminsList.includes(user)} socket={socket} />
                     <RoomSelector scrolled={scrolled} socket={socket} />
                 </div>
 
