@@ -17,7 +17,7 @@ import Settings from "./Settings";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom } = useChat();
-    const { socket, connected: isConnected, isAdmin: userIsAdmin, loginData } = useSocket(user, password);
+    const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
@@ -102,19 +102,27 @@ export default function Chat() {
         return () => socket.off("Mensaje en Chat", handleNewMessage);
     }, [socket, user, isAtBottom, historialListo]);
 
-    const [adminsList, setAdminsList] = useState(() => userIsAdmin ? [user] : []);
+    const [adminsList, setAdminsList] = useState([]);
 
-    // Actualizar adminsList cuando llega loginData
-    useEffect(() => {
-        if (loginData?.isAdmin && user) {
-            setAdminsList([user]);
-        }
-    }, [loginData, user]);
-
-    // Escuchar usuarios conectados
     useEffect(() => {
         if (!socket) return;
         
+        socket.on("Login Exitoso", (data) => {
+            console.log("🔐 [CHAT] Auth listo:", data);
+            if (data.isAdmin && user) {
+                setAdminsList([user]);
+            }
+            console.log("🏠 [CHAT] Pidiendo lista de salas...");
+            socket.emit("Obtener Mis Salas", (res) => {
+                if (res.status === "ok") {
+                    console.log("🏠 [CHAT] Salas recibidas:", res.salas.length);
+                    res.salas.forEach(s => addUserRoom(s));
+                } else {
+                    console.error("🏠 [CHAT] Error al obtener salas:", res);
+                }
+            });
+        });
+
         const handleUsers = (data) => {
             const users = data.users || data;
             const admins = data.admins || [];
@@ -127,8 +135,12 @@ export default function Chat() {
         };
         
         socket.on("Users Actualizados", handleUsers);
-        return () => socket.off("Users Actualizados", handleUsers);
-    }, [socket, setConnectedUsers]);
+
+        return () => {
+            socket.off("Login Exitoso");
+            socket.off("Users Actualizados", handleUsers);
+        };
+    }, [socket, user, setConnectedUsers, addUserRoom]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
