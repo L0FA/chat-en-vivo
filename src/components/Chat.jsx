@@ -16,7 +16,7 @@ import ProfileDropdown from "./ProfileDropdown";
 import Settings from "./Settings";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom, adminsList } = useChat();
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom, adminsList, setAdminsList } = useChat();
     const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     
@@ -100,32 +100,49 @@ export default function Chat() {
     }, [user]);
 
     useEffect(() => {
-        if (!socket || loadedRef.current) return;
+        if (!socket) return;
         
-        const loadInitialData = () => {
-            console.log("📥 [CHAT] Cargando datos iniciales...");
+        const loadData = () => {
+            if (loadedRef.current) return;
+            loadedRef.current = true;
+            console.log("📥 [CHAT] Cargando datos...");
             
-            // Cargar salas
+            // Timeout de seguridad
+            const timeout = setTimeout(() => {
+                console.log("⏱️ [CHAT] Timeout de seguridad - no hubo respuesta");
+                loadedRef.current = false;
+            }, 10000);
+            
             socket.emit("Obtener Mis Salas", (res) => {
+                clearTimeout(timeout);
+                console.log("🏠 [CHAT] Respuesta salas:", res);
                 if (res.status === "ok") {
-                    console.log("🏠 [CHAT] Salas recibidas:", res.salas);
-                    // Obtener info de membresía para determinar si es admin de alguna sala
+                    console.log("🏠 [CHAT] Salas:", res.salas);
                     const adminSala = res.salas.find(s => s.esAdmin === 1);
                     const isUserAdmin = !!adminSala;
                     setUserIsAdminFlag(isUserAdmin);
                     if (isUserAdmin) localStorage.setItem("user-is-admin", "true");
-                    // Filtrar sala de admins para no admins
                     const filtered = res.salas.filter(s => {
                         if (s.id === "sala-admins-global" && !isUserAdmin) return false;
                         return true;
                     });
                     filtered.forEach(s => addUserRoom(s));
+                } else {
+                    console.error("🏠 [CHAT] Error:", res);
                 }
-                loadedRef.current = true;
             });
         };
 
-        socket.on("connect", loadInitialData);
+        // Cargar inmediatamente con delay para asegurar que socket esté listo
+        const timer = setTimeout(() => {
+            console.log("⏰ [CHAT] Timeout ejecutado, cargo datos");
+            loadData();
+        }, 500);
+
+        socket.on("connect", () => {
+            console.log("🔌 [CHAT] Socket connect!");
+            loadData();
+        });
 
         socket.on("Login Exitoso", (data) => {
             console.log("🔐 [CHAT] Login Exitoso:", data);
@@ -137,7 +154,7 @@ export default function Chat() {
         });
 
         const handleUsers = (data) => {
-            console.log("👥 [CHAT] Users Actualizados:", data);
+            console.log("👥 [CHAT] Users:", data);
             const users = data.users || data;
             const admins = data.admins || [];
             const normalizedUsers = users.map(u => {
@@ -151,12 +168,12 @@ export default function Chat() {
         socket.on("Users Actualizados", handleUsers);
 
         return () => {
-            socket.off("connect", loadInitialData);
+            clearTimeout(timer);
+            socket.off("connect");
             socket.off("Login Exitoso");
             socket.off("Users Actualizados", handleUsers);
-            loadedRef.current = false;
         };
-    }, [socket, user, setConnectedUsers, addUserRoom]);
+    }, [socket, user, setConnectedUsers, addUserRoom, setAdminsList]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {

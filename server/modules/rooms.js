@@ -10,7 +10,9 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 export function setupRooms(socket, connectedUsers) {
     // ---- OBTENER MIS SALAS ----
     socket.on("Obtener Mis Salas", async (cb) => {
+        console.log("🏠 [ROOMS] Solicitud de Obtener Mis Salas para socket:", socket.id);
         const user = connectedUsers.get(socket.id);
+        console.log("🏠 [ROOMS] User en connectedUsers:", user);
         if (!user) {
             console.log("⚠️ [ROOMS] Intento de Obtener Mis Salas sin user en map para:", socket.id);
             return cb?.({ status: "error", message: "No autenticado" });
