@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useChat } from "../hooks/useChat";
 
-export default function RoomSelector({ scrolled, socket }) {
+export default function RoomSelector({ scrolled, socket, isUserAdmin = false }) {
     const { currentRoom, changeRoom, userRooms, addUserRoom, removeUserRoom } = useChat();
     const [open, setOpen] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -25,12 +25,17 @@ export default function RoomSelector({ scrolled, socket }) {
             if (socket) {
                 socket.emit("Obtener Mis Salas", (res) => {
                     if (res.status === "ok") {
-                        res.salas.forEach(s => addUserRoom(s));
+                        // Filtrar sala de admins para no admins
+                        const filtered = res.salas.filter(s => {
+                            if (s.id === "sala-admins-global" && !isUserAdmin) return false;
+                            return true;
+                        });
+                        filtered.forEach(s => addUserRoom(s));
                     }
                 });
             }
         }
-    }, [open, socket, addUserRoom, userRooms]);
+    }, [open, socket, addUserRoom, userRooms, isUserAdmin]);
 
     // Función de cierre declarada antes del useEffect que la usa
     const handleClose = useCallback(() => {

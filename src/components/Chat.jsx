@@ -16,7 +16,7 @@ import ProfileDropdown from "./ProfileDropdown";
 import Settings from "./Settings";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom } = useChat();
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom, adminsList } = useChat();
     const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     
@@ -24,6 +24,7 @@ export default function Chat() {
     const { onType, stopTyping } = useTyping(socket);
     const [scrolled, setScrolled] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [userIsAdminFlag, setUserIsAdminFlag] = useState(() => localStorage.getItem("user-is-admin") === "true");
 
     const mensajesRef = useRef(null);
     const bottomRef = useRef(null);
@@ -34,17 +35,7 @@ export default function Chat() {
     const [showSettings, setShowSettings] = useState(false);
     const [callTrigger, setCallTrigger] = useState(0);
 
-    // Pedir salas al conectar
-    useEffect(() => {
-        if (socket && isConnected) {
-            console.log("🏠 [CHAT] Pidiendo lista de salas...");
-            socket.emit("Obtener Mis Salas", (res) => {
-                if (res.status === "ok") {
-                    res.salas.forEach(s => addUserRoom(s));
-                }
-            });
-        }
-    }, [socket, isConnected, addUserRoom]);
+    
 
     // Efecto para actualizar título con notificaciones
     useEffect(() => {
@@ -102,35 +93,52 @@ export default function Chat() {
         return () => socket.off("Mensaje en Chat", handleNewMessage);
     }, [socket, user, isAtBottom, historialListo]);
 
-    const [adminsList, setAdminsList] = useState([]);
-    const [userIsAdminFlag, setUserIsAdminFlag] = useState(false);
+    const [userIsAdminFlag, setUserIsAdminFlag] = useState(() => {
+        const saved = localStorage.getItem("user-is-admin");
+        return saved === "true";
+    });
+
+    const loadedRef = useRef(false);
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || loadedRef.current) return;
         
-        socket.on("Login Exitoso", (data) => {
-            console.log("🔐 [CHAT] Auth listo:", data);
-            if (data.isAdmin && user) {
-                setUserIsAdminFlag(true);
-                setAdminsList([user]);
-            }
-            console.log("🏠 [CHAT] Pidiendo lista de salas...");
+        const loadInitialData = () => {
+            console.log("📥 [CHAT] Cargando datos iniciales...");
+            
+            // Cargar salas
             socket.emit("Obtener Mis Salas", (res) => {
                 if (res.status === "ok") {
-                    console.log("🏠 [CHAT] Salas recibidas:", res.salas.length);
-                    // Filtrar sala de admins si no es admin
+                    console.log("🏠 [CHAT] Salas recibidas:", res.salas);
+                    // Obtener info de membresía para determinar si es admin de alguna sala
+                    const adminSala = res.salas.find(s => s.esAdmin === 1);
+                    const isUserAdmin = !!adminSala;
+                    setUserIsAdminFlag(isUserAdmin);
+                    if (isUserAdmin) localStorage.setItem("user-is-admin", "true");
+                    // Filtrar sala de admins para no admins
                     const filtered = res.salas.filter(s => {
-                        if (s.id === "sala-admins-global" && !data.isAdmin) return false;
+                        if (s.id === "sala-admins-global" && !isUserAdmin) return false;
                         return true;
                     });
                     filtered.forEach(s => addUserRoom(s));
-                } else {
-                    console.error("🏠 [CHAT] Error al obtener salas:", res);
                 }
+                loadedRef.current = true;
             });
+        };
+
+        socket.on("connect", loadInitialData);
+
+        socket.on("Login Exitoso", (data) => {
+            console.log("🔐 [CHAT] Login Exitoso:", data);
+            setUserIsAdminFlag(!!data.isAdmin);
+            localStorage.setItem("user-is-admin", data.isAdmin ? "true" : "false");
+            if (data.isAdmin && data.user) {
+                setAdminsList(prev => prev.includes(data.user) ? prev : [...prev, data.user]);
+            }
         });
 
         const handleUsers = (data) => {
+            console.log("👥 [CHAT] Users Actualizados:", data);
             const users = data.users || data;
             const admins = data.admins || [];
             const normalizedUsers = users.map(u => {
@@ -140,14 +148,16 @@ export default function Chat() {
             setConnectedUsers(normalizedUsers);
             setAdminsList(admins);
         };
-        
+
         socket.on("Users Actualizados", handleUsers);
 
         return () => {
+            socket.off("connect", loadInitialData);
             socket.off("Login Exitoso");
             socket.off("Users Actualizados", handleUsers);
+            loadedRef.current = false;
         };
-    }, [socket, user, setConnectedUsers, addUserRoom]);
+    }, [socket, setConnectedUsers, addUserRoom]);
 
     // Scroll al fondo cuando llega un mensaje nuevo
     useEffect(() => {
@@ -247,7 +257,7 @@ export default function Chat() {
                 {/* Logo + estado */}
                 <div className="flex items-center gap-2">
                     <ProfileDropdown isAdmin={userIsAdminFlag || adminsList.includes(user)} socket={socket} />
-                    <RoomSelector scrolled={scrolled} socket={socket} />
+                    <RoomSelector scrolled={scrolled} socket={socket} isUserAdmin={userIsAdminFlag} />
                 </div>
 
                 {/* Botones */}

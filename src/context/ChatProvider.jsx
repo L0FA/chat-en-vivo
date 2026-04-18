@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ChatContext } from "./ChatContext";
 
 export function ChatProvider({ children }) {
@@ -7,7 +7,14 @@ export function ChatProvider({ children }) {
     const [avatar, setAvatar] = useState(() => localStorage.getItem("UserAvatar") || "😀");
     const [messages, setMessages] = useState([]);
     const [theme, setTheme] = useState(() => localStorage.getItem("chat-theme") || "default");
-    const [connectedUsers, setConnectedUsers] = useState([]);
+    const [connectedUsers, setConnectedUsers] = useState(() => {
+        const saved = localStorage.getItem("connected-users");
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [adminsList, setAdminsList] = useState(() => {
+        const saved = localStorage.getItem("admins-list");
+        return saved ? JSON.parse(saved) : [];
+    });
     const [replyingTo, setReplyingTo] = useState(null);
     const [lightboxSrc, setLightboxSrc] = useState(null);
     const [typingUsers, setTypingUsers] = useState([]);
@@ -17,6 +24,16 @@ export function ChatProvider({ children }) {
     });
     // Siempre iniciar sin sala seleccionada para mostrar el placeholder
     const [currentRoom, setCurrentRoom] = useState(null);
+
+    const handleSetConnectedUsers = useCallback((users) => {
+        setConnectedUsers(users);
+        localStorage.setItem("connected-users", JSON.stringify(users));
+    }, []);
+
+    const handleSetAdminsList = useCallback((admins) => {
+        setAdminsList(admins);
+        localStorage.setItem("admins-list", JSON.stringify(admins));
+    }, []);
 
     const addMessage = useCallback((msg) => {
         setMessages(prev => {
@@ -132,7 +149,8 @@ export function ChatProvider({ children }) {
             user, password, login, avatar, updateProfile,
             messages, setMessages, setBatchMessages, clearMessages, addMessage, prependMessages, updateMessage, removeMessage, updateReaction,
             theme, changeTheme,
-            connectedUsers, setConnectedUsers,
+            connectedUsers, setConnectedUsers: handleSetConnectedUsers,
+            adminsList, setAdminsList: handleSetAdminsList,
             replyingTo, setReplyingTo,
             lightboxSrc, setLightboxSrc,
             typingUsers, setTypingUsers,

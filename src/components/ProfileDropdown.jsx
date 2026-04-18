@@ -65,6 +65,10 @@ export default function ProfileDropdown({ isAdmin = false, socket = null }) {
         localStorage.removeItem("chat-theme");
         localStorage.removeItem("chat-custom-theme");
         localStorage.removeItem("currentRoom");
+        localStorage.removeItem("user-is-admin");
+        localStorage.removeItem("connected-users");
+        localStorage.removeItem("admins-list");
+        localStorage.removeItem("user-rooms");
         window.location.reload();
     };
 
