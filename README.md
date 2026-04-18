@@ -1,6 +1,6 @@
-# 💬 Whatsappn't (aka Chat en Vivo)
+# 💬 L0FAChat (aka Chat en Vivo)
 
-¡Bienvenido a **Whatsappn't**! Una aplicación de chat full-stack, en tiempo real y rica en funcionalidades construida sobre **React**, **Vite** y **Node.js**.
+¡Bienvenido a **L0FAChat**! Una aplicación de chat full-stack, en tiempo real y rica en funcionalidades construida sobre **React**, **Vite** y **Node.js**.
 
 Este proyecto se concibió inicialmente como *chat-en-vivo*, pero fue refactorizado y migrado por completo hacia una arquitectura de frontend web moderna y unificada en un solo repositorio (Monorepo), acoplándose perfectamente a un backend ligero y ridículamente rápido potenciado por WebSockets.
 
@@ -24,21 +24,6 @@ Este proyecto se concibió inicialmente como *chat-en-vivo*, pero fue refactoriz
 - **Base de Datos:** SQLite / [libSQL](https://turso.tech) (Turso).
 - **Librerías Extra:** `emoji-picker-element` para stickers/reacciones, `open-graph-scraper` para visualización previa de enlaces en el chat.
 
-## 📦 Instalación y Desarrollo Local
-
-### 1. Variables de Entorno (.env)
-Clona este repositorio o asegúrate de poseer tus credenciales locales. Crea un archivo `.env` en la raíz replicando esto:
-```env
-VITE_SOCKET_URL=http://localhost:3000
-
-# -- Backend Secrets --
-DB_TOKEN="TU_TOKEN_DE_TURSO"
-DB_URL="libsql://tu-base-de-datos.turso.io"
-ADMINS="ElAdmin,OtroAdmin"
-GIPHY_API_KEY="TU_CLAVE_DE_GIPHY"
-```
-
-### 2. Arrancar Proyecto
 
 Para instalar todas las dependencias necesarias de Front y Back:
 ```bash
