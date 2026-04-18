@@ -17,7 +17,7 @@ import Settings from "./Settings";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom } = useChat();
-    const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
+    const { socket, connected: isConnected, isAdmin: userIsAdmin, loginData } = useSocket(user, password);
     const { theme } = useTheme();
     
     const { historialListo, hasMore, loadOlder } = useMessages(socket, currentRoom);
@@ -103,6 +103,13 @@ export default function Chat() {
     }, [socket, user, isAtBottom, historialListo]);
 
     const [adminsList, setAdminsList] = useState(() => userIsAdmin ? [user] : []);
+
+    // Actualizar adminsList cuando llega loginData
+    useEffect(() => {
+        if (loginData?.isAdmin && user) {
+            setAdminsList([user]);
+        }
+    }, [loginData, user]);
 
     // Escuchar usuarios conectados
     useEffect(() => {
