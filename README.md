@@ -15,7 +15,7 @@ Este proyecto se concibió inicialmente como *chat-en-vivo*, pero fue refactoriz
 - **Temas Dinámicos:** Personalización de fondos asombrosa gracias a simulaciones en *Canvas* (Lluvia Matrix, Pétalos Sakura, Fuego, Cyberpunk, Neón y muchos más).
 - **Backend Moderno con libSQL:** Motor de base de datos integrado mediante Turso.
 - **Totalmente Responsive:** Orientado 100% al diseño Mobile-First y adaptable al teclado del SO (`100dvh`).
-- **Sistema de Llamadas en Vivo: Estilo Discord, podes hablar por llamada, prender camara, compartir pantalla en tiempo real!
+- **Sistema de Llamadas en Vivo:** Estilo Discord, podes hablar por llamada, prender camara, compartir pantalla en tiempo real!
 
 ## 🛠️ Stack Tecnológico
 
