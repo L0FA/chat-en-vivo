@@ -24,6 +24,24 @@ export async function setupMusic(io, socket, connectedUsers) {
         }
     }
 
+    // Inicialización: Enviar lista actual al conectar
+    try {
+        const result = await db.execute("SELECT * FROM Canciones ORDER BY timestamp ASC");
+        socket.emit("Lista Música Actualizada", result.rows);
+    } catch (e) {
+        console.error("❌ Error enviando lista inicial:", e);
+    }
+
+    // ---- OBTENER COLA COMPLETA ----
+    socket.on("Cargar Cola Música", async (cb) => {
+        try {
+            const result = await db.execute("SELECT * FROM Canciones ORDER BY timestamp ASC");
+            cb?.({ status: "ok", canciones: result.rows });
+        } catch {
+            cb?.({ status: "error" });
+        }
+    });
+
     // ---- SUBIR CANCIÓN ----
     socket.on("Subir Canción", async (payload, cb) => {
         const user = connectedUsers.get(socket.id);

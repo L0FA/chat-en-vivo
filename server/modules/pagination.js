@@ -96,6 +96,12 @@ export async function setupPagination(io, socket, connectedUsers) {
                 isAuthorizedAdmin = isHardcodedAdmin || (adminCheck.rows.length > 0 && adminCheck.rows[0].esAdmin === 1);
             }
 
+            // --- SEGURIDAD: Bloquear acceso si la sala es ADMIN y el usuario NO ---
+            if (room === "sala-admins-global" && !isAuthorizedAdmin) {
+                console.log(`🚫 [SECURITY] Acceso denegado a historial admin para: ${currentUser?.nombre}`);
+                return _cb?.({ status: "error", message: "Acceso denegado" });
+            }
+
             // 2. Ejecutar búsqueda de mensajes
             let results;
             if (room === "sala-admins-global" && isAuthorizedAdmin) {

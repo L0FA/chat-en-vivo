@@ -6,24 +6,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { formatTime, extractYouTubeId, getAudioType } from "../utils/musicUtils";
-import { MusicPlayer, MusicQueue, AddSongForm } from "./music";
+import { formatTime, extractYouTubeId } from "../utils/musicUtils";
+import { MusicQueue } from "./music";
 
-/**
- * Componente principal de la aplicación de música
- * Maneja reproducción de YouTube, archivos de audio y streams
- * @param {Object} props
- * @param {Object} props.socket - Socket de conexión
- * @param {string} props.currentUser - Usuario actual
- * @param {boolean} props.open - Si el panel está abierto
- * @param {function} props.onClose - Cerrar panel
- */
 export default function MusicApp({ socket, open, onClose }) {
     // ============================================
     // 🔧 ESTADOS
     // ============================================
     
-    const [canciones] = useState([]);
+    const [canciones, setCanciones] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -35,15 +26,11 @@ export default function MusicApp({ socket, open, onClose }) {
     const [tab, setTab] = useState("cola");
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
-    const [searching, setSearching] = useState(false);
-    const [equilizer, setEquilizer] = useState(false);
     
-    // Estados del formulario
     const [titulo, setTitulo] = useState("");
     const [artista, setArtista] = useState("");
     const [youtubeUrl, setYoutubeUrl] = useState("");
     const [audioFile, setAudioFile] = useState(null);
-    const [portadaFile, setPortadaFile] = useState(null);
     const [portadaPreview, setPortadaPreview] = useState(null);
     const [urlStream, setUrlStream] = useState("");
     
@@ -58,12 +45,60 @@ export default function MusicApp({ socket, open, onClose }) {
     const ytContainerRef = useRef(null);
     const progressRef = useRef(null);
     const fileInputRef = useRef(null);
-    const portadaInputRef = useRef(null);
 
-const cancionActual = canciones[currentIndex];
+    const cancionActual = canciones.length > 0 ? canciones[currentIndex] : null;
 
     // ============================================
-    // 🎮 CONTROL FUNCTIONS - Definidas antes de los useEffects que las usan
+    // 📡 SOCKET SYNC (MÚSICA)
+    // ============================================
+    
+    useEffect(() => {
+        if (!socket) return;
+
+        // Pedir lista inicial
+        socket.emit("Cargar Cola Música", (res) => {
+            if (res?.status === "ok") setCanciones(res.canciones);
+        });
+
+        const handleUpdateList = (list) => {
+            setCanciones(Array.isArray(list) ? list : []);
+        };
+
+        const handleAdd = (cancion) => {
+            setCanciones(prev => [...prev, cancion]);
+        };
+
+        const handleRemove = ({ cancionId }) => {
+            setCanciones(prev => prev.filter(c => c.id !== cancionId));
+        };
+
+        const handleSync = ({ accion, currentTime: time, cancionId }) => {
+            if (accion === "play") {
+                setIsPlaying(true);
+                if (cancionId) {
+                    const idx = canciones.findIndex(c => c.id === cancionId);
+                    if (idx !== -1) setCurrentIndex(idx);
+                }
+            } else if (accion === "pause") {
+                setIsPlaying(false);
+            }
+        };
+
+        socket.on("Lista Música Actualizada", handleUpdateList);
+        socket.on("Canción Agregada", handleAdd);
+        socket.on("Canción Eliminada", handleRemove);
+        socket.on("Sync Música App", handleSync);
+
+        return () => {
+            socket.off("Lista Música Actualizada", handleUpdateList);
+            socket.off("Canción Agregada", handleAdd);
+            socket.off("Canción Eliminada", handleRemove);
+            socket.off("Sync Música App", handleSync);
+        };
+    }, [socket, canciones.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ============================================
+    // 🎮 CONTROL FUNCTIONS
     // ============================================
 
     const handleEnded = useCallback(() => {
@@ -71,9 +106,9 @@ const cancionActual = canciones[currentIndex];
             if (cancionActual?.tipo === "audio" && audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play();
-            } else {
-                ytPlayerRef.current?.seekTo(0, true);
-                ytPlayerRef.current?.playVideo();
+            } else if (ytPlayerRef.current) {
+                ytPlayerRef.current.seekTo(0, true);
+                ytPlayerRef.current.playVideo();
             }
         } else {
             setCurrentIndex(prev => {
@@ -86,114 +121,19 @@ const cancionActual = canciones[currentIndex];
         }
     }, [repeat, shuffle, canciones.length, cancionActual]);
 
-    // eslint-disable-next-line no-unused-vars
-    const emitSync = useCallback((accion) => {
-        const videoId = extractYouTubeId(cancionActual.contenido);
-        if (!videoId) return;
-
-        const initYT = () => {
-            if (ytPlayerRef.current) {
-                ytPlayerRef.current.loadVideoById(videoId);
-                return;
-            }
-            if (!ytContainerRef.current) return;
-            ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
-                height: "1",
-                width: "1",
-                videoId,
-                playerVars: { autoplay: 0, playsinline: 1, enablejsapi: 1 },
-                events: {
-                    onReady: () => {
-                        ytPlayerRef.current.setVolume(volume * 100);
-                        if (isPlaying) ytPlayerRef.current.playVideo();
-                    },
-                    onStateChange: (e) => {
-                        if (e.data === window.YT.PlayerState.ENDED) handleEnded();
-                    }
-                }
-            });
-        };
-
-        if (!document.getElementById("yt-api-script")) {
-            const tag = document.createElement("script");
-            tag.id = "yt-api-script";
-            tag.src = "https://www.youtube.com/iframe_api";
-            document.head.appendChild(tag);
-            window.onYouTubeIframeAPIReady = initYT;
-        } else if (window.YT?.Player) {
-            initYT();
-        } else {
-            window.onYouTubeIframeAPIReady = initYT;
-        }
-    }, [cancionActual]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // ============================================
-    // 🎵 AUDIO STREAMS
-    // ============================================
-
-    useEffect(() => {
-        if (!cancionActual || cancionActual.tipo !== "url") return;
-        if (audioRef.current) {
-            audioRef.current.src = cancionActual.contenido;
-            audioRef.current.volume = volume;
-            audioRef.current.load();
-            if (isPlaying) audioRef.current.play().catch(console.error);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cancionActual]);
-
-    // Cargar audio cuando cambia canción
-    useEffect(() => {
-        if (!cancionActual || cancionActual.tipo !== "audio") return;
-        if (audioRef.current) {
-            audioRef.current.src = cancionActual.contenido;
-            audioRef.current.volume = volume;
-            audioRef.current.load();
-            if (isPlaying) audioRef.current.play().catch(console.error);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cancionActual]);
-
-    // ============================================
-    // ⏱️ PROGRESS HANDLERS
-    // ============================================
-
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        const update = () => {
-            setCurrentTime(audio.currentTime);
-            setDuration(audio.duration || 0);
-        };
-        const onEnded = () => handleEnded();
-        audio.addEventListener("timeupdate", update);
-        audio.addEventListener("loadedmetadata", update);
-        audio.addEventListener("ended", onEnded);
-        return () => {
-            audio.removeEventListener("timeupdate", update);
-            audio.removeEventListener("loadedmetadata", update);
-            audio.removeEventListener("ended", onEnded);
-        };
-    }, [handleEnded]);
-
-    useEffect(() => {
-        if (!cancionActual || cancionActual.tipo !== "youtube") return;
-        const interval = setInterval(() => {
-            if (ytPlayerRef.current?.getCurrentTime) {
-                setCurrentTime(ytPlayerRef.current.getCurrentTime());
-                setDuration(ytPlayerRef.current.getDuration() || 0);
-            }
-        }, 500);
-        return () => clearInterval(interval);
-    }, [cancionActual]);
-
-    // ============================================
-    // 🎮 CONTROL FUNCTIONS
-    // ============================================
+    const emitSync = useCallback((accion, extra = {}) => {
+        if (!socket || !cancionActual) return;
+        socket.emit("Sync Música App", { 
+            accion, 
+            cancionId: cancionActual.id, 
+            currentTime: currentTime,
+            ...extra 
+        });
+    }, [socket, cancionActual, currentTime]);
 
     const play = useCallback(() => {
         if (!cancionActual) return;
-        if (cancionActual.tipo === "audio") {
+        if (cancionActual.tipo === "audio" || cancionActual.tipo === "url") {
             audioRef.current?.play().catch(console.error);
         } else {
             ytPlayerRef.current?.playVideo();
@@ -209,24 +149,23 @@ const cancionActual = canciones[currentIndex];
         emitSync("pause");
     }, [emitSync]);
 
-    const playNext = useCallback(() => {
-        if (!canciones.length) return;
-        setCurrentIndex(prev => {
-            const next = shuffle
-                ? Math.floor(Math.random() * canciones.length)
-                : (prev + 1) % canciones.length;
-            return next;
-        });
-        setIsPlaying(true);
-        emitSync("next");
-    }, [canciones.length, shuffle, emitSync]);
+    const handleVolumeChange = useCallback((v) => {
+        setVolume(v);
+        if (audioRef.current) audioRef.current.volume = v;
+        if (ytPlayerRef.current) ytPlayerRef.current.setVolume(v * 100);
+    }, []);
 
     const playPrev = useCallback(() => {
-        if (!canciones.length) return;
-        setCurrentIndex(prev => prev === 0 ? canciones.length - 1 : prev - 1);
+        if (canciones.length === 0) return;
+        setCurrentIndex(prev => (prev === 0 ? canciones.length - 1 : prev - 1));
         setIsPlaying(true);
-        emitSync("prev");
-    }, [canciones.length, emitSync]);
+    }, [canciones.length]);
+
+    const playNext = useCallback(() => {
+        if (canciones.length === 0) return;
+        setCurrentIndex(prev => (prev + 1) % canciones.length);
+        setIsPlaying(true);
+    }, [canciones.length]);
 
     const handleSeek = useCallback((e) => {
         const rect = progressRef.current?.getBoundingClientRect();
@@ -239,31 +178,8 @@ const cancionActual = canciones[currentIndex];
         emitSync("seek", { currentTime: time });
     }, [duration, emitSync]);
 
-    const handleVolumeChange = useCallback((v) => {
-        setVolume(v);
-        if (audioRef.current) audioRef.current.volume = v;
-        if (ytPlayerRef.current) ytPlayerRef.current.setVolume(v * 100);
-    }, []);
-
-    const playCancion = useCallback((idx) => {
-        const c = canciones[idx];
-        if (!c) return;
-        setCurrentIndex(idx);
-        setIsPlaying(true);
-        if (c.tipo === "audio" && audioRef.current) {
-            audioRef.current.src = c.contenido;
-            audioRef.current.load();
-            audioRef.current.play().catch(console.error);
-        }
-        socket?.emit("Sync Música App", { accion: "play", cancionId: c.id, currentTime: 0 });
-    }, [canciones, socket]);
-
-    const handleEliminar = useCallback((cancionId) => {
-        socket?.emit("Eliminar Canción", { cancionId });
-    }, [socket]);
-
     // ============================================
-    // 🔍 YOUTUBE SEARCH
+    // 🔍 SEARCH & UPLOAD
     // ============================================
 
     const searchYouTube = async (query) => {
@@ -275,7 +191,7 @@ const cancionActual = canciones[currentIndex];
             const data = await res.json();
             setSearchResults(data.items || []);
         } catch (err) {
-            console.error("Error buscar YouTube:", err);
+            console.error("Error search YouTube:", err);
         } finally {
             setSearching(false);
         }
@@ -283,70 +199,32 @@ const cancionActual = canciones[currentIndex];
 
     const addFromSearch = (video) => {
         const videoId = video.id?.videoId || video.id;
-        const title = video.snippet?.title || "Video";
         socket?.emit("Subir Canción", {
-            titulo: title,
+            titulo: video.snippet?.title || "Video",
             artista: video.snippet?.channelTitle || "YouTube",
             tipo: "youtube",
             contenido: `https://www.youtube.com/watch?v=${videoId}`,
-            portada: video.snippet?.thumbnails?.medium?.url
-        }, (response) => {
-            if (response?.status !== "ok") console.error("Error al agregar");
+            portada: video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url
         });
     };
 
-    // ============================================
-    // 📤 UPLOAD SONG
-    // ============================================
-
-    const handlePortadaChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => setPortadaPreview(ev.target.result);
-        reader.readAsDataURL(file);
-        setPortadaFile(file);
-    };
-
-    const handleSubir = useCallback(async () => {
-        if (!titulo.trim()) { alert("Ingresá un título"); return; }
-        if (!audioFile && !youtubeUrl.trim() && !urlStream.trim()) { alert("Subí un archivo, link de YouTube, o URL de audio"); return; }
-        if (audioFile && audioFile.size > 50 * 1024 * 1024) {
-            alert("El archivo no puede superar los 50MB");
-            return;
-        }
-
+    const handleSubir = async () => {
+        if (!titulo.trim()) return;
         setUploading(true);
         try {
-            let contenido = "";
-            let tipo = "";
-
-            if (youtubeUrl.trim()) {
-                const videoId = extractYouTubeId(youtubeUrl);
-                if (!videoId) { alert("Link de YouTube inválido"); setUploading(false); return; }
-                contenido = youtubeUrl.trim();
-                tipo = "youtube";
-            } else if (urlStream.trim()) {
-                contenido = urlStream.trim();
-                tipo = getAudioType(contenido) || "url";
-            } else {
+            let contenido = youtubeUrl.trim() || urlStream.trim();
+            let tipo = youtubeUrl.trim() ? "youtube" : "url";
+            
+            if (audioFile) {
                 const reader = new FileReader();
-                contenido = await new Promise((res, rej) => {
+                contenido = await new Promise(res => {
                     reader.onload = (e) => res(e.target.result);
-                    reader.onerror = rej;
                     reader.readAsDataURL(audioFile);
                 });
                 tipo = "audio";
             }
 
-            let portadaData = null;
-            if (portadaFile) {
-                const reader = new FileReader();
-                portadaData = await new Promise((res) => {
-                    reader.onload = (e) => res(e.target.result);
-                    reader.readAsDataURL(portadaFile);
-                });
-            }
+            let portadaData = portadaPreview;
 
             socket?.emit("Subir Canción", {
                 titulo: titulo.trim(),
@@ -354,37 +232,97 @@ const cancionActual = canciones[currentIndex];
                 tipo,
                 contenido,
                 portada: portadaData
-            }, (response) => {
-                if (response?.status !== "ok") alert("Error al subir la canción");
             });
 
-            setTitulo("");
-            setArtista("");
-            setYoutubeUrl("");
-            setUrlStream("");
-            setAudioFile(null);
-            setPortadaFile(null);
-            setPortadaPreview(null);
-            setSearchResults([]);
-            setTab("cola");
-        } catch (err) {
-            console.error("Error subiendo canción:", err);
-            alert("Error al procesar el archivo");
+            setTitulo(""); setArtista(""); setYoutubeUrl(""); setUrlStream("");
+            setAudioFile(null); setPortadaPreview(null); setTab("cola");
+        } catch (e) {
+            console.error("Error uploading:", e);
         } finally {
             setUploading(false);
         }
-    }, [titulo, artista, youtubeUrl, urlStream, audioFile, portadaFile, socket]);
+    };
 
     // ============================================
-    // 🎬 ANIMATION
+    // ⏱️ PROGRESS & YOUTUBE API
     // ============================================
 
     useEffect(() => {
-        if (open) {
-            setShow(true);
+        const audio = audioRef.current;
+        if (!audio) return;
+        const update = () => {
+            setCurrentTime(audio.currentTime);
+            setDuration(audio.duration || 0);
+        };
+        audio.addEventListener("timeupdate", update);
+        audio.addEventListener("loadedmetadata", update);
+        audio.addEventListener("ended", handleEnded);
+        return () => {
+            audio.removeEventListener("timeupdate", update);
+            audio.removeEventListener("loadedmetadata", update);
+            audio.removeEventListener("ended", handleEnded);
+        };
+    }, [handleEnded]);
+
+    useEffect(() => {
+        if (!cancionActual || cancionActual.tipo !== "youtube") return;
+        
+        const initYT = () => {
+            const videoId = extractYouTubeId(cancionActual.contenido);
+            if (!videoId) return;
+
+            if (ytPlayerRef.current) {
+                ytPlayerRef.current.loadVideoById(videoId);
+                return;
+            }
+
+            ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
+                height: "1", width: "1", videoId,
+                playerVars: { autoplay: 0, playsinline: 1 },
+                events: {
+                    onReady: (e) => {
+                        e.target.setVolume(volume * 100);
+                        if (isPlaying) e.target.playVideo();
+                    },
+                    onStateChange: (e) => {
+                        if (e.data === window.YT.PlayerState.ENDED) handleEnded();
+                    }
+                }
+            });
+        };
+
+        if (!window.YT) {
+            const tag = document.createElement("script");
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(tag);
+            window.onYouTubeIframeAPIReady = initYT;
         } else {
-            const timer = setTimeout(() => setShow(false), 300);
-            return () => clearTimeout(timer);
+            initYT();
+        }
+
+        const interval = setInterval(() => {
+            if (ytPlayerRef.current?.getCurrentTime) {
+                setCurrentTime(ytPlayerRef.current.getCurrentTime());
+                setDuration(ytPlayerRef.current.getDuration() || 0);
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, [cancionActual, handleEnded, isPlaying, volume]);
+
+    useEffect(() => {
+        if (!cancionActual) return;
+        if ((cancionActual.tipo === "audio" || cancionActual.tipo === "url") && audioRef.current) {
+            audioRef.current.src = cancionActual.contenido;
+            audioRef.current.load();
+            if (isPlaying) audioRef.current.play().catch(console.error);
+        }
+    }, [cancionActual, isPlaying]);
+
+    useEffect(() => {
+        if (open) setShow(true);
+        else {
+            const t = setTimeout(() => setShow(false), 300);
+            return () => clearTimeout(t);
         }
     }, [open]);
 
@@ -392,277 +330,75 @@ const cancionActual = canciones[currentIndex];
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-    // ============================================
-    // 🎨 RENDER
-    // ============================================
-
     return createPortal(
         <>
-            <div 
-                className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} 
-                style={{ zIndex: 9998 }} 
-                onClick={onClose} 
-            />
-            <div
-                style={{ zIndex: 9999 }}
-                className={`fixed bottom-20 right-4 w-80 rounded-3xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl border border-white/10 transition-all duration-300 ${
-                    open ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
-                }`}
-                onClick={e => e.stopPropagation()}
-            >
-                <div className="absolute inset-0 bg-linear-to-b from-white/5 via-white/3 to-black/20 pointer-events-none rounded-3xl" />
-                
-                {/* Header */}
+            <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} style={{ zIndex: 9998 }} onClick={onClose} />
+            <div style={{ zIndex: 9999 }} className={`fixed bottom-20 right-4 w-80 rounded-3xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl border border-white/10 transition-all duration-300 ${open ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"}`} onClick={e => e.stopPropagation()}>
                 <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
                     <span className="text-white font-bold text-sm">🎵 Música</span>
                     <button onClick={onClose} className="text-white/50 hover:text-white transition cursor-pointer">✖</button>
                 </div>
-
-                {/* Portada + info */}
                 <div className="px-4 pt-4 pb-2 flex flex-col items-center gap-3">
                     <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center shadow-xl">
-                        {cancionActual?.portada ? (
-                            <img src={cancionActual.portada} className="w-full h-full object-cover" alt="portada"/>
-                        ) : cancionActual?.tipo === "youtube" ? (
-                            <img
-                                src={`https://img.youtube.com/vi/${extractYouTubeId(cancionActual.contenido)}/mqdefault.jpg`}
-                                className="w-full h-full object-cover"
-                                alt="portada"
-                            />
-                        ) : (
-                            <span className="text-5xl">🎵</span>
-                        )}
+                        {cancionActual?.portada ? <img src={cancionActual.portada} className="w-full h-full object-cover" /> : <span className="text-5xl">🎵</span>}
                     </div>
                     <div className="text-center">
-                        <p className="text-white font-bold text-sm truncate max-w-60">
-                            {cancionActual?.titulo || "Sin canción"}
-                        </p>
-                        <p className="text-white/50 text-xs">
-                            {cancionActual?.artista || "—"}
-                        </p>
+                        <p className="text-white font-bold text-sm truncate max-w-60">{cancionActual?.titulo || "Sin canción"}</p>
+                        <p className="text-white/50 text-xs">{cancionActual?.artista || "—"}</p>
                     </div>
                 </div>
-
-                {/* Barra de progreso */}
                 <div className="px-4">
-                    <div
-                        ref={progressRef}
-                        onClick={handleSeek}
-                        className="w-full h-1.5 bg-white/10 rounded-full cursor-pointer"
-                    >
-                        <div
-                            className="h-full bg-pink-400 rounded-full transition-all"
-                            style={{ width: `${progress}%` }}
-                        />
+                    <div ref={progressRef} onClick={handleSeek} className="w-full h-1.5 bg-white/10 rounded-full cursor-pointer">
+                        <div className="h-full bg-pink-400 rounded-full transition-all" style={{ width: `${progress}%` }} />
                     </div>
                     <div className="flex justify-between text-xs text-white/40 mt-1">
                         <span>{formatTime(currentTime)}</span>
                         <span>{formatTime(duration)}</span>
                     </div>
                 </div>
-
-                {/* Controles */}
                 <div className="flex items-center justify-center gap-4 px-4 py-3">
-                    <button
-                        onClick={() => setShuffle(s => !s)}
-                        className={`text-lg cursor-pointer transition ${shuffle ? "text-pink-400" : "text-white/30 hover:text-white"}`}
-                    >🔀</button>
-                    <button onClick={playPrev} className="text-white hover:text-pink-400 transition cursor-pointer text-xl">⏮</button>
-                    <button
-                        onClick={isPlaying ? pause : play}
-                        className="w-12 h-12 rounded-full bg-pink-400 hover:bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg transition cursor-pointer"
-                    >
-                        {isPlaying ? "⏸" : "▶"}
-                    </button>
-                    <button onClick={playNext} className="text-white hover:text-pink-400 transition cursor-pointer text-xl">⏭</button>
-                    <button
-                        onClick={() => setRepeat(r => !r)}
-                        className={`text-lg cursor-pointer transition ${repeat ? "text-pink-400" : "text-white/30 hover:text-white"}`}
-                    >🔁</button>
+                    <button onClick={() => setShuffle(!shuffle)} className={`text-lg transition ${shuffle ? "text-pink-400" : "text-white/30"}`}>🔀</button>
+                    <button onClick={playPrev} className="text-white hover:text-pink-400 transition text-xl">⏮</button>
+                    <button onClick={isPlaying ? pause : play} className="w-12 h-12 rounded-full bg-pink-400 hover:bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg transition">{isPlaying ? "⏸" : "▶"}</button>
+                    <button onClick={playNext} className="text-white hover:text-pink-400 transition text-xl">⏭</button>
+                    <button onClick={() => setRepeat(!repeat)} className={`text-lg transition ${repeat ? "text-pink-400" : "text-white/30"}`}>🔁</button>
                 </div>
-
-                {/* Volumen */}
                 <div className="flex items-center gap-2 px-4 pb-3">
-                    <span className="text-white/40 text-xs">🔈</span>
-                    <input
-                        type="range" min="0" max="1" step="0.01"
-                        value={volume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                        className="flex-1 accent-pink-400 cursor-pointer"
-                    />
-                    <span className="text-white/40 text-xs">🔊</span>
+                    <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => handleVolumeChange(parseFloat(e.target.value))} className="flex-1 accent-pink-400" />
                 </div>
-
-                {/* Tabs */}
                 <div className="flex border-t border-white/10">
-                    {[
-                        { id: "cola", label: "📋" }, 
-                        { id: "subir", label: "➕" },
-                        { id: "buscar", label: "🔍" },
-                        { id: "eq", label: "🎚️" }
-                    ].map(t => (
-                        <button
-                            key={t.id}
-                            onClick={() => setTab(t.id)}
-                            className={`flex-1 py-2 text-xs font-bold transition cursor-pointer ${
-                                tab === t.id ? "text-pink-400 border-b-2 border-pink-400" : "text-white/40 hover:text-white"
-                            }`}
-                            title={t.label}
-                        >{t.label}</button>
+                    {["cola", "subir", "buscar", "eq"].map(t => (
+                        <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-xs font-bold transition ${tab === t ? "text-pink-400 border-b-2 border-pink-400" : "text-white/40"}`}>{t.toUpperCase()}</button>
                     ))}
                 </div>
-
-                {/* Tab Cola */}
-                {tab === "cola" && (
-                    <MusicQueue 
-                        canciones={canciones}
-                        currentIndex={currentIndex}
-                        onSelect={playCancion}
-                        onRemove={handleEliminar}
-                    />
-                )}
-
-                {/* Tab Subir */}
-                {tab === "subir" && (
-                    <div className="p-4 flex flex-col gap-3 max-h-64 overflow-y-auto">
-                        <div
-                            onClick={() => portadaInputRef.current?.click()}
-                            className="w-full h-24 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-pink-400 transition overflow-hidden"
-                        >
-                            {portadaPreview ? (
-                                <img src={portadaPreview} className="w-full h-full object-cover" alt="portada"/>
-                            ) : (
-                                <span className="text-white/30 text-xs">🖼️ Subir portada (opcional)</span>
-                            )}
+                <div className="max-h-64 overflow-y-auto">
+                    {tab === "cola" && <MusicQueue canciones={canciones} currentIndex={currentIndex} onSelect={setCurrentIndex} onRemove={(id) => socket?.emit("Eliminar Canción", { cancionId: id })} />}
+                    {tab === "subir" && (
+                        <div className="p-4 flex flex-col gap-3">
+                            <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título *" className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2" />
+                            <input type="text" value={artista} onChange={e => setArtista(e.target.value)} placeholder="Artista" className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2" />
+                            <input type="text" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} placeholder="YouTube URL" className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2" />
+                            <button onClick={() => fileInputRef.current.click()} className="w-full bg-white/10 text-white/70 text-xs py-2 rounded-lg">MP3/WAV</button>
+                            <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={e => setAudioFile(e.target.files[0])} />
+                            <button onClick={handleSubir} disabled={uploading} className="w-full bg-pink-400 text-white font-bold text-xs py-2 rounded-xl disabled:opacity-50">{uploading ? "Subiendo..." : "Agregar"}</button>
                         </div>
-                        <input ref={portadaInputRef} type="file" accept="image/*" className="hidden" onChange={handlePortadaChange}/>
-                        <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título *"
-                            className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-400 placeholder-white/30"/>
-                        <input type="text" value={artista} onChange={e => setArtista(e.target.value)} placeholder="Artista"
-                            className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-400 placeholder-white/30"/>
-                        <input type="text" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} placeholder="Link de YouTube"
-                            className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-400 placeholder-white/30"/>
-                        <input type="text" value={urlStream} onChange={e => setUrlStream(e.target.value)} placeholder="URL de audio (MP3, Stream)"
-                            className="w-full bg-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-400 placeholder-white/30"/>
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 h-px bg-white/10"/>
-                            <span className="text-white/30 text-xs">o</span>
-                            <div className="flex-1 h-px bg-white/10"/>
-                        </div>
-                        <button onClick={() => fileInputRef.current?.click()}
-                            className="w-full bg-white/10 hover:bg-white/20 text-white/70 text-xs py-2 rounded-lg transition cursor-pointer">
-                            {audioFile ? `✅ ${audioFile.name}` : "🎵 Subir archivo MP3/WAV"}
-                        </button>
-                        <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={e => setAudioFile(e.target.files?.[0])}/>
-                        <button onClick={handleSubir} disabled={uploading}
-                            className="w-full bg-pink-400 hover:bg-pink-500 text-white font-bold text-xs py-2.5 rounded-xl transition cursor-pointer disabled:opacity-50">
-                            {uploading ? "Subiendo..." : "▶ Agregar a la cola"}
-                        </button>
-                    </div>
-                )}
-
-                {/* Tab Buscar */}
-                {tab === "buscar" && (
-                    <div className="flex flex-col max-h-64">
-                        <div className="p-3 border-b border-white/10">
+                    )}
+                    {tab === "buscar" && (
+                        <div className="p-3">
                             <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && searchYouTube(searchQuery)}
-                                    placeholder="Buscar en YouTube..."
-                                    className="flex-1 bg-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-400 placeholder-white/30"
-                                />
-                                <button
-                                    onClick={() => searchYouTube(searchQuery)}
-                                    disabled={searching}
-                                    className="bg-pink-400 text-white text-xs px-3 py-2 rounded-lg hover:bg-pink-500 transition disabled:opacity-50"
-                                >
-                                    {searching ? "..." : "🔍"}
-                                </button>
+                                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && searchYouTube(searchQuery)} className="flex-1 bg-white/10 text-white text-xs rounded-lg px-3 py-2" />
+                                <button onClick={() => searchYouTube(searchQuery)} className="bg-pink-400 p-2 rounded-lg">🔍</button>
                             </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto">
-                            {searchResults.length === 0 && (
-                                <p className="text-white/30 text-xs text-center py-6">
-                                    Busca canciones en YouTube
-                                </p>
-                            )}
-                            {searchResults.map((video) => {
-                                const videoId = video.id?.videoId || video.id;
-                                const title = video.snippet?.title || "";
-                                if (!videoId) return null;
-                                return (
-                                    <div
-                                        key={video.id}
-                                        className="flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition cursor-pointer"
-                                        onClick={() => addFromSearch(video)}
-                                    >
-                                        <div className="w-12 h-12 rounded overflow-hidden bg-white/5 shrink-0">
-                                            <img 
-                                                src={video.snippet?.thumbnails?.default?.url} 
-                                                className="w-full h-full object-cover"
-                                                alt=""
-                                            />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs text-white truncate">{title}</p>
-                                            <p className="text-white/40 text-xs truncate">{video.snippet?.channelTitle}</p>
-                                        </div>
-                                        <span className="text-green-400 text-lg">➕</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab EQ */}
-                {tab === "eq" && (
-                    <div className="p-4 flex flex-col gap-4 max-h-64 overflow-y-auto">
-                        <div className="flex items-center justify-between">
-                            <span className="text-white text-xs">🎚️ Ecualizador</span>
-                            <button
-                                onClick={() => setEquilizer(e => !e)}
-                                className={`text-xs px-2 py-1 rounded ${equilizer ? "bg-pink-400 text-white" : "bg-white/10 text-white/50"}`}
-                            >
-                                {equilizer ? "ON" : "OFF"}
-                            </button>
-                        </div>
-                        
-                        {equilizer && (
-                            <>
-                                <div className="space-y-2">
-                                    {["Bass", "Mid", "Treble", "Reverb"].map(band => (
-                                        <div key={band} className="flex items-center gap-2">
-                                            <span className="text-white/50 text-xs w-8">{band}</span>
-                                            <input type="range" min="0" max="100" defaultValue="50" className="flex-1 accent-pink-400 h-1.5" />
-                                        </div>
-                                    ))}
+                            {searchResults.map(v => (
+                                <div key={v.id.videoId} className="flex gap-2 p-2 hover:bg-white/5 cursor-pointer" onClick={() => addFromSearch(v)}>
+                                    <img src={v.snippet.thumbnails.default.url} className="w-10 h-10 rounded" />
+                                    <div className="flex-1 truncate"><p className="text-xs text-white truncate">{v.snippet.title}</p></div>
                                 </div>
-                                <div className="text-center">
-                                    <span className="text-white/40 text-xs">Presets</span>
-                                    <div className="flex gap-2 mt-2 flex-wrap justify-center">
-                                        {["Flat", "Rock", "Pop", "Jazz"].map(preset => (
-                                            <button key={preset} className="text-xs bg-white/10 hover:bg-pink-400/30 text-white/70 px-3 py-1.5 rounded-full transition">
-                                                {preset}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                        
-                        {!equilizer && (
-                            <p className="text-white/30 text-xs text-center py-4">
-                                Activa el ecualizador para mejorar el sonido
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                <div ref={ytContainerRef} style={{ width: 1, height: 1, overflow: "hidden" }}/>
-                <audio ref={audioRef} style={{ display: "none" }}/>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div ref={ytContainerRef} className="hidden" />
             </div>
         </>,
         document.body

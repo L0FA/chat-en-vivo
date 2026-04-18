@@ -148,6 +148,48 @@ app.get("/api/giphy/search", async (req, res) => {
     }
 });
 
+app.get("/api/youtube/search", async (req, res) => {
+    try {
+        const q = req.query.q || "";
+        if (!q) return res.json({ items: [] });
+        
+        console.log(`🔍 [YOUTUBE] Buscando: ${q}`);
+        const response = await fetchWithTimeout(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D`, 8000);
+        const html = await response.text();
+        const match = html.match(/ytInitialData\s*=\s*({.+?});/);
+        
+        if (!match) return res.json({ items: [] });
+        
+        const data = JSON.parse(match[1]);
+        const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+        
+        if (!contents) return res.json({ items: [] });
+
+        const videos = [];
+        for (const section of contents) {
+            const items = section.itemSectionRenderer?.contents;
+            if (!items) continue;
+            for (const item of items) {
+                const info = item.videoRenderer;
+                if (!info) continue;
+                videos.push({
+                    id: { videoId: info.videoId },
+                    snippet: {
+                        title: info.title?.runs?.[0]?.text,
+                        channelTitle: info.ownerText?.runs?.[0]?.text,
+                        thumbnails: { default: { url: info.thumbnail?.thumbnails?.[0]?.url } }
+                    }
+                });
+                if (videos.length >= 20) break;
+            }
+        }
+        res.json({ items: videos });
+    } catch (e) {
+        console.error("❌ Error YouTube Search:", e);
+        res.status(500).json({ items: [] });
+    }
+});
+
 app.use(logger("dev"));
 app.use((req, res, next) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate");

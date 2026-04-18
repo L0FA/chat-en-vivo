@@ -75,6 +75,15 @@ export function setupRooms(socket, connectedUsers) {
         const user = connectedUsers.get(socket.id);
         if (!user) return;
         
+        const ADMIN_LIST = (process.env.ADMINS || "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+        const isUserAdmin = ADMIN_LIST.includes(user.nombre.toLowerCase());
+
+        // BLOQUEO DE SEGURIDAD PARA SALAS RESTRINGIDAS
+        if (salaId === "sala-admins-global" && !isUserAdmin) {
+            console.log(`🚫 [SECURITY] Intento de acceso no autorizado a sala admin por: ${user.nombre}`);
+            return cb?.({ status: "error", message: "Acceso denegado: Sala restringida" });
+        }
+        
         try {
             await db.execute({
                 sql: "INSERT OR IGNORE INTO MiembrosSala (salaId, usuario, rol, esAdmin, joinedAt) VALUES (?, ?, ?, ?, ?)",
@@ -121,6 +130,13 @@ export function setupRooms(socket, connectedUsers) {
     socket.on("Invitar a Sala", async ({ salaId, usuario }, cb) => {
         const user = connectedUsers.get(socket.id);
         if (!user) return;
+
+        const ADMIN_LIST = (process.env.ADMINS || "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+        const isUserAdmin = ADMIN_LIST.includes(user.nombre.toLowerCase());
+        
+        if (salaId === "sala-admins-global" && !isUserAdmin) {
+            return cb?.({ status: "error", message: "No podés invitar a esta sala" });
+        }
         
         try {
             await db.execute({
