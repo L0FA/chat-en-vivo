@@ -11,11 +11,11 @@ Este proyecto se concibió inicialmente como *chat-en-vivo*, pero fue refactoriz
   - Envía y reproduce archivos de audio pesado (Hasta 50MB por canción).
   - Integración nativa del reproductor de **YouTube** para buscar y encolar videos que se reproducirán de forma sincronizada con el resto de conectados.
   - Efectos visuales de Ecualizador.
-- **Mensajes que se Autodestruyen 💣:** Envía secretos seguros al configurar temporizadores de expiración antes de que desaparezcan del mapa.
 - **Integración de GIFs:** Búsqueda inmediata en Giphy para dar contexto a cualquier conversación.
 - **Temas Dinámicos:** Personalización de fondos asombrosa gracias a simulaciones en *Canvas* (Lluvia Matrix, Pétalos Sakura, Fuego, Cyberpunk, Neón y muchos más).
 - **Backend Moderno con libSQL:** Motor de base de datos integrado mediante Turso.
 - **Totalmente Responsive:** Orientado 100% al diseño Mobile-First y adaptable al teclado del SO (`100dvh`).
+- **Sistema de Llamadas en Vivo: Estilo Discord, podes hablar por llamada, prender camara, compartir pantalla en tiempo real!
 
 ## 🛠️ Stack Tecnológico
 
@@ -26,19 +26,7 @@ Este proyecto se concibió inicialmente como *chat-en-vivo*, pero fue refactoriz
 
 ## 📦 Instalación y Desarrollo Local
 
-### 1. Variables de Entorno (.env)
-Clona este repositorio o asegúrate de poseer tus credenciales locales. Crea un archivo `.env` en la raíz replicando esto:
-```env
-VITE_SOCKET_URL=http://localhost:3000
-
-# -- Backend Secrets --
-DB_TOKEN="TU_TOKEN_DE_TURSO"
-DB_URL="libsql://tu-base-de-datos.turso.io"
-ADMINS="ElAdmin,OtroAdmin"
-GIPHY_API_KEY="TU_CLAVE_DE_GIPHY"
-```
-
-### 2. Arrancar Proyecto
+### 1. Arrancar Proyecto
 
 Para instalar todas las dependencias necesarias de Front y Back:
 ```bash
