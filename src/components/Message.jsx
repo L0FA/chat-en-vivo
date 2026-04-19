@@ -32,6 +32,7 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
     const canEdit = isMe || isUserAdmin;
     const userColor = getUserColor(message.user);
     const [showMenu, setShowMenu] = React.useState(false);
+    const [menuPosition, setMenuPosition] = React.useState("right");
     const [showReactions, setShowReactions] = React.useState(false);
     const menuRef = React.useRef(null);
     const msgRef = React.useRef(null);
@@ -51,7 +52,11 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
 
     const handleContextMenu = (e) => {
         e.preventDefault();
-        if (isMe) setShowMenu(true);
+        const windowWidth = window.innerWidth;
+        const clickX = e.clientX;
+        const isRightSide = clickX > windowWidth / 2;
+        setMenuPosition(isRightSide ? "left" : "right");
+        setShowMenu(true);
     };
 
     const handleEdit = () => {
@@ -198,7 +203,7 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
 
                 {/* Menú contextual (click derecho) */}
                 {showMenu && (
-                    <div ref={menuRef} className="absolute top-0 z-50 bg-gray-900/95 border border-white/20 rounded-lg shadow-xl py-1 min-w-[140px]">
+                    <div ref={menuRef} className={`absolute top-0 z-50 bg-gray-900/95 border border-white/20 rounded-lg shadow-xl py-1 min-w-[140px] ${menuPosition === "left" ? "right-0" : "left-0"}`}>
                         <button onClick={() => { setShowMenu(false); setShowReactions(true); }} className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">😀 Reaccionar</button>
                         {canEdit && (
                             <button onClick={handleEdit} className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">✏️ Editar</button>
