@@ -50,7 +50,7 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
         }
     }, [isHighlighted]);
 
-    const timestampClass = isLightTheme ? "text-gray-600 font-medium" : "text-white/70 font-medium";
+    const timestampClass = isLightTheme ? "text-gray-700 font-medium drop-shadow-sm" : "text-white/70 font-medium";
 
     const handleContextMenu = (e) => {
         e.preventDefault();

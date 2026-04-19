@@ -17,7 +17,7 @@ import Settings from "./Settings";
 import UserInfoModal from "./UserInfoModal";
 
 export default function Chat() {
-    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom, adminsList, setAdminsList } = useChat();
+    const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, connectedUsers, setConnectedUsers, addUserRoom, adminsList, setAdminsList } = useChat();
     const { socket, connected: isConnected, isAdmin: userIsAdmin } = useSocket(user, password);
     const { theme } = useTheme();
     
