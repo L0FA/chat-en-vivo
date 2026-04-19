@@ -160,7 +160,11 @@ export default function Chat() {
                 if (typeof u === "string") return { nombre: u, avatar: null };
                 return { nombre: u?.nombre || u, avatar: u?.avatar || null };
             });
-            setConnectedUsers(normalizedUsers);
+            // Deduplicar por nombre
+            const uniqueUsers = normalizedUsers.filter((u, i, self) => 
+                i === self.findIndex(x => x.nombre === u.nombre)
+            );
+            setConnectedUsers(uniqueUsers);
             setAdminsList(admins);
         };
 
