@@ -62,7 +62,7 @@ export default function Chat() {
     };
 
     const handleUserClick = (username) => {
-        const targetUser = connectedUsers.find(u => u.nombre === username);
+        const targetUser = connectedUsers.find(u => (typeof u === "object" ? u.nombre : u) === username);
         setSelectedUserInfo(targetUser || { nombre: username, avatar: null });
     };
 
