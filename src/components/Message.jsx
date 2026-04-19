@@ -183,8 +183,8 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
                 
                 {renderContent()}
                 
-                <div className="flex items-center justify-end gap-2 mt-1.5 opacity-60 text-[0.65rem]">
-                    <span>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex items-center justify-end gap-2 mt-1.5 text-[0.7rem] text-white/70">
+                    <span>{new Date(message.timestamp).toLocaleDateString([], { day: '2-digit', month: '2-digit' })} {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     {isMe && (
                         <span className="text-indigo-400 font-bold">✓✓</span>
                     )}
