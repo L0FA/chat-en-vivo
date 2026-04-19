@@ -182,16 +182,28 @@ export async function setupMessages(io, socket, connectedUsers) {
         const user = connectedUsers.get(socket.id);
         if (!user) return;
         try {
-            const msgCheck = await db.execute({ sql: "SELECT room FROM Mensajes WHERE id = ?", args: [messageId] });
+            const ADMIN_LIST = (process.env.ADMINS || "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+            const isAdmin = ADMIN_LIST.includes(user.nombre.toLowerCase());
+            
+            const msgCheck = await db.execute({ sql: "SELECT room, user FROM Mensajes WHERE id = ?", args: [messageId] });
+            if (msgCheck.rows.length === 0) return cb?.({ status: "error", message: "Mensaje no encontrado" });
+            
             const room = msgCheck.rows[0]?.room || "sala-global";
+            const messageOwner = msgCheck.rows[0]?.user;
+            
             if (!checkAdminRoomAccess(room, user.nombre)) return cb?.({ status: "error" });
 
-            await db.execute({
-                sql: "UPDATE Mensajes SET content = ?, edited = 1 WHERE id = ? AND user = ?",
-                args: [newContent, messageId, user.nombre]
-            });
-            io.to(room).emit("Mensaje Editado", { messageId, newContent });
-            cb?.({ status: "ok" });
+            // Admins pueden editar cualquier mensaje, usuarios solo el propio
+            if (isAdmin || messageOwner === user.nombre) {
+                await db.execute({
+                    sql: "UPDATE Mensajes SET content = ?, edited = 1 WHERE id = ?",
+                    args: [newContent, messageId]
+                });
+                io.to(room).emit("Mensaje Editado", { messageId, newContent });
+                cb?.({ status: "ok" });
+            } else {
+                cb?.({ status: "error", message: "No tienes permiso" });
+            }
         } catch { cb?.({ status: "error" }); }
     });
 

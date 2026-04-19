@@ -14,6 +14,7 @@ import MusicApp from "./MusicApp";
 import VideoCall from "./VideoCall";
 import ProfileDropdown from "./ProfileDropdown";
 import Settings from "./Settings";
+import UserInfoModal from "./UserInfoModal";
 
 export default function Chat() {
     const { user, password, avatar, messages, prependMessages, typingUsers, lightboxSrc, setLightboxSrc, currentRoom, setConnectedUsers, addUserRoom, adminsList, setAdminsList } = useChat();
@@ -25,6 +26,8 @@ export default function Chat() {
     const [scrolled, setScrolled] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [userIsAdminFlag, setUserIsAdminFlag] = useState(() => localStorage.getItem("user-is-admin") === "true");
+    const [selectedUserInfo, setSelectedUserInfo] = useState(null);
+    const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
     const mensajesRef = useRef(null);
     const bottomRef = useRef(null);
@@ -56,6 +59,16 @@ export default function Chat() {
             return "bg-black/50 border-white/30 text-white backdrop-blur-sm";
         }
         return "bg-white/20 border-white/30 text-white backdrop-blur-sm";
+    };
+
+    const handleUserClick = (username) => {
+        const targetUser = connectedUsers.find(u => u.nombre === username);
+        setSelectedUserInfo(targetUser || { nombre: username, avatar: null });
+    };
+
+    const handleReplyClick = (replyToId) => {
+        setHighlightedMessageId(replyToId);
+        setTimeout(() => setHighlightedMessageId(null), 2000);
     };
 
     // Efecto para contar mensajes no leídos
@@ -263,7 +276,7 @@ export default function Chat() {
 
                 {/* Botones */}
                 <div className="flex items-center gap-1.5">
-                    <UsersPanel />
+                    <UsersPanel onUserClick={handleUserClick} />
                     <VideoCall 
                         socket={socket} 
                         callTrigger={callTrigger}
@@ -333,6 +346,11 @@ export default function Chat() {
                         onPlayMusic={() => {}}
                         userAvatar={msg.user === user ? avatar : (msg.senderAvatar || null)}
                         adminsList={adminsList}
+                        isUserAdmin={userIsAdminFlag}
+                        theme={theme}
+                        onUserClick={handleUserClick}
+                        highlightedMessageId={highlightedMessageId}
+                        onReplyClick={handleReplyClick}
                     />
                 ))}
 

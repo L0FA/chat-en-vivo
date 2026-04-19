@@ -65,11 +65,11 @@ html, body {
 }
 
 .message-mine {
-    @apply self-end rounded-2xl rounded-tr-none bg-indigo-600/25 border-indigo-500/30;
+    @apply self-end rounded-2xl rounded-tr-none bg-indigo-600/70 border-indigo-500/50;
 }
 
 .message-other {
-    @apply self-start rounded-2xl rounded-tl-none bg-white/5 border-white/10;
+    @apply self-start rounded-2xl rounded-tl-none bg-white/40 border-white/30;
 }
 
 /* Ajustes para Mobile y Teclado */

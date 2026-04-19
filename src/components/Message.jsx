@@ -25,11 +25,71 @@ function highlightMentions(text, currentUser) {
     });
 }
 
-function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsList = [] }) {
+function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsList = [], socket, userAvatar: propAvatar, isUserAdmin = false, theme = "default", onUserClick, highlightedMessageId, onReplyClick }) {
     const { setReplyingTo } = useChat();
     const isMe = message.user === currentUser;
     const isAdmin = adminsList.includes(message.user);
+    const canEdit = isMe || isUserAdmin;
     const userColor = getUserColor(message.user);
+    const [showMenu, setShowMenu] = React.useState(false);
+    const [showReactions, setShowReactions] = React.useState(false);
+    const menuRef = React.useRef(null);
+    const msgRef = React.useRef(null);
+
+    const userAvatar = propAvatar || message.senderAvatar;
+    const isLightTheme = ["default", "retro", "ocean", "forest", "rosa", "minimal"].includes(theme);
+    const textClass = isLightTheme ? "text-gray-900" : "text-white drop-shadow-md";
+    const isHighlighted = highlightedMessageId === message.id;
+
+    React.useEffect(() => {
+        if (isHighlighted && msgRef.current) {
+            msgRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+            msgRef.current.classList.add("ring-2", "ring-yellow-400");
+            setTimeout(() => msgRef.current?.classList.remove("ring-2", "ring-yellow-400"), 2000);
+        }
+    }, [isHighlighted]);
+
+    const handleContextMenu = (e) => {
+        e.preventDefault();
+        if (isMe) setShowMenu(true);
+    };
+
+    const handleEdit = () => {
+        setShowMenu(false);
+        const newContent = prompt("Editar mensaje:", message.content);
+        if (newContent && newContent !== message.content && socket && message.id) {
+            socket.emit("Editar Mensaje", { messageId: message.id, newContent }, (res) => {
+                if (res?.status !== "ok") {
+                    alert("Error al editar mensaje");
+                }
+            });
+        }
+    };
+
+    const handleDelete = () => {
+        if (socket && message.id) {
+            socket.emit("Eliminar Mensaje", { messageId: message.id });
+        }
+        setShowMenu(false);
+    };
+
+    const handleReply = () => {
+        setReplyingTo({ id: message.id, user: message.user, text: message.content });
+        setShowMenu(false);
+    };
+
+    React.useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setShowMenu(false);
+                setShowReactions(false);
+            }
+        };
+        if (showMenu || showReactions) {
+            document.addEventListener("click", handleClickOutside);
+            return () => document.removeEventListener("click", handleClickOutside);
+        }
+    }, [showMenu, showReactions]);
 
     const renderContent = () => {
         if (message.type === "image") {
@@ -72,26 +132,47 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
         const htmlContent = highlightMentions(linkify(message.content), currentUser);
         return (
             <p 
-                className="text-[0.95rem] leading-relaxed wrap-break-word whitespace-pre-wrap"
+                className={`text-[1rem] leading-relaxed wrap-break-word whitespace-pre-wrap ${textClass}`}
                 dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
         );
     };
 
+    const handleAddReaction = (emoji) => {
+        if (socket && message.id) {
+            socket.emit("Agregar Reacción", { messageId: message.id, emoji, user: currentUser });
+        }
+        setShowReactions(false);
+    };
+
+    const reactions = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👎"];
+
     return (
-        <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} group animate-fade-in`}>
+        <div ref={msgRef} className={`flex flex-col ${isMe ? "items-end" : "items-start"} group animate-fade-in relative`} onContextMenu={handleContextMenu}>
             {!isMe && (
-                <span className="text-[0.7rem] font-bold mb-1 ml-2 flex items-center gap-1.5" style={{ color: userColor }}>
-                    {message.user}
-                    {isAdmin && <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-md text-[0.6rem] uppercase tracking-wider">Admin</span>}
-                </span>
+                <div className="flex items-center gap-1.5 mb-1 ml-2">
+                    {userAvatar && userAvatar.startsWith("data:image") && (
+                        <img src={userAvatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                    )}
+                    <span 
+                        onClick={() => onUserClick?.(message.user)}
+                        className="text-[0.7rem] font-bold flex items-center gap-1.5 cursor-pointer hover:underline"
+                        style={{ color: userColor }}
+                    >
+                        {message.user}
+                        {isAdmin && <span className="bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-md text-[0.6rem] uppercase tracking-wider">Admin</span>}
+                    </span>
+                </div>
             )}
             
-            <div className={`message-bubble ${isMe ? "message-mine" : "message-other"}`}>
-                {message.replyToUser && (
-                    <div className="mb-2 p-2 rounded-lg bg-black/10 border-l-4 border-indigo-500/50 text-[0.8rem] opacity-80 italic truncate">
-                        <span className="font-bold not-italic block mb-0.5">@{message.replyToUser}</span>
-                        {message.replyToText || "Mensaje"}
+            <div className={`message-bubble ${isMe ? "message-mine" : "message-other"} ${isHighlighted ? "ring-2 ring-yellow-400" : ""}`}>
+                {(message.replyToUser || message.replyToContent) && (
+                    <div 
+                        onClick={() => onReplyClick?.(message.replyToId)}
+                        className={`mb-2 p-2 rounded-lg border-l-4 text-[0.8rem] italic truncate cursor-pointer hover:opacity-100 transition ${isLightTheme ? "bg-gray-100/80 border-indigo-500/70 text-gray-700" : "bg-black/20 border-indigo-500/50 text-white/80"}`}
+                    >
+                        <span className={`font-bold not-italic block mb-0.5 ${isLightTheme ? "text-indigo-600" : ""}`}>@{message.replyToUser || "Usuario"}</span>
+                        {message.replyToContent || message.replyToText || "Mensaje"}
                     </div>
                 )}
                 
@@ -107,13 +188,34 @@ function MessageInner({ message, currentUser, onImageClick, onPlayMusic, adminsL
                 {/* Acciones rápidas al hover */}
                 <div className={`absolute top-0 ${isMe ? "-left-10" : "-right-10"} opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col gap-1`}>
                     <button 
-                        onClick={() => setReplyingTo({ id: message.id, user: message.user, text: message.content })}
+                        onClick={handleReply}
                         className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 transition-colors"
                         title="Responder"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
                     </button>
                 </div>
+
+                {/* Menú contextual (click derecho) */}
+                {showMenu && (
+                    <div ref={menuRef} className="absolute top-0 z-50 bg-gray-900/95 border border-white/20 rounded-lg shadow-xl py-1 min-w-[140px]">
+                        <button onClick={() => { setShowMenu(false); setShowReactions(true); }} className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">😀 Reaccionar</button>
+                        {canEdit && (
+                            <button onClick={handleEdit} className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">✏️ Editar</button>
+                        )}
+                        <button onClick={handleDelete} className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-white/10 hover:text-red-300 transition-colors">🗑️ Eliminar</button>
+                        <button onClick={handleReply} className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">↩️ Responder</button>
+                    </div>
+                )}
+
+                {/* Panel de reacciones */}
+                {showReactions && (
+                    <div className="absolute bottom-full mb-1 z-50 bg-gray-900/95 border border-white/20 rounded-lg shadow-xl py-1 flex gap-1">
+                        {reactions.map(emoji => (
+                            <button key={emoji} onClick={() => handleAddReaction(emoji)} className="p-1.5 hover:bg-white/10 rounded transition text-lg">{emoji}</button>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

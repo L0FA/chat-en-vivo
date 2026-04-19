@@ -43,37 +43,50 @@ export default function ThemeBackground() {
     const { theme } = useChat();
     const canvasRef = useRef(null);
     const themeRef = useRef(null);
+    const animationRef = useRef(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
-        const currentTheme = theme;
-        themeRef.current = currentTheme;
+
+        const stopCurrentAnimation = () => {
+            if (animationRef.current) {
+                animationRef.current.stop();
+                animationRef.current = null;
+            }
+        };
 
         const handleResize = () => {
+            stopCurrentAnimation();
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            
+            const currentTheme = themeRef.current;
+            if (!currentTheme) return;
+            
+            const themeKey = currentTheme === "default" || currentTheme === "custom" ? "minimal" : currentTheme;
+            const createAnimation = THEME_ANIMATIONS[themeKey] || createDefaultAnimation;
+            animationRef.current = createAnimation(ctx, canvas);
         };
         
-        handleResize();
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         window.addEventListener("resize", handleResize);
 
-        const themeKey = currentTheme === "default" || currentTheme === "custom" ? "minimal" : currentTheme;
+        themeRef.current = theme;
+        const themeKey = theme === "default" || theme === "custom" ? "minimal" : theme;
         const createAnimation = THEME_ANIMATIONS[themeKey] || createDefaultAnimation;
         
         const animResult = createAnimation(ctx, canvas);
         
         if (animResult && typeof animResult === "object") {
-            activeAnimations.set(canvas, animResult);
+            animationRef.current = animResult;
         }
 
         return () => {
-            const storedAnim = activeAnimations.get(canvas);
-            if (storedAnim && storedAnim.stop) {
-                storedAnim.stop();
-            }
+            stopCurrentAnimation();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             window.removeEventListener("resize", handleResize);
         };

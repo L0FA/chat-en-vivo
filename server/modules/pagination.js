@@ -105,9 +105,10 @@ export async function setupPagination(io, socket, connectedUsers) {
             // 2. Ejecutar búsqueda de mensajes
             let results;
             if (room === "sala-admins-global" && isAuthorizedAdmin) {
+                // Solo mensajes de la sala de admins, no todos los mensajes del sistema
                 results = await db.execute({
-                    sql: `SELECT * FROM Mensajes ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
-                    args: []
+                    sql: `SELECT * FROM Mensajes WHERE room = ? ORDER BY timestamp DESC LIMIT ${PAGE_SIZE}`,
+                    args: ["sala-admins-global"]
                 });
             } else {
                 results = await db.execute({

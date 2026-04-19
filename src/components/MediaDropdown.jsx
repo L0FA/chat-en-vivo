@@ -130,7 +130,7 @@ export default function MediaDropdown({ socket, currentRoom }) {
                 <button
                     type="button"
                     onClick={() => setOpen(o => !o)}
-                    className="w-9 h-9 rounded-full bg-linear-to-r from-pink-500 to-purple-500 flex items-center justify-center text-lg hover:scale-110 transition shrink-0 text-white cursor-pointer shadow-lg"
+                    className="w-9 h-9 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center text-lg hover:bg-white/20 hover:scale-105 transition shrink-0 text-white cursor-pointer shadow-lg"
                 >
                     📷
                 </button>
@@ -139,24 +139,24 @@ export default function MediaDropdown({ socket, currentRoom }) {
                 {open && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                        <div className="absolute bottom-12 right-0 bg-[#222] rounded-xl overflow-hidden shadow-2xl z-50 min-w-40 border border-white/10">
+                        <div className="absolute bottom-12 right-0 bg-gray-900/95 backdrop-blur-xl rounded-xl overflow-hidden shadow-2xl z-50 min-w-44 border border-white/20">
                             <button
                                 onClick={() => { fileInputRef.current?.click(); setOpen(false); }}
-                                className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2 cursor-pointer"
+                                className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-white transition flex items-center gap-3 cursor-pointer border-b border-white/10"
                             >
-                                🖼️ Subir media
+                                <span className="text-lg">🖼️</span> Subir media
                             </button>
                             <button
                                 onClick={openCamera}
-                                className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2 cursor-pointer"
+                                className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-white transition flex items-center gap-3 cursor-pointer border-b border-white/10"
                             >
-                                📷 Usar cámara
+                                <span className="text-lg">📷</span> Usar cámara
                             </button>
                             <button
                                 onClick={startVoice}
-                                className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2 cursor-pointer"
+                                className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-white transition flex items-center gap-3 cursor-pointer"
                             >
-                                🎤 Mensaje de voz
+                                <span className="text-lg">🎤</span> Mensaje de voz
                             </button>
                         </div>
                     </>
