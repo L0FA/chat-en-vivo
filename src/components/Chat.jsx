@@ -62,8 +62,25 @@ export default function Chat() {
     };
 
     const handleUserClick = (username) => {
-        const targetUser = connectedUsers.find(u => (typeof u === "object" ? u.nombre : u) === username);
-        setSelectedUserInfo(targetUser || { nombre: username, avatar: null });
+        if (!socket) return;
+        
+        // Obtener info del usuario desde el servidor
+        socket.emit("Obtener Info Usuario", { targetUser: username }, (res) => {
+            if (res.status === "ok" && res.info) {
+                const isUserAdmin = adminsList.includes(username);
+                setSelectedUserInfo({
+                    nombre: res.info.nombre,
+                    avatar: res.info.avatar,
+                    creado: res.info.creado,
+                    isAdmin: isUserAdmin
+                });
+            } else {
+                // Fallback si no se puede obtener info
+                const targetUser = connectedUsers.find(u => (typeof u === "object" ? u.nombre : u) === username);
+                const isUserAdmin = adminsList.includes(username);
+                setSelectedUserInfo(targetUser || { nombre: username, avatar: null, isAdmin: isUserAdmin });
+            }
+        });
     };
 
     const handleReplyClick = (replyToId) => {
