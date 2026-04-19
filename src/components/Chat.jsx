@@ -400,6 +400,10 @@ export default function Chat() {
             {lightboxSrc && (
                 <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
             )}
+
+            {selectedUserInfo && (
+                <UserInfoModal user={selectedUserInfo} onClose={() => setSelectedUserInfo(null)} />
+            )}
         </div>
     );
 }
