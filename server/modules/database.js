@@ -84,11 +84,23 @@ export async function initDatabase() {
         )
     `);
 
-    // Agregar columna room si la tabla ya existía sin ella
-    try {
-        await db.execute("ALTER TABLE Mensajes ADD COLUMN room TEXT");
-    } catch (e) {
-        // Ignorar error si la columna ya existe
+    // Agregar columnas faltantes si la tabla ya existía con esquema antiguo
+    const columnsToAdd = [
+        { name: "room", type: "TEXT" },
+        { name: "timestamp", type: "INTEGER" },
+        { name: "type", type: "TEXT" },
+        { name: "replyToId", type: "TEXT" },
+        { name: "replyToUser", type: "TEXT" },
+        { name: "replyToContent", type: "TEXT" },
+        { name: "edited", type: "INTEGER DEFAULT 0" },
+        { name: "destructSeconds", type: "INTEGER DEFAULT 0" }
+    ];
+    for (const col of columnsToAdd) {
+        try {
+            await db.execute(`ALTER TABLE Mensajes ADD COLUMN ${col.name} ${col.type}`);
+        } catch (e) {
+            // Ignorar error si la columna ya existe
+        }
     }
 
     // Tabla Reacciones
