@@ -84,6 +84,13 @@ export async function initDatabase() {
         )
     `);
 
+    // Agregar columna room si la tabla ya existía sin ella
+    try {
+        await db.execute("ALTER TABLE Mensajes ADD COLUMN room TEXT");
+    } catch (e) {
+        // Ignorar error si la columna ya existe
+    }
+
     // Tabla Reacciones
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Reacciones (
